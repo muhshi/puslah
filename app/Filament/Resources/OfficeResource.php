@@ -5,7 +5,10 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\OfficeResource\Pages;
 use App\Filament\Resources\OfficeResource\RelationManagers;
 use App\Models\Office;
+use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms;
+use Filament\Forms\Components\Group;
+use Filament\Forms\Components\Section;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
@@ -20,45 +23,71 @@ class OfficeResource extends Resource
 {
     protected static ?string $model = Office::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
+
+    protected static ?string $navigationGroup = 'Presensi Management';
+
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('name')
-                    ->required(),
-                OSMMap::make('location')
-                    ->label('Location')
-                    ->showMarker()
-                    ->draggable()
-                    ->extraControl([
-                        'zoomDelta'           => 1,
-                        'zoomSnap'            => 0.25,
-                        'wheelPxPerZoomLevel' => 60
-                    ])
-                    ->afterStateHydrated(function (Get $get, Set $set, $record) {
-                        $latitude = $record->latitude;
-                        $longitude = $record->longitude;
-                        if ($latitude && $longitude) {
-                            $set('location', ['lat' => $latitude, 'lng' => $longitude]);
-                        }
-                    })
-                    ->afterStateUpdated(function ($state, Get $get, Set $set) {
-                        $set('latitude', $state['lat']);
-                        $set('longitude', $state['lng']);
-                    })
-                    // tiles url (refer to https://www.spatialbias.com/2018/02/qgis-3.0-xyz-tile-layers/)
-                    ->tilesUrl('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'),
-                Forms\Components\TextInput::make('latitude')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('longitude')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('radius')
-                    ->required()
-                    ->numeric(),
+                Group::make()
+                    ->schema([
+                        Section::make()
+                            ->schema([
+                                Forms\Components\TextInput::make('name')
+                                    ->required(),
+                                Map::make('location')
+                                    ->label('Location')
+                                    ->columnSpanFull()
+                                    ->default([
+                                        'lat' => -6.894561,
+                                        'lng' => 110.637492
+                                    ])
+                                    ->afterStateUpdated(function (Set $set, ?array $state): void {
+                                        $set('latitude', $state['lat']);
+                                        $set('longitude', $state['lng']);
+                                    })
+                                    ->afterStateHydrated(function ($state, $record, Set $set): void {
+                                        if ($record) {
+                                            $set('location', ['lat' => $record->latitude, 'lng' => $record->longitude]);
+                                        }
+                                    })
+
+                                    ->liveLocation()
+                                    ->showMarker()
+                                    ->markerColor("#22c55eff")
+                                    ->showFullscreenControl()
+                                    ->showZoomControl()
+                                    ->draggable()
+                                    ->tilesUrl("http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga")
+                                    ->zoom(15)
+                                    ->detectRetina()
+                                    ->extraTileControl([])
+                                    ->extraControl([
+                                        'zoomDelta'           => 1,
+                                        'zoomSnap'            => 2,
+                                    ]),
+                                Group::make()
+                                    ->schema([
+                                        Forms\Components\TextInput::make('latitude')
+                                            ->required()
+                                            ->numeric(),
+                                        Forms\Components\TextInput::make('longitude')
+                                            ->numeric(),
+                                    ])->columns(2),
+                            ]),
+                    ]),
+                Group::make()
+                    ->schema([
+                        Section::make()
+                            ->schema([
+                                Forms\Components\TextInput::make('radius')
+                                    ->required()
+                                    ->numeric(),
+                            ]),
+                    ]),
             ]);
     }
 

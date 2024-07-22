@@ -6,6 +6,8 @@ use App\Filament\Resources\ScheduleResource\Pages;
 use App\Filament\Resources\ScheduleResource\RelationManagers;
 use App\Models\Schedule;
 use Filament\Forms;
+use Filament\Forms\Components\Group;
+use Filament\Forms\Components\Section;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -17,30 +19,35 @@ class ScheduleResource extends Resource
 {
     protected static ?string $model = Schedule::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-calendar-days';
+
+    protected static ?string $navigationGroup = 'Presensi Management';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\Select::make('user_id')
-                    ->relationship('user', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->native(false)
-                    ->required(),
-                Forms\Components\Select::make('shift_id')
-                    ->relationship('shift', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->native(false)
-                    ->required(),
-                Forms\Components\Select::make('office_id')
-                    ->relationship('office', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->native(false)
-                    ->required(),
+                Section::make()
+                    ->schema([
+                        Forms\Components\Select::make('user_id')
+                            ->relationship('user', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->native(false)
+                            ->required(),
+                        Forms\Components\Select::make('shift_id')
+                            ->relationship('shift', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->native(false)
+                            ->required(),
+                        Forms\Components\Select::make('office_id')
+                            ->relationship('office', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->native(false)
+                            ->required(),
+                    ])->columns(3),
             ]);
     }
 
