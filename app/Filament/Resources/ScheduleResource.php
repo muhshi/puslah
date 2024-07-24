@@ -14,6 +14,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Auth;
 
 class ScheduleResource extends Resource
 {
@@ -47,6 +48,9 @@ class ScheduleResource extends Resource
                             ->preload()
                             ->native(false)
                             ->required(),
+                        Forms\Components\Toggle::make('is_wfa')
+                            ->default(false)
+                            ->required(),
                     ])->columns(3),
             ]);
     }
@@ -54,15 +58,30 @@ class ScheduleResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(function (Builder $query) {
+                //if(Auth::user()->hasRole('Doctor')) -> pakai ini bisa tapi terdeteksi error sama intelephense
+                if (Auth::user()->roles[0]->name != 'super_admin') {
+                    $query->where('user_id', Auth::user()->id);
+                }
+            })
             ->columns([
                 Tables\Columns\TextColumn::make('user.name')
-                    ->numeric()
+                    ->label('Name')
+                    ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('user.email')
+                    ->label('Email'),
                 Tables\Columns\TextColumn::make('shift.name')
-                    ->numeric()
+                    ->description(fn(Schedule $record): string => $record->shift->start_time . ' - ' . $record->shift->end_time)
                     ->sortable(),
+                Tables\Columns\IconColumn::make('is_wfa')
+                    ->label('WFA')
+                    ->boolean()
+                    ->sortable(),
+                Tables\Columns\ToggleColumn::make('is_wfa')
+                    ->label('WFA')
+                    ->visible(fn() => Auth::user()->roles[0]->name == 'super_admin'),
                 Tables\Columns\TextColumn::make('office.name')
-                    ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
