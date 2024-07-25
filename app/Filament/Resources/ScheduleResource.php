@@ -78,9 +78,9 @@ class ScheduleResource extends Resource
                     ->label('WFA')
                     ->boolean()
                     ->sortable(),
-                Tables\Columns\ToggleColumn::make('is_wfa')
-                    ->label('WFA')
-                    ->visible(fn() => Auth::user()->roles[0]->name == 'super_admin'),
+                // Tables\Columns\ToggleColumn::make('is_wfa')
+                //     ->label('WFA')
+                //     ->visible(fn() => Auth::user()->roles[0]->name == 'super_admin'),
                 Tables\Columns\TextColumn::make('office.name')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
