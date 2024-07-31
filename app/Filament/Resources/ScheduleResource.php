@@ -33,6 +33,7 @@ class ScheduleResource extends Resource
                         Forms\Components\Select::make('user_id')
                             ->relationship('user', 'name')
                             ->searchable()
+                            ->unique()
                             ->preload()
                             ->native(false)
                             ->required(),
@@ -51,6 +52,9 @@ class ScheduleResource extends Resource
                         Forms\Components\Toggle::make('is_wfa')
                             ->default(false)
                             ->required(),
+                        Forms\Components\Toggle::make('is_banned'),
+
+
                     ])->columns(3),
             ]);
     }
@@ -71,16 +75,32 @@ class ScheduleResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('user.email')
                     ->label('Email'),
+                Auth::user()->roles[0]->name == 'super_admin' ?
+                    Tables\Columns\ToggleColumn::make('is_banned')
+                    ->label('Banned') :
+                    Tables\Columns\TextColumn::make('is_banned')
+                    ->label('Status')
+                    ->badge()
+                    ->getStateUsing(function ($record) {
+                        return $record->isBanned() ? 'Banned' : 'Active';
+                    })
+                    ->color(function ($record) {
+                        return $record->isBanned() ? 'danger' : 'success';
+                    }),
+
                 Tables\Columns\TextColumn::make('shift.name')
                     ->description(fn(Schedule $record): string => $record->shift->start_time . ' - ' . $record->shift->end_time)
                     ->sortable(),
-                Tables\Columns\IconColumn::make('is_wfa')
+                //setting WFA toggle untuk admin, tapi icon untuk pegawai
+                Auth::user()->roles[0]->name == 'super_admin' ?
+                    Tables\Columns\ToggleColumn::make('is_wfa')
+                    ->label('WFA')
+                    ->visible(fn() => Auth::user()->roles[0]->name == 'super_admin') :
+                    Tables\Columns\IconColumn::make('is_wfa')
                     ->label('WFA')
                     ->boolean()
                     ->sortable(),
-                // Tables\Columns\ToggleColumn::make('is_wfa')
-                //     ->label('WFA')
-                //     ->visible(fn() => Auth::user()->roles[0]->name == 'super_admin'),
+
                 Tables\Columns\TextColumn::make('office.name')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
@@ -102,6 +122,7 @@ class ScheduleResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

@@ -11,6 +11,7 @@
         "filament/filament": "^3.2.0",
         "humaidem/filament-map-picker": "^0.1.5",
         "laravel/framework": "^11.9",
+        "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.9"
     },
     "require-dev": {
