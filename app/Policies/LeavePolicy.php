@@ -3,10 +3,10 @@
 namespace App\Policies;
 
 use App\Models\User;
-use App\Models\Shift;
+use App\Models\Leave;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
-class ShiftPolicy
+class LeavePolicy
 {
     use HandlesAuthorization;
 
@@ -15,15 +15,15 @@ class ShiftPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_shift');
+        return $user->can('view_any_leave');
     }
 
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, Shift $shift): bool
+    public function view(User $user, Leave $leave): bool
     {
-        return $user->can('view_shift');
+        return $user->can('view_leave');
     }
 
     /**
@@ -31,23 +31,23 @@ class ShiftPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_shift');
+        return $user->can('create_leave');
     }
 
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, Shift $shift): bool
+    public function update(User $user, Leave $leave): bool
     {
-        return $user->can('update_shift');
+        return $user->can('update_leave');
     }
 
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, Shift $shift): bool
+    public function delete(User $user, Leave $leave): bool
     {
-        return $user->can('delete_shift');
+        return $user->can('delete_leave');
     }
 
     /**
@@ -55,13 +55,13 @@ class ShiftPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_shift');
+        return $user->can('delete_any_leave');
     }
 
     /**
      * Determine whether the user can permanently delete.
      */
-    public function forceDelete(User $user, Shift $shift): bool
+    public function forceDelete(User $user, Leave $leave): bool
     {
         return $user->can('{{ ForceDelete }}');
     }
@@ -77,9 +77,9 @@ class ShiftPolicy
     /**
      * Determine whether the user can restore.
      */
-    public function restore(User $user, Shift $shift): bool
+    public function restore(User $user, Leave $leave): bool
     {
-        return $user->can('restore_shift');
+        return $user->can('restore_leave');
     }
 
     /**
@@ -87,13 +87,13 @@ class ShiftPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_shift');
+        return $user->can('restore_any_leave');
     }
 
     /**
      * Determine whether the user can replicate.
      */
-    public function replicate(User $user, Shift $shift): bool
+    public function replicate(User $user, Leave $leave): bool
     {
         return $user->can('{{ Replicate }}');
     }

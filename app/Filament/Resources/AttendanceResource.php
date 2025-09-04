@@ -88,15 +88,12 @@ class AttendanceResource extends Resource
                 Tables\Columns\TextColumn::make('start_time')
                     ->label('Jam Datang'),
                 Tables\Columns\TextColumn::make('end_time')
-                    ->label('Jam Pulang'),
+                    ->label('Jam Pulang')
+                    ->formatStateUsing(fn($state) => $state ?: ''),
                 Tables\Columns\TextColumn::make('work_duration')
                     ->label('Durasi Kerja')
-                    ->getStateUsing(function ($record) {
-                        return $record->workDuration();
-                    })
-                    ->color(function ($record) {
-                        return $record->lessWorkDuration() ? 'success' : 'danger';
-                    }),
+                    ->getStateUsing(fn($record) => $record->workDuration())
+                    ->color(fn($record) => $record->underSevenHours() ? 'danger' : 'success'),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()

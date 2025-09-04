@@ -63,7 +63,7 @@ class AttendancePolicy
      */
     public function forceDelete(User $user, Attendance $attendance): bool
     {
-        return $user->can('force_delete_attendance');
+        return $user->can('{{ ForceDelete }}');
     }
 
     /**
@@ -71,7 +71,7 @@ class AttendancePolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_attendance');
+        return $user->can('{{ ForceDeleteAny }}');
     }
 
     /**
@@ -95,7 +95,7 @@ class AttendancePolicy
      */
     public function replicate(User $user, Attendance $attendance): bool
     {
-        return $user->can('replicate_attendance');
+        return $user->can('{{ Replicate }}');
     }
 
     /**
@@ -103,6 +103,6 @@ class AttendancePolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_attendance');
+        return $user->can('{{ Reorder }}');
     }
 }

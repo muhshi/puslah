@@ -63,7 +63,7 @@ class SchedulePolicy
      */
     public function forceDelete(User $user, Schedule $schedule): bool
     {
-        return $user->can('force_delete_schedule');
+        return $user->can('{{ ForceDelete }}');
     }
 
     /**
@@ -71,7 +71,7 @@ class SchedulePolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_schedule');
+        return $user->can('{{ ForceDeleteAny }}');
     }
 
     /**
@@ -95,7 +95,7 @@ class SchedulePolicy
      */
     public function replicate(User $user, Schedule $schedule): bool
     {
-        return $user->can('replicate_schedule');
+        return $user->can('{{ Replicate }}');
     }
 
     /**
@@ -103,6 +103,6 @@ class SchedulePolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_schedule');
+        return $user->can('{{ Reorder }}');
     }
 }

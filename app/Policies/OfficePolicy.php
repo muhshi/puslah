@@ -63,7 +63,7 @@ class OfficePolicy
      */
     public function forceDelete(User $user, Office $office): bool
     {
-        return $user->can('force_delete_office');
+        return $user->can('{{ ForceDelete }}');
     }
 
     /**
@@ -71,7 +71,7 @@ class OfficePolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_office');
+        return $user->can('{{ ForceDeleteAny }}');
     }
 
     /**
@@ -95,7 +95,7 @@ class OfficePolicy
      */
     public function replicate(User $user, Office $office): bool
     {
-        return $user->can('replicate_office');
+        return $user->can('{{ Replicate }}');
     }
 
     /**
@@ -103,6 +103,6 @@ class OfficePolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_office');
+        return $user->can('{{ Reorder }}');
     }
 }
