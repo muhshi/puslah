@@ -20,7 +20,9 @@ class ShiftResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-clipboard-document';
 
-    protected static ?string $navigationGroup = 'Presensi Management';
+    protected static ?string $navigationGroup = 'Manajemen Kantor Cabang';
+    protected static ?string $navigationLabel = 'Shift';
+    protected static ?int $navigationSort = 82;
 
     public static function form(Form $form): Form
     {

@@ -25,7 +25,9 @@ class OfficeResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
 
-    protected static ?string $navigationGroup = 'Presensi Management';
+    protected static ?string $navigationGroup = 'Manajemen Kantor Cabang';
+    protected static ?string $navigationLabel = 'Kantor';
+    protected static ?int $navigationSort = 80;
 
 
     public static function form(Form $form): Form
@@ -66,8 +68,8 @@ class OfficeResource extends Resource
                                     ->detectRetina()
                                     ->extraTileControl([])
                                     ->extraControl([
-                                        'zoomDelta'           => 1,
-                                        'zoomSnap'            => 2,
+                                        'zoomDelta' => 1,
+                                        'zoomSnap' => 2,
                                     ]),
                                 Group::make()
                                     ->schema([

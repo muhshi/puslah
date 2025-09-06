@@ -1,11 +1,13 @@
 <x-filament::page>
-    <div>
+    <form wire:submit.prevent="save" class="space-y-6">
         {{ $this->form }}
-    </div>
 
-    <x-slot name="footer">
-        <x-filament::button wire:click="save">
-            Simpan
-        </x-filament::button>
-    </x-slot>
+        <div class="flex justify-start">
+            <x-filament::button type="submit">
+                Simpan
+            </x-filament::button>
+        </div>
+    </form>
+
+    <x-filament-actions::modals />
 </x-filament::page>

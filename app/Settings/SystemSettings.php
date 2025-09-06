@@ -13,6 +13,7 @@ class SystemSettings extends Settings
     public string $default_work_end;   // 'H:i'
     /** @var array<int> 1=Mon ... 7=Sun */
     public array $default_workdays;
+    public string $default_office_name;
 
     public static function defaults(): array
     {
@@ -23,6 +24,7 @@ class SystemSettings extends Settings
             'default_work_start' => '08:00',
             'default_work_end' => '16:00',
             'default_workdays' => [1, 2, 3, 4, 5],
+            'default_office_name' => 'Puslah BPS Demak',
         ];
     }
 

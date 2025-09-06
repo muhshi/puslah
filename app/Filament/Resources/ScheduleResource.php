@@ -22,7 +22,9 @@ class ScheduleResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-calendar-days';
 
-    protected static ?string $navigationGroup = 'Presensi Management';
+    protected static ?string $navigationGroup = 'Manajemen Kantor Cabang';
+    protected static ?string $navigationLabel = 'Jadwal';
+    protected static ?int $navigationSort = 81;
 
     public static function form(Form $form): Form
     {
@@ -49,11 +51,6 @@ class ScheduleResource extends Resource
                             ->preload()
                             ->native(false)
                             ->required(),
-                        Forms\Components\Toggle::make('is_wfa')
-                            ->default(false)
-                            ->required(),
-                        Forms\Components\Toggle::make('is_banned'),
-
 
                     ])->columns(3),
             ]);
@@ -75,30 +72,9 @@ class ScheduleResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('user.email')
                     ->label('Email'),
-                Auth::user()->roles[0]->name == 'super_admin' ?
-                    Tables\Columns\ToggleColumn::make('is_banned')
-                    ->label('Banned') :
-                    Tables\Columns\TextColumn::make('is_banned')
-                    ->label('Status')
-                    ->badge()
-                    ->getStateUsing(function ($record) {
-                        return $record->isBanned() ? 'Banned' : 'Active';
-                    })
-                    ->color(function ($record) {
-                        return $record->isBanned() ? 'danger' : 'success';
-                    }),
 
                 Tables\Columns\TextColumn::make('shift.name')
                     ->description(fn(Schedule $record): string => $record->shift->start_time . ' - ' . $record->shift->end_time)
-                    ->sortable(),
-                //setting WFA toggle untuk admin, tapi icon untuk pegawai
-                Auth::user()->roles[0]->name == 'super_admin' ?
-                    Tables\Columns\ToggleColumn::make('is_wfa')
-                    ->label('WFA')
-                    ->visible(fn() => Auth::user()->roles[0]->name == 'super_admin') :
-                    Tables\Columns\IconColumn::make('is_wfa')
-                    ->label('WFA')
-                    ->boolean()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('office.name')
