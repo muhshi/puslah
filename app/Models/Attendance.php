@@ -40,10 +40,11 @@ class Attendance extends Model
 
     public function workDuration(): string
     {
-        $mins = $this->workedMinutes();
-        $h = intdiv($mins, 60);
-        $m = $mins % 60;
-        return "{$h} jam {$m} menit";
+        $m = $this->durationMinutes();
+        $h = intdiv($m, 60);
+        $mm = $m % 60;
+
+        return "{$h} jam {$mm} menit";
     }
 
     public function lessWorkDuration()
@@ -68,26 +69,28 @@ class Attendance extends Model
         return !empty($this->end_time);
     }
 
-    public function workedMinutes(): int
+    public function durationMinutes(): int
     {
-        if (empty($this->start_time) || empty($this->end_time)) {
-            return 0; // belum checkout
+        // Belum checkout
+        if (!$this->start_time || !$this->end_time) {
+            return 0;
         }
 
+        // Parse aman untuk 'H:i' / 'H:i:s'
         $start = Carbon::parse($this->start_time);
         $end = Carbon::parse($this->end_time);
 
-        // kalau end < start (shift malam), anggap selesai keesokan hari
+        // Jika end < start, anggap shift nyebrang hari
         if ($end->lessThan($start)) {
             $end->addDay();
         }
 
-        return $end->diffInMinutes($start);
+        return $start->diffInMinutes($end); // SELALU positif
     }
 
     /** Merah kalau < 7 jam */
     public function underSevenHours(): bool
     {
-        return $this->workedMinutes() < (7 * 60); // 420 menit
+        return $this->durationMinutes() < (7 * 60); // 420 menit
     }
 }

@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\AttendanceResource\Pages;
 use App\Filament\Resources\AttendanceResource\RelationManagers;
 use App\Models\Attendance;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -95,7 +96,12 @@ class AttendanceResource extends Resource
                 Tables\Columns\TextColumn::make('work_duration')
                     ->label('Durasi Kerja')
                     ->getStateUsing(fn($record) => $record->workDuration())
-                    ->color(fn($record) => $record->underSevenHours() ? 'danger' : 'success'),
+                    ->color(function ($record) {
+                        if (!$record->end_time) {
+                            return 'gray';        // belum checkout
+                        }
+                        return $record->underSevenHours() ? 'danger' : 'success';
+                    }),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
@@ -107,11 +113,30 @@ class AttendanceResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('user_id')
+                    ->label('Pegawai')
+                    ->options(\App\Models\User::orderBy('name')->pluck('name', 'id'))
+                    ->searchable(),
+
+                Tables\Filters\Filter::make('created_at')
+                    ->form([
+                        Forms\Components\DatePicker::make('from')->label('Dari'),
+                        Forms\Components\DatePicker::make('until')->label('Sampai'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when($data['from'], fn($q, $date) => $q->whereDate('created_at', '>=', $date))
+                            ->when($data['until'], fn($q, $date) => $q->whereDate('created_at', '<=', $date));
+                    }),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 //Tables\Actions\EditAction::make(),
+            ])
+            ->headerActions([
+                ExportAction::make()
+                    ->label('Export XLSX')
+                    ->color('success')
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
