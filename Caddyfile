@@ -1,6 +1,7 @@
 {
   frankenphp
   order cgi-php before file_server
+  auto_https off
 }
 
 :80 {
