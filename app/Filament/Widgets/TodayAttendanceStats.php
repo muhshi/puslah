@@ -13,7 +13,7 @@ use Illuminate\Support\Carbon;
 
 class TodayAttendanceStats extends BaseWidget
 {
-    protected static ?string $heading = 'Rekap Hari Ini (WIB)';
+    protected ?string $heading = 'Rekap Hari Ini (WIB)';
     protected function getStats(): array
     {
         $today = Carbon::today('Asia/Jakarta')->toDateString();
