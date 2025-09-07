@@ -10,8 +10,8 @@ use Filament\Widgets\ChartWidget;
 
 class TodayPresencePie extends ChartWidget
 {
-    protected ?string $heading = 'Distribusi Hari Ini';
-    protected ?string $maxHeight = '300px';
+    protected static ?string $heading = 'Distribusi Hari Ini';
+    protected static ?string $maxHeight = '300px';
 
     protected function getData(): array
     {

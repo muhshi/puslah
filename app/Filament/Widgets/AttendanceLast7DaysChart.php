@@ -8,8 +8,8 @@ use Illuminate\Support\Carbon;
 
 class AttendanceLast7DaysChart extends ChartWidget
 {
-    protected ?string $heading = 'Hadir 7 Hari Terakhir';
-    protected ?string $maxHeight = '300px';
+    protected static ?string $heading = 'Hadir 7 Hari Terakhir';
+    protected static ?string $maxHeight = '300px';
 
     protected function getData(): array
     {
