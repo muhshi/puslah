@@ -6,6 +6,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "barryvdh/laravel-dompdf": "^2.0",
         "bezhansalleh/filament-shield": "^3.2",
         "dotswan/filament-map-picker": "^1.2",
         "filament/filament": "^3.2.0",
@@ -15,6 +16,7 @@
         "laravel/tinker": "^2.9",
         "maatwebsite/excel": "^3.1",
         "pxlrbt/filament-excel": "^2.5",
+        "simplesoftwareio/simple-qrcode": "^4.2",
         "spatie/laravel-settings": "^3.4"
     },
     "require-dev": {

@@ -33,6 +33,6 @@ class DatabaseSeeder extends Seeder
 
         $this->call(OfficeSeeder::class);
         $this->call(ShiftSeeder::class);
-        $this->call(SystemSettingsSeeder::class);
+
     }
 }
