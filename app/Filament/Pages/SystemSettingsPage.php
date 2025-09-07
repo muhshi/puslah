@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Forms\Get;
 use Filament\Pages\Page;
 
@@ -18,10 +19,13 @@ use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Set;
+use Illuminate\Support\Facades\Auth;
 
 class SystemSettingsPage extends Page implements HasForms
 {
     use InteractsWithForms;
+    use HasPageShield;
+    protected static ?string $slug = 'system-settings';
     protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
     protected static ?string $navigationGroup = 'Pengaturan';
     protected static ?string $title = 'Pengaturan Sistem';
@@ -129,4 +133,6 @@ class SystemSettingsPage extends Page implements HasForms
 
         Notification::make()->title('Pengaturan tersimpan')->success()->send();
     }
+
+
 }

@@ -52,4 +52,22 @@ class User extends Authenticatable
     {
         return $this->hasMany(Leave::class);
     }
+    public function profile()
+    {
+        return $this->hasOne(\App\Models\UserProfile::class);
+    }
+
+    protected static function booted()
+    {
+        static::created(function ($user) {
+            // buat profil kosong ONLY jika belum ada
+            $user->profile()->firstOrCreate([
+                'user_id' => $user->id,
+            ], [
+                'employment_status' => 'aktif',
+                'full_name' => $user->name ?? '', // opsional
+            ]);
+        });
+    }
+
 }
