@@ -1,0 +1,21 @@
+services:
+    puslah-franken:
+        container_name: puslah-franken
+        restart: unless-stopped
+        environment:
+            - PUID=1000
+            - PGID=1000
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - '8001:80'
+        volumes:
+            - '.:/app'
+        networks:
+            - default
+            - mysql-stack_mysql_network
+    networks:
+    default: null
+    mysql-stack_mysql_network:
+        external: true

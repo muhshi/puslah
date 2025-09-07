@@ -1,0 +1,25 @@
+{
+  frankenphp
+  order cgi-php before file_server
+}
+
+:80 {
+  # Akar dokumen Laravel
+  root * /app/public
+
+  # Static file & kompresi
+  encode zstd gzip
+
+  # Eksekusi PHP (FrankenPHP)
+  php_server
+
+  # Front controller fallback ke public/index.php
+  try_files {path} /index.php
+
+  # Header basic security (opsional)
+  header {
+    X-Frame-Options "SAMEORIGIN"
+    X-Content-Type-Options "nosniff"
+    Referrer-Policy "strict-origin-when-cross-origin"
+  }
+}
