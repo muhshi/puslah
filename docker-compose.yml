@@ -5,6 +5,7 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
+      - SERVER_NAME=:80
     build:
       context: .
       dockerfile: Dockerfile
