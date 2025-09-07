@@ -19,7 +19,10 @@ class UserProfileResource extends Resource
 {
     protected static ?string $model = UserProfile::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-users';
+
+    protected static ?string $navigationGroup = 'Pengaturan Akun';
+    protected static ?string $navigationLabel = 'Profil Pengguna';
 
     public static function form(Form $form): Form
     {
