@@ -74,8 +74,11 @@ class User extends Authenticatable
 
     public function canAccessPanel(Panel $panel): bool
     {
+        dd($this instanceof User, $this->canAccessPanel($panel));
         return true;
+
     }
+
 
 
 }
