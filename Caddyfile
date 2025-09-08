@@ -1,23 +1,21 @@
 {
   frankenphp
-  order cgi-php before file_server
+  # yang benar:
+  order php_server before file_server
   auto_https off
 }
 
 :80 {
-  # Akar dokumen Laravel
   root * /app/public
 
-  # Static file & kompresi
   encode zstd gzip
 
-  # Eksekusi PHP (FrankenPHP)
+  # Pastikan ini dieksekusi sebelum file_server
   php_server
 
-  # Front controller fallback ke public/index.php
+  # Front controller fallback (aman dipertahankan)
   try_files {path} /index.php
 
-  # Header basic security (opsional)
   header {
     X-Frame-Options "SAMEORIGIN"
     X-Content-Type-Options "nosniff"
