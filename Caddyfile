@@ -1,24 +1,15 @@
 {
   frankenphp
   # yang benar:
-  order php_server before file_server
-  auto_https off
+  order cgi-php before file_server
 }
 
 :80 {
   root * /app/public
 
-  encode zstd gzip
+  encode zstd br gzip
 
   # Pastikan ini dieksekusi sebelum file_server
   php_server
 
-  # Front controller fallback (aman dipertahankan)
-  try_files {path} /index.php
-
-  header {
-    X-Frame-Options "SAMEORIGIN"
-    X-Content-Type-Options "nosniff"
-    Referrer-Policy "strict-origin-when-cross-origin"
-  }
 }
