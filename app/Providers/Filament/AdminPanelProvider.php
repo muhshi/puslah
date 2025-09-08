@@ -66,11 +66,10 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
-                EnsureProfileComplete::class,
+                //EnsureProfileComplete::class,
             ])
             ->authMiddleware([
                 Authenticate::class,
-                fn(): bool => Auth::check(),
             ])
             ->plugins([
                 FilamentShieldPlugin::make()
