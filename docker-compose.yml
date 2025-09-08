@@ -13,6 +13,7 @@ services:
       - "8089:80"
     volumes:
       - .:/app
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
     networks:
       - default
       - mysql-stack_mysql_network
