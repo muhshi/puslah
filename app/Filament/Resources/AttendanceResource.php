@@ -89,9 +89,11 @@ class AttendanceResource extends Resource
                         return $record->isLate() ? 'danger' : 'success';
                     }),
                 Tables\Columns\TextColumn::make('start_time')
-                    ->label('Jam Datang'),
+                    ->label('Jam Datang')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('end_time')
                     ->label('Jam Pulang')
+                    ->sortable()
                     ->formatStateUsing(fn($state) => $state ?: ''),
                 Tables\Columns\TextColumn::make('work_duration')
                     ->label('Durasi Kerja')
