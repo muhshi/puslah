@@ -14,6 +14,7 @@ services:
     volumes:
       - .:/app
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - .:/var/www/html
     networks:
       - default
       - mysql-stack_mysql_network
