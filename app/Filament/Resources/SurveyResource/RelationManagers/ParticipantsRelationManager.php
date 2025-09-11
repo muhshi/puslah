@@ -101,6 +101,7 @@ class ParticipantsRelationManager extends RelationManager
                     }),
             ])
             ->actions([
+
                 Tables\Actions\EditAction::make(),
                 Action::make('approve')
                     ->label('Approve + Sertifikat')
@@ -115,7 +116,9 @@ class ParticipantsRelationManager extends RelationManager
                     })
                     ->openUrlInNewTab()
                     ->visible(fn(SurveyUser $r) => Certificate::where('survey_id', $r->survey_id)->where('user_id', $r->user_id)->exists()),
+                Tables\Actions\DeleteAction::make(),
             ])
+
             ->defaultSort('id', 'desc');
     }
 

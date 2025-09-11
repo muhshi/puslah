@@ -18,7 +18,10 @@ class SurveyResource extends Resource
 {
     protected static ?string $model = Survey::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-m-clipboard-document-check';
+
+    protected static ?string $navigationGroup = 'Manajemen Survei';
+    protected static ?string $navigationLabel = 'Survei';
 
     public static function form(Form $form): Form
     {

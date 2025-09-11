@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Auth;
 
 class Dashboard extends BaseDashboard
 {
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    protected static ?string $navigationIcon = 'heroicon-m-presentation-chart-bar';
 
     protected static string $view = 'filament.pages.dashboard';
 
