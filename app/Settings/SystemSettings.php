@@ -1,5 +1,4 @@
 <?php
-// app/Settings/SystemSettings.php
 namespace App\Settings;
 
 use Spatie\LaravelSettings\Settings;
@@ -14,6 +13,11 @@ class SystemSettings extends Settings
     /** @var array<int> 1=Mon ... 7=Sun */
     public array $default_workdays;
     public string $default_office_name;
+    public string $cert_signer_name;
+    public string $cert_signer_title;
+    public ?string $cert_signer_signature_path;
+    public string $cert_number_prefix;        // ex: 'BPS-DMK'
+    public array $cert_number_seq_by_year;    // ex: ['2025'=>123]
 
     public static function defaults(): array
     {
