@@ -31,7 +31,16 @@ class UserProfileResource extends Resource
                 Forms\Components\Select::make('user_id')
                     ->relationship('user', 'name')
                     ->required(),
-                Forms\Components\TextInput::make('avatar_path'),
+                Forms\Components\FileUpload::make('avatar_path')
+                    ->label('Foto')
+                    ->image()
+                    ->directory('avatars')        // file akan ke storage/app/public/avatars
+                    ->disk('public')              // pake disk public
+                    ->visibility('public')        // biar bisa diakses via /storage/...
+                    ->imageEditor()               // optional: crop/rotate
+                    ->imagePreviewHeight('200')   // optional
+                    ->maxSize(2048)               // 2 MB
+                    ->helperText('JPG/PNG, maks 2MB'),
                 Forms\Components\TextInput::make('full_name')
                     ->required(),
                 Forms\Components\TextInput::make('nickname'),
