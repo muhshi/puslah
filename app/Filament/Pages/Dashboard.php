@@ -8,12 +8,15 @@ use App\Filament\Widgets\TodayPresencePie;
 use Faker\Provider\Base;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Url;
 
 class Dashboard extends BaseDashboard
 {
     protected static ?string $navigationIcon = 'heroicon-m-presentation-chart-bar';
 
     protected static string $view = 'filament.pages.dashboard';
+    #[Url] public ?string $dateFrom = null;
+    #[Url] public ?string $dateUntil = null;
 
     protected function isAdmin(): bool
     {

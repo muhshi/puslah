@@ -35,6 +35,11 @@ class TodayPresencePie extends ChartWidget
             'datasets' => [
                 [
                     'data' => [$hadir, $izin, $tidak],
+                    'backgroundColor' => [
+                        'rgb(34,197,94)',   // hijau
+                        'rgb(249,115,22)',  // oranye
+                        'rgb(239,68,68)',   // merah
+                    ],
                 ],
             ],
         ];
