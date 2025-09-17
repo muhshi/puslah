@@ -5,11 +5,16 @@
 }
 
 puslah.bpsdemak.com {
-  root * /app/public
+    root * /app/public
+    encode zstd br gzip
 
-  encode zstd br gzip
+    # Pastikan /livewire/* tidak ditangani sebagai static file
+    @livewire path /livewire/*
+    handle @livewire {
+        rewrite * /index.php?{query}
+    }
 
-  # Pastikan ini dieksekusi sebelum file_server
-  php_server
-
+    php_server
+    file_server
 }
+
