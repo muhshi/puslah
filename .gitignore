@@ -1,3 +1,7 @@
+# Ignore build assets
+/public/css/
+/public/js/
+/public/vendor/livewire/
 /.phpunit.cache
 /node_modules
 /public/build
