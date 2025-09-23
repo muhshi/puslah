@@ -50,7 +50,9 @@ class User extends Authenticatable implements FilamentUser
             'password' => 'hashed',
         ];
     }
-
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
     public function leaves(): HasMany
     {
         return $this->hasMany(Leave::class);
@@ -58,6 +60,13 @@ class User extends Authenticatable implements FilamentUser
     public function profile()
     {
         return $this->hasOne(\App\Models\UserProfile::class);
+    }
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(\App\Models\Attendance::class);
     }
 
     protected static function booted()

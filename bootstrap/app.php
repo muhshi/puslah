@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->trustProxies(at: '*');
     })
+    ->withSchedule(function (Illuminate\Console\Scheduling\Schedule $schedule) {
+        $schedule->command('recap:update')->dailyAt('00:10')->timezone('Asia/Jakarta');
+    })
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();
