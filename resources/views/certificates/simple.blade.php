@@ -1,4 +1,4 @@
-<!doctype html>
+{{-- <!doctype html>
 <html>
 
 <head>
@@ -85,4 +85,4 @@
     </div>
 </body>
 
-</html>
+</html> --}}

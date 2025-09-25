@@ -75,7 +75,11 @@
                     <div class="flex gap-2">
                         @if ($cert)
                             <x-filament::button tag="a" target="_blank"
-                                href="{{ route('certificates.download', $cert) }}" color="success" size="sm">
+                                href="{{ route('certificates.preview', $cert) }}" color="gray" size="sm">
+                                Lihat Sertifikat
+                            </x-filament::button>
+                            <x-filament::button tag="a" href="{{ route('certificates.download', $cert) }}"
+                                color="success" size="sm">
                                 Unduh Sertifikat
                             </x-filament::button>
                         @endif

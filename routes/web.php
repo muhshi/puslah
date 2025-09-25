@@ -18,15 +18,23 @@ Route::group(['middleware' => 'auth'], function () {
     Route::get('presensi', Presensi::class)->name('presensi');
 });
 
-Route::get('/certificates/{certificate}/download', function (Certificate $certificate) {
-    $user = Auth::user();
-    if (!($user->roles[0]->name == 'super_admin' || $certificate->user_id === $user->id)) {
-        abort(403);
-    }
+Route::get('/certificates/{certificate}/preview', [\App\Http\Controllers\CertificateController::class, 'preview'])
+    ->name('certificates.preview')
+    ->middleware(['auth']);
 
-    abort_if(!Storage::exists($certificate->file_path), 404);
-    return response()->file(storage_path('app/' . $certificate->file_path));
-})->name('certificates.download')->middleware(['auth']);
+Route::get('/certificates/{certificate}/download', [\App\Http\Controllers\CertificateController::class, 'download'])
+    ->name('certificates.download')
+    ->middleware(['auth']);
+
+// Route::get('/certificates/{certificate}/download', function (Certificate $certificate) {
+//     $user = Auth::user();
+//     if (!($user->roles[0]->name == 'super_admin' || $certificate->user_id === $user->id)) {
+//         abort(403);
+//     }
+
+//     abort_if(!Storage::exists($certificate->file_path), 404);
+//     return response()->file(storage_path('app/' . $certificate->file_path));
+// })->name('certificates.download')->middleware(['auth']);
 
 
 Route::get('/verify', function () {

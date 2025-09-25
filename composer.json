@@ -11,6 +11,7 @@
         "dotswan/filament-map-picker": "^1.2",
         "filament/filament": "^3.2.0",
         "humaidem/filament-map-picker": "^0.1.5",
+        "joshembling/image-optimizer": "^1.5",
         "laravel/framework": "^11.0",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.9",

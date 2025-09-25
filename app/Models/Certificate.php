@@ -32,4 +32,8 @@ class Certificate extends Model
     {
         return $this->belongsTo(User::class);
     }
+    public function template()
+    {
+        return $this->belongsTo(CertificateTemplate::class, 'certificate_template_id');
+    }
 }
