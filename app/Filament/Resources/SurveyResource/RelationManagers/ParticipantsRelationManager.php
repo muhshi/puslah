@@ -18,6 +18,8 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
@@ -118,7 +120,29 @@ class ParticipantsRelationManager extends RelationManager
                     ->visible(fn(SurveyUser $r) => Certificate::where('survey_id', $r->survey_id)->where('user_id', $r->user_id)->exists()),
                 Tables\Actions\DeleteAction::make(),
             ])
-
+            ->bulkActions([
+                Tables\Actions\BulkAction::make('approveSelected')
+                    ->label('Approve & Terbitkan Sertifikat')
+                    ->icon('heroicon-o-check-badge')
+                    ->requiresConfirmation()
+                    ->deselectRecordsAfterCompletion()
+                    ->action(function (Collection $records): void {
+                        try {
+                            foreach ($records as $row) { // $row adalah SurveyUser
+                                if ($row->status !== 'approved') {
+                                    $row->update(['status' => 'approved']);
+                                    $this->issueCertificate($row); // pakai helper milik RelationManager-mu
+                                    // atau dispatch(Job) di sini
+                                }
+                            }
+                            Notification::make()->title('Approved & sertifikat diterbitkan')->success()->send();
+                        } catch (\Throwable $e) {
+                            Notification::make()->title('Gagal')->body($e->getMessage())->danger()->send();
+                            Log::error('RM bulk approve error', ['e' => $e]);
+                        }
+                    }),
+                Tables\Actions\DeleteBulkAction::make(),
+            ])
             ->defaultSort('id', 'desc');
     }
 

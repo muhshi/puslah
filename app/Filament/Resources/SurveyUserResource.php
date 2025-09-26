@@ -13,6 +13,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -21,6 +22,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class SurveyUserResource extends Resource
@@ -85,11 +88,29 @@ class SurveyUserResource extends Resource
                     ->label('Approve & Terbitkan Sertifikat')
                     ->icon('heroicon-o-check-badge')
                     ->requiresConfirmation()
-                    ->action(function (array $records) {
-                        $rows = SurveyUser::whereIn('id', $records)->get();
-                        foreach ($rows as $row) {
-                            $row->update(['status' => 'approved']);
-                            self::issueCertificate($row);
+                    ->deselectRecordsAfterCompletion() // UI rapi setelah selesai
+                    ->action(function (Collection $records): void {
+                        try {
+                            $records->each(function (\App\Models\SurveyUser $row) {
+                                if ($row->status !== 'approved') {
+                                    $row->update(['status' => 'approved']);
+                                    // Ideal: dispatch(new IssueCertificateJob($row->id));
+                                    self::issueCertificate($row); // sementara tetap sinkron
+                                }
+                            });
+
+                            Notification::make()
+                                ->title('Approved & sertifikat diterbitkan')
+                                ->success()
+                                ->send();
+                        } catch (\Throwable $e) {
+                            Notification::make()
+                                ->title('Gagal menerbitkan sebagian/semua sertifikat')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                            // log biar tahu akar masalah
+                            Log::error('Bulk approve error', ['e' => $e]);
                         }
                     }),
                 Tables\Actions\DeleteBulkAction::make(),
