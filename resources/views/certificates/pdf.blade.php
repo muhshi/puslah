@@ -1,3 +1,10 @@
+@php
+    $fontBase = storage_path('fonts/Montserrat/static');
+    $montRegular = $fontBase . '/Montserrat-Regular.ttf';
+    $montSemiBold = $fontBase . '/Montserrat-SemiBold.ttf';
+    $montBold = $fontBase . '/Montserrat-Bold.ttf';
+@endphp
+
 <style>
     @page {
         margin: 0;
@@ -84,16 +91,16 @@
     /* optional: grid bantu saat PREVIEW */
     {{ !empty($preview)
         ? "
-                                                                                                                                                                                                                                                                                                                                                                            .page{ outline:1px solid rgba(0,0,0,.08); }
-                                                                                                                                                                                                                                                                                                                                                                            .box { outline:1px dashed rgba(0,0,0,.25); }
-                                                                                                                                                                                                                                                                                                                                                                            .grid-helper::before{
-                                                                                                                                                                                                                                                                                                                                                                              content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
-                                                                                                                                                                                                                                                                                                                                                                              background:
-                                                                                                                                                                                                                                                                                                                                                                                linear-gradient(to right, rgba(0,0,0,.05) 1px, transparent 1px),
-                                                                                                                                                                                                                                                                                                                                                                                linear-gradient(to bottom, rgba(0,0,0,.05) 1px, transparent 1px);
-                                                                                                                                                                                                                                                                                                                                                                              background-size: 20px 20px;
-                                                                                                                                                                                                                                                                                                                                                                            }
-                                                                                                                                                                                                                                                                                                                                                                            "
+                                                                                                                                                                                                                                                                                                                                                                                                    .page{ outline:1px solid rgba(0,0,0,.08); }
+                                                                                                                                                                                                                                                                                                                                                                                                    .box { outline:1px dashed rgba(0,0,0,.25); }
+                                                                                                                                                                                                                                                                                                                                                                                                    .grid-helper::before{
+                                                                                                                                                                                                                                                                                                                                                                                                      content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
+                                                                                                                                                                                                                                                                                                                                                                                                      background:
+                                                                                                                                                                                                                                                                                                                                                                                                        linear-gradient(to right, rgba(0,0,0,.05) 1px, transparent 1px),
+                                                                                                                                                                                                                                                                                                                                                                                                        linear-gradient(to bottom, rgba(0,0,0,.05) 1px, transparent 1px);
+                                                                                                                                                                                                                                                                                                                                                                                                      background-size: 20px 20px;
+                                                                                                                                                                                                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                                                                                                                                                                                    "
         : '' }} .title {
         font-size: 28px;
         font-weight: 700;
@@ -176,7 +183,33 @@
         text-align: center;
     }
 </style>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+    @font-face {
+        font-family: 'Montserrat';
+        src: url('{{ $montRegular }}') format('truetype');
+        font-weight: 400;
+        font-style: normal;
+    }
+
+    @font-face {
+        font-family: 'Montserrat';
+        src: url('{{ $montSemiBold }}') format('truetype');
+        font-weight: 600;
+        font-style: normal;
+    }
+
+    @font-face {
+        font-family: 'Montserrat';
+        src: url('{{ $montBold }}') format('truetype');
+        font-weight: 700;
+        font-style: normal;
+    }
+
+    body,
+    .page {
+        font-family: 'Montserrat', DejaVu Sans, sans-serif;
+    }
+</style>
 <style>
     body,
     .page {
@@ -201,12 +234,12 @@
         </div>
 
         <!-- NAMA (besar, kanan, dengan garis tipis di bawah) -->
-        <div class="box center fs-40 bold muted" style="top: 355px; left: 560px; width: 480px;">
+        <div class="box center fs-40 bold muted" style="top: 345px; left: 560px; width: 480px;">
             {{ $user->profile->full_name ?? $user->name }}
         </div>
 
         <!-- Deskripsi peran & nama survei (kanan tengah) -->
-        <div class="box right fs-20 muted" style="top: 430px; left: 500px; width: 520px;">
+        <div class="box right fs-20 muted" style="top: 410px; left: 500px; width: 520px;">
             Petugas <span class="bold">{{ $survey->name }}</span>
         </div>
 
