@@ -8,7 +8,7 @@
         </div>
     @endif
 
-    @if (empty($isAdmin) || !$isAdmin || !$isPegawai)
+    @if (!$isAdmin && !$isPegawai)
         <x-filament::section>
             <div class="flex items-center justify-between">
                 <div>
