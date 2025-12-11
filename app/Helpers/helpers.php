@@ -9,3 +9,10 @@ if (!function_exists('isAdmin')) {
         return Auth::user()->roles[0]->name == 'super_admin';
     }
 }
+
+if (!function_exists('isPegawai')) {
+    function isPegawai(): bool
+    {
+        return Auth::user()->roles[0]->name == 'Pegawai BPS';
+    }
+}
