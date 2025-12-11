@@ -25,7 +25,10 @@ class SuratTugasResource extends Resource
 {
     protected static ?string $model = SuratTugas::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    protected static ?string $navigationGroup = 'Manajemen Dokumen';
+    protected static ?string $navigationLabel = 'Surat Tugas';
+
 
     public static function form(Form $form): Form
     {
