@@ -26,6 +26,11 @@ class Dashboard extends BaseDashboard
         // || Auth::user()?->hasRole('admin')
     }
 
+    protected function isPegawai(): bool
+    {
+        return Auth::user()->roles[0]->name == 'Pegawai BPS';
+    }
+
     public function getWidgets(): array
     {
         return $this->isAdmin()
@@ -48,6 +53,7 @@ class Dashboard extends BaseDashboard
     {
         return [
             'isAdmin' => $this->isAdmin(),
+            'isPegawai' => $this->isPegawai(),
         ];
     }
 }
