@@ -12,6 +12,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use App\Settings\SystemSettings;
 
 class CertificateTemplateResource extends Resource
 {
@@ -65,9 +66,16 @@ class CertificateTemplateResource extends Resource
             ])->columns(3),
 
             Forms\Components\Section::make('Tanda Tangan')->schema([
-                Forms\Components\TextInput::make('city_label')->label('Kota/Label Lokasi')->placeholder('Demak,'),
-                Forms\Components\TextInput::make('signer_name')->label('Nama Pejabat'),
-                Forms\Components\TextInput::make('signer_title')->label('Jabatan'),
+                Forms\Components\TextInput::make('city_label')
+                    ->label('Kota/Label Lokasi')
+                    ->placeholder('Demak,')
+                    ->default(fn() => app(SystemSettings::class)->cert_city . ', '), // Auto-fill with comma
+                Forms\Components\TextInput::make('signer_name')
+                    ->label('Nama Pejabat')
+                    ->default(fn() => app(SystemSettings::class)->cert_signer_name),
+                Forms\Components\TextInput::make('signer_title')
+                    ->label('Jabatan')
+                    ->default(fn() => app(SystemSettings::class)->cert_signer_title),
                 Forms\Components\FileUpload::make('signer_image_path')
                     ->label('Gambar TTD/Cap (opsional)')
                     ->image()

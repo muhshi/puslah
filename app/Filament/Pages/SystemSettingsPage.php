@@ -16,6 +16,7 @@ use Filament\Forms\Components\Group;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Set;
@@ -44,12 +45,26 @@ class SystemSettingsPage extends Page implements HasForms
             'default_work_start' => $s->default_work_start ?? '08:00',
             'default_work_end' => $s->default_work_end ?? '16:00',
             'default_workdays' => $s->default_workdays ?? [1, 2, 3, 4, 5],
+            'cert_city' => $s->cert_city ?? 'Demak',
+            'cert_signer_name' => $s->cert_signer_name ?? '-',
+            'cert_signer_nip' => $s->cert_signer_nip ?? '-',
+            'cert_signer_title' => $s->cert_signer_title ?? 'Kepala Badan Pusat Statistik Kabupaten Demak',
+            'cert_signer_signature_path' => $s->cert_signer_signature_path,
+            'office_code' => $s->office_code ?? '33210',
+            'surat_prefix' => $s->surat_prefix ?? 'B',
+            'surat_tugas_template_path' => $s->surat_tugas_template_path,
         ]);
     }
 
     public function form(Form $form): Form
     {
         return $form->schema([
+            Section::make('Format Nomor Surat')
+                ->description('Pastikan format sesuai: {Prefix}-{Urut}/{KodeKantor}/{Klasifikasi}/{Tahun}')
+                ->schema([
+                    TextInput::make('office_code')->label('Kode Kantor')->required()->maxLength(20),
+                    TextInput::make('surat_prefix')->label('Prefix Surat')->required()->maxLength(10),
+                ])->columns(2),
             Group::make()->schema([ // ====== KOLOM KIRI
                 Section::make('Lokasi Kantor Default')->schema([
                     TextInput::make('default_office_name')
@@ -95,6 +110,8 @@ class SystemSettingsPage extends Page implements HasForms
                         ->label('Radius (m)')
                         ->numeric()->minValue(10)->required()->suffix('m'),
                 ]),
+
+
             ])->columns(1),
 
             Group::make()->schema([ // ====== KOLOM KANAN
@@ -112,7 +129,36 @@ class SystemSettingsPage extends Page implements HasForms
                             7 => 'Minggu',
                         ]),
                 ])->columns(1),
+
+                Section::make('Pejabat Penandatangan (Kepala)')->schema([
+                    TextInput::make('cert_city')->label('Kota Penetapan')->required(),
+                    TextInput::make('cert_signer_name')->label('Nama Pejabat')->required(),
+                    TextInput::make('cert_signer_nip')->label('NIP')->required(),
+                    TextInput::make('cert_signer_title')->label('Jabatan')->required(),
+                    FileUpload::make('cert_signer_signature_path')
+                        ->label('Scan Tanda Tangan')
+                        ->image()
+                        ->directory('signatures')
+                        ->visibility('public')
+                        ->maxSize(2048),
+
+
+                    Section::make('Template Surat Tugas (.docx)')
+                        ->description('Upload file .docx dengan variabel: ${nomor_surat}, ${nama_pegawai}, ${nip_pegawai}, ${jabatan_pegawai}, ${jabatan_tugas}, ${tanggal_surat}, ${nama_kepala}, ${nip_kepala}')
+                        ->schema([
+                            FileUpload::make('surat_tugas_template_path')
+                                ->label('File Template')
+                                ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
+                                ->directory('templates')
+                                ->visibility('public')
+                                ->maxSize(5120) // 5MB
+                                ->downloadable(),
+                        ])->columns(1),
+
+                ])->columns(1), // End Section Pejabat
+
             ])->columns(1),
+
         ])
             ->columns(2)   // <— dua kolom: kiri & kanan
             ->statePath('data');

@@ -53,6 +53,9 @@ class UserProfileResource extends Resource
                     ->tel(),
                 Forms\Components\TextInput::make('employment_status')
                     ->required(),
+                Forms\Components\TextInput::make('jabatan')
+                    ->label('Jabatan')
+                    ->maxLength(100),
             ]);
     }
 
@@ -92,6 +95,11 @@ class UserProfileResource extends Resource
                     ->label('Status')
                     ->badge()
                     ->color(fn(?string $state) => $state === 'aktif' ? 'success' : 'gray'),
+
+                TextColumn::make('jabatan')
+                    ->label('Jabatan')
+                    ->searchable()
+                    ->toggleable(),
 
                 TextColumn::make('created_at')
                     ->dateTime()

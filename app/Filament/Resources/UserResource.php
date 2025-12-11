@@ -39,6 +39,7 @@ class UserResource extends Resource
                         // Using Select Component
                         Forms\Components\Select::make('roles')
                             ->relationship('roles', 'name')
+                            ->multiple()
                             ->preload()
                             ->searchable(),
                         Forms\Components\TextInput::make('password')
@@ -60,6 +61,8 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('email')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('roles.name')
+                    ->badge()
+                    ->separator(',')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('email_verified_at')
                     ->dateTime()
@@ -82,6 +85,29 @@ class UserResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('assignRoles')
+                        ->label('Assign Roles')
+                        ->icon('heroicon-o-user-plus')
+                        ->form([
+                            Forms\Components\Select::make('roles')
+                                ->label('Pilih Role yang Akan Ditambahkan')
+                                ->multiple()
+                                ->options(\Spatie\Permission\Models\Role::all()->pluck('name', 'name'))
+                                ->required(),
+                        ])
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
+                            foreach ($records as $user) {
+                                $user->syncRoles(array_merge(
+                                    $user->roles->pluck('name')->toArray(),
+                                    $data['roles']
+                                ));
+                            }
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Berhasil assign role ke ' . $records->count() . ' user')
+                                ->success()
+                                ->send();
+                        }),
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);

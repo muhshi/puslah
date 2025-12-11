@@ -20,6 +20,7 @@ class UserProfile extends Model
         'address',
         'phone',
         'employment_status',   // 'aktif' / 'nonaktif'
+        'jabatan',             // New Jabatan column
     ];
 
     protected $casts = [

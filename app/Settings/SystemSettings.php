@@ -14,7 +14,12 @@ class SystemSettings extends Settings
     public array $default_workdays;
     public string $default_office_name;
     public string $cert_signer_name;
-    public string $cert_signer_title;
+    public string $cert_signer_nip;  // Added NIP
+    public string $cert_signer_title; // Jabatan
+    public string $cert_city;         // Kota penetapan surat
+    public string $office_code;       // Kode Kantor (ex: 33210)
+    public string $surat_prefix;      // Prefix Surat (ex: B)
+    public ?string $surat_tugas_template_path; // Path to DOCX template
     public ?string $cert_signer_signature_path;
     public string $cert_number_prefix;        // ex: 'BPS-DMK'
     public array $cert_number_seq_by_year;    // ex: ['2025'=>123]
@@ -29,6 +34,13 @@ class SystemSettings extends Settings
             'default_work_end' => '16:00',
             'default_workdays' => [1, 2, 3, 4, 5],
             'default_office_name' => 'Puslah BPS Demak',
+            'cert_city' => 'Demak',
+            'cert_signer_name' => '-',
+            'cert_signer_nip' => '-',
+            'cert_signer_title' => 'Kepala Badan Pusat Statistik Kabupaten Demak',
+            'office_code' => '33210',
+            'surat_prefix' => 'B',
+            'surat_tugas_template_path' => null,
         ];
     }
 
