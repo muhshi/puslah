@@ -7,6 +7,7 @@ use App\Models\Leave;
 use App\Models\Survey;
 use App\Models\SurveyUser;
 use App\Models\User;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Components\Group;
@@ -27,6 +28,7 @@ class AttendanceRecap extends Page implements Tables\Contracts\HasTable, Forms\C
 {
     use Tables\Concerns\InteractsWithTable;
     use Forms\Concerns\InteractsWithForms;
+    use HasPageShield;
 
     protected static ?string $navigationIcon = 'heroicon-c-clipboard-document-list';
     protected static ?string $navigationGroup = 'Manajemen Presensi';

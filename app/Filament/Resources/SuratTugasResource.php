@@ -294,7 +294,7 @@ class SuratTugasResource extends Resource
                             }
 
                             foreach ($records as $record) {
-                                $template = new \PhpOffice\PhpWord\TemplateProcessor(storage_path('app/public/' . $templatePath));
+                                $template = new TemplateProcessor(storage_path('app/public/' . $templatePath));
 
                                 // Map all variables (same as single download)
                                 $template->setValue('nomor_surat', $record->nomor_surat);
