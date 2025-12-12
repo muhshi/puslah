@@ -18,7 +18,7 @@ class CertificateTemplateResource extends Resource
 {
     protected static ?string $model = CertificateTemplate::class;
     protected static ?string $navigationIcon = 'heroicon-o-photo';
-    protected static ?string $navigationGroup = 'Sertifikat';
+    protected static ?string $navigationGroup = 'Pengaturan';
     protected static ?string $navigationLabel = 'Template Sertifikat';
 
     public static function form(Form $form): Form
