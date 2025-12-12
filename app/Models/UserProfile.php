@@ -21,6 +21,8 @@ class UserProfile extends Model
         'phone',
         'employment_status',   // 'aktif' / 'nonaktif'
         'jabatan',             // New Jabatan column
+        'nip',                 // NIP for Pegawai BPS
+        'pangkat_golongan',    // Pangkat/Golongan for Pegawai BPS
     ];
 
     protected $casts = [

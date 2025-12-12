@@ -155,6 +155,30 @@ class SystemSettingsPage extends Page implements HasForms
                                 ->downloadable(),
                         ])->columns(1),
 
+                    Section::make('Template Laporan Perjalanan Dinas (.docx)')
+                        ->description('Upload file .docx dengan variabel: ${nama_pegawai}, ${nomor_surat_tugas}, ${tujuan}, ${tanggal_kunjungan}, ${uraian_kegiatan}, ${nama_pejabat}, ${desa_pejabat}, ${foto_1} s/d ${foto_10}')
+                        ->schema([
+                            FileUpload::make('laporan_dinas_template_path')
+                                ->label('File Template')
+                                ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
+                                ->directory('templates')
+                                ->visibility('public')
+                                ->maxSize(5120) // 5MB
+                                ->downloadable(),
+                        ])->columns(1),
+
+                    Section::make('Template Surat Pernyataan (.docx)')
+                        ->description('Upload file .docx untuk Surat Pernyataan (khusus Pegawai BPS). Variabel: ${nama_pegawai}, ${nip_pegawai}, ${pangkat_golongan}, ${jabatan}, ${unit_kerja}, ${tanggal_pernyataan}')
+                        ->schema([
+                            FileUpload::make('surat_pernyataan_template_path')
+                                ->label('File Template')
+                                ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
+                                ->directory('templates')
+                                ->visibility('public')
+                                ->maxSize(5120) // 5MB
+                                ->downloadable(),
+                        ])->columns(1),
+
                 ])->columns(1), // End Section Pejabat
 
             ])->columns(1),

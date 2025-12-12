@@ -38,44 +38,78 @@ class CreateBulkSuratTugas extends Page implements HasForms
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('Pilih Pegawai')
-                    ->description('Pilih pegawai dari kategori Mitra atau Pegawai BPS. Bisa pilih dari kedua kategori sekaligus.')
+                Forms\Components\Section::make('Pilih Survey & Pegawai')
+                    ->description('Pilih survey terlebih dahulu, lalu pilih pegawai dari peserta survey tersebut.')
                     ->schema([
+                        Forms\Components\Select::make('survey_id')
+                            ->label('Survey')
+                            ->options(\App\Models\Survey::where('is_active', true)->pluck('name', 'id'))
+                            ->searchable()
+                            ->preload()
+                            ->live()
+                            ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                // Reset user selections when survey changes
+                                $set('mitra_user_ids', []);
+                                $set('pegawai_bps_user_ids', []);
+
+                                // Auto-fill keperluan
+                                if ($state) {
+                                    $survey = \App\Models\Survey::find($state);
+                                    if ($survey) {
+                                        $set('keperluan', "Pendataan {$survey->name}");
+                                    }
+                                }
+                            })
+                            ->columnSpan('full')
+                            ->required(),
+
                         Forms\Components\Select::make('mitra_user_ids')
                             ->label('Pegawai Mitra')
                             ->multiple()
                             ->searchable()
                             ->preload()
-                            ->options(function () {
-                                return User::whereHas('roles', function ($query) {
-                                    $query->where('name', 'Mitra');
-                                })
-                                    ->with('profile')
+                            ->options(function (Forms\Get $get) {
+                                $surveyId = $get('survey_id');
+                                if (!$surveyId)
+                                    return [];
+
+                                return \App\Models\SurveyUser::where('survey_id', $surveyId)
+                                    ->whereHas('user.roles', function ($q) {
+                                        $q->where('name', 'Mitra');
+                                    })
+                                    ->with('user.profile')
                                     ->get()
-                                    ->mapWithKeys(function ($user) {
-                                        $jabatan = $user->profile->jabatan ?? '-';
-                                        return [$user->id => "{$user->name} ({$jabatan})"];
+                                    ->mapWithKeys(function ($su) {
+                                        $jabatan = $su->user->profile->jabatan ?? '-';
+                                        return [$su->user_id => "{$su->user->name} ({$jabatan})"];
                                     });
                             })
-                            ->helperText('Cari dan pilih pegawai dengan role Mitra'),
+                            ->disabled(fn(Forms\Get $get) => !$get('survey_id'))
+                            ->helperText('Hanya peserta survey dengan role Mitra'),
 
                         Forms\Components\Select::make('pegawai_bps_user_ids')
                             ->label('Pegawai BPS')
                             ->multiple()
                             ->searchable()
                             ->preload()
-                            ->options(function () {
-                                return User::whereHas('roles', function ($query) {
-                                    $query->where('name', 'Pegawai BPS');
-                                })
-                                    ->with('profile')
+                            ->options(function (Forms\Get $get) {
+                                $surveyId = $get('survey_id');
+                                if (!$surveyId)
+                                    return [];
+
+                                return \App\Models\SurveyUser::where('survey_id', $surveyId)
+                                    ->whereHas('user.roles', function ($q) {
+                                        $q->where('name', 'Pegawai BPS');
+                                    })
+                                    ->with('user.profile')
                                     ->get()
-                                    ->mapWithKeys(function ($user) {
-                                        $jabatan = $user->profile->jabatan ?? '-';
-                                        return [$user->id => "{$user->name} ({$jabatan})"];
+                                    ->mapWithKeys(function ($su) {
+                                        $jabatan = $su->user->profile->jabatan ?? '-';
+                                        return [$su->user_id => "{$su->user->name} ({$jabatan})"];
                                     });
                             })
-                            ->helperText('Cari dan pilih pegawai dengan role Pegawai BPS'),
+                            ->disabled(fn(Forms\Get $get) => !$get('survey_id'))
+                            ->helperText('Hanya peserta survey dengan role Pegawai BPS'),
                     ])->columns(2),
 
                 Forms\Components\Section::make('Data Surat (Berlaku untuk Semua)')
@@ -160,6 +194,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
 
                 SuratTugas::create([
                     'user_id' => $userId,
+                    'survey_id' => $data['survey_id'],
                     'nomor_surat' => $nomorSurat,
                     'nomor_urut' => $maxUrut,
                     'kode_klasifikasi' => $klasifikasi,

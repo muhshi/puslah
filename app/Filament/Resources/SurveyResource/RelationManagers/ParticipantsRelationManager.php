@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Settings\SystemSettings;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Forms;
+use Filament\Forms\Components\Section;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -71,13 +72,44 @@ class ParticipantsRelationManager extends RelationManager
                     ->label('Tambah Peserta (Banyak)')
                     ->icon('heroicon-o-user-plus')
                     ->form([
-                        Forms\Components\Select::make('users')
-                            ->label('Pilih User')
-                            ->options(User::orderBy('name')->pluck('name', 'id'))
-                            ->multiple()
-                            ->searchable()
-                            ->preload()
-                            ->required(),
+                        Section::make('Peserta Survei')->schema([
+                            Forms\Components\Select::make('mitra_users')
+                                ->label('Pegawai Mitra')
+                                ->multiple()
+                                ->searchable()
+                                ->preload()
+                                ->options(function () {
+                                    return User::whereHas('roles', function ($query) {
+                                        $query->where('name', 'Mitra');
+                                    })
+                                        ->with('profile')
+                                        ->get()
+                                        ->mapWithKeys(function ($user) {
+                                            $jabatan = $user->profile->jabatan ?? '-';
+                                            return [$user->id => "{$user->name} ({$jabatan})"];
+                                        });
+                                })
+                                ->helperText('Cari dan pilih pegawai dengan role Mitra'),
+
+                            Forms\Components\Select::make('pegawai_bps_users')
+                                ->label('Pegawai BPS')
+                                ->multiple()
+                                ->searchable()
+                                ->preload()
+                                ->options(function () {
+                                    return User::whereHas('roles', function ($query) {
+                                        $query->where('name', 'Pegawai BPS');
+                                    })
+                                        ->with('profile')
+                                        ->get()
+                                        ->mapWithKeys(function ($user) {
+                                            $jabatan = $user->profile->jabatan ?? '-';
+                                            return [$user->id => "{$user->name} ({$jabatan})"];
+                                        });
+                                })
+                                ->helperText('Cari dan pilih pegawai dengan role Pegawai BPS'),
+                        ])->columns(2),
+
                         Forms\Components\Textarea::make('notes')->label('Catatan')->columnSpanFull(),
                     ])
                     ->action(function (array $data, $livewire) {
@@ -85,7 +117,20 @@ class ParticipantsRelationManager extends RelationManager
                         $survey = $livewire->getOwnerRecord(); // record parent (Survey)
                         $now = Carbon::now('Asia/Jakarta');
 
-                        foreach ($data['users'] as $userId) {
+                        // Merge users from both role categories
+                        $mitraUsers = $data['mitra_users'] ?? [];
+                        $pegawaiUsers = $data['pegawai_bps_users'] ?? [];
+                        $allUsers = array_merge($mitraUsers, $pegawaiUsers);
+
+                        if (empty($allUsers)) {
+                            Notification::make()
+                                ->title('Pilih minimal 1 peserta')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        foreach ($allUsers as $userId) {
                             SurveyUser::firstOrCreate(
                                 ['survey_id' => $survey->id, 'user_id' => $userId],
                                 [
@@ -97,7 +142,7 @@ class ParticipantsRelationManager extends RelationManager
                         }
 
                         Notification::make()
-                            ->title('Peserta ditambahkan')
+                            ->title('Peserta ditambahkan: ' . count($allUsers) . ' orang')
                             ->success()
                             ->send();
                     }),

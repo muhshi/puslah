@@ -48,6 +48,31 @@ class UserResource extends Resource
                             ->dehydrateStateUsing(fn($state) => Hash::make($state))
                             ->dehydrated(fn($state) => filled($state))
                             ->required(fn(string $context): bool => $context === 'create'),
+
+                        Forms\Components\TextInput::make('profile.nip')
+                            ->label('NIP')
+                            ->maxLength(255)
+                            ->visible(function ($get) {
+                                $roles = $get('roles');
+                                if (is_array($roles)) {
+                                    return in_array('Pegawai BPS', \Spatie\Permission\Models\Role::whereIn('id', $roles)->pluck('name')->toArray());
+                                }
+                                return false;
+                            })
+                            ->helperText('Khusus Pegawai BPS'),
+
+                        Forms\Components\TextInput::make('profile.pangkat_golongan')
+                            ->label('Pangkat/Golongan')
+                            ->placeholder('Contoh: Penata Muda Tingkat 1 / IIIb')
+                            ->maxLength(255)
+                            ->visible(function ($get) {
+                                $roles = $get('roles');
+                                if (is_array($roles)) {
+                                    return in_array('Pegawai BPS', \Spatie\Permission\Models\Role::whereIn('id', $roles)->pluck('name')->toArray());
+                                }
+                                return false;
+                            })
+                            ->helperText('Khusus Pegawai BPS'),
                     ])->columns(2)
             ]);
     }

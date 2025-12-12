@@ -20,6 +20,8 @@ class SystemSettings extends Settings
     public string $office_code;       // Kode Kantor (ex: 33210)
     public string $surat_prefix;      // Prefix Surat (ex: B)
     public ?string $surat_tugas_template_path; // Path to DOCX template
+    public ?string $laporan_dinas_template_path; // Path to Laporan DOCX template
+    public ?string $surat_pernyataan_template_path; // Path to Surat Pernyataan DOCX template
     public ?string $cert_signer_signature_path;
     public string $cert_number_prefix;        // ex: 'BPS-DMK'
     public array $cert_number_seq_by_year;    // ex: ['2025'=>123]

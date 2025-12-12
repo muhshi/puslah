@@ -14,6 +14,7 @@ class SuratTugas extends Model
 
     protected $fillable = [
         'user_id',
+        'survey_id',
         'nomor_surat',
         'nomor_urut',
         'kode_klasifikasi',
@@ -40,5 +41,10 @@ class SuratTugas extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function survey(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Survey::class);
     }
 }

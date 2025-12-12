@@ -4,12 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Survey extends Model
 {
-    use HasFactory;
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -23,16 +24,19 @@ class Survey extends Model
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
-        'is_active' => 'bool',
+        'is_active' => 'boolean',
     ];
 
-    public function participants()
+    public function participants(): BelongsToMany
     {
-        return $this->hasMany(SurveyUser::class);
+        return $this->belongsToMany(User::class, 'survey_users')
+            ->using(SurveyUser::class)
+            ->withPivot(['status', 'registered_at', 'score', 'notes'])
+            ->withTimestamps();
     }
 
-    public function certificates()
+    public function suratTugas(): HasMany
     {
-        return $this->hasMany(Certificate::class);
+        return $this->hasMany(SuratTugas::class);
     }
 }

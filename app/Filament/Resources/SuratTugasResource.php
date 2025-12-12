@@ -14,12 +14,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
-use App\Models\UserProfile;
 use App\Settings\SystemSettings;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Split;
 use Filament\Forms\Components\Group;
 use PhpOffice\PhpWord\TemplateProcessor;
+use App\Models\User;
+use App\Models\UserProfile;
 
 class SuratTugasResource extends Resource
 {
@@ -36,9 +37,48 @@ class SuratTugasResource extends Resource
             ->schema([
                 Section::make('Informasi Tugas')->schema([
                     Forms\Components\Group::make()->schema([
+                        Forms\Components\Select::make('survey_id')
+                            ->label('Survey (Opsional)')
+                            ->relationship('survey', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->live()
+                            ->afterStateUpdated(function (Set $set, $state) {
+                                // Reset user_id when survey changes
+                                $set('user_id', null);
+                                // Auto-fill keperluan if survey selected
+                                if ($state) {
+                                    $survey = \App\Models\Survey::find($state);
+                                    if ($survey) {
+                                        $set('keperluan', "Pendataan {$survey->name}");
+                                    }
+                                }
+                            }),
+
                         Forms\Components\Select::make('user_id')
                             ->label('Pegawai yang Ditugaskan')
-                            ->relationship('user', 'name')
+                            ->options(function (Get $get) {
+                                $surveyId = $get('survey_id');
+
+                                // If survey selected, filter by survey participants only
+                                if ($surveyId) {
+                                    return \App\Models\SurveyUser::where('survey_id', $surveyId)
+                                        ->with('user.profile')
+                                        ->get()
+                                        ->mapWithKeys(function ($su) {
+                                            $jabatan = $su->user->profile->jabatan ?? '-';
+                                            return [$su->user_id => "{$su->user->name} ({$jabatan})"];
+                                        });
+                                }
+
+                                // If no survey, show all users
+                                return User::with('profile')
+                                    ->get()
+                                    ->mapWithKeys(function ($user) {
+                                    $jabatan = $user->profile->jabatan ?? '-';
+                                    return [$user->id => "{$user->name} ({$jabatan})"];
+                                });
+                            })
                             ->searchable()
                             ->preload()
                             ->live()
