@@ -53,6 +53,8 @@ class SystemSettingsPage extends Page implements HasForms
             'office_code' => $s->office_code ?? '33210',
             'surat_prefix' => $s->surat_prefix ?? 'B',
             'surat_tugas_template_path' => $s->surat_tugas_template_path,
+            'laporan_dinas_template_path' => $s->laporan_dinas_template_path,
+            'surat_pernyataan_template_path' => $s->surat_pernyataan_template_path,
         ]);
     }
 

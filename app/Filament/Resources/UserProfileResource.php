@@ -29,33 +29,53 @@ class UserProfileResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Select::make('user_id')
+                    ->label('Nama User')
                     ->relationship('user', 'name')
                     ->required(),
                 Forms\Components\FileUpload::make('avatar_path')
-                    ->label('Foto')
+                    ->label('Foto Profil')
                     ->image()
-                    ->directory('avatars')        // file akan ke storage/app/public/avatars
-                    ->disk('public')              // pake disk public
-                    ->visibility('public')        // biar bisa diakses via /storage/...
-                    ->imageEditor()               // optional: crop/rotate
-                    ->imagePreviewHeight('200')   // optional
-                    ->maxSize(2048)               // 2 MB
+                    ->directory('avatars')
+                    ->disk('public')
+                    ->visibility('public')
+                    ->imageEditor()
+                    ->maxSize(2048)
                     ->helperText('JPG/PNG, maks 2MB'),
                 Forms\Components\TextInput::make('full_name')
+                    ->label('Nama Lengkap')
                     ->required(),
-                Forms\Components\TextInput::make('nickname'),
-                Forms\Components\TextInput::make('birth_place'),
-                Forms\Components\DatePicker::make('birth_date'),
-                Forms\Components\TextInput::make('gender'),
+                Forms\Components\TextInput::make('nickname')
+                    ->label('Nama Panggilan'),
+                Forms\Components\TextInput::make('birth_place')
+                    ->label('Tempat Lahir'),
+                Forms\Components\DatePicker::make('birth_date')
+                    ->label('Tanggal Lahir'),
+                Forms\Components\Select::make('gender')
+                    ->label('Jenis Kelamin')
+                    ->options([
+                        'L' => 'Laki-laki',
+                        'P' => 'Perempuan',
+                    ]),
                 Forms\Components\Textarea::make('address')
+                    ->label('Alamat')
                     ->columnSpanFull(),
                 Forms\Components\TextInput::make('phone')
+                    ->label('No. HP / WA')
                     ->tel(),
                 Forms\Components\TextInput::make('employment_status')
+                    ->label('Status Kepegawaian')
                     ->required(),
                 Forms\Components\TextInput::make('jabatan')
                     ->label('Jabatan')
                     ->maxLength(100),
+                Forms\Components\TextInput::make('nip')
+                    ->label('NIP')
+                    ->maxLength(50)
+                    ->helperText('Khusus Pegawai BPS'),
+                Forms\Components\TextInput::make('pangkat_golongan')
+                    ->label('Pangkat/Golongan')
+                    ->maxLength(100)
+                    ->helperText('Contoh: Penata Muda Tingkat 1 / IIIb'),
             ]);
     }
 
@@ -100,6 +120,16 @@ class UserProfileResource extends Resource
                     ->label('Jabatan')
                     ->searchable()
                     ->toggleable(),
+
+                TextColumn::make('nip')
+                    ->label('NIP')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('pangkat_golongan')
+                    ->label('Pangkat')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('created_at')
                     ->dateTime()

@@ -157,6 +157,8 @@ class LaporanPerjalananDinasResource extends Resource
                                 ->label('Foto')
                                 ->image()
                                 ->directory('laporan-foto')
+                                ->disk('public')
+                                ->visibility('public')
                                 ->maxSize(5120)
                                 ->required(),
                             Forms\Components\Textarea::make('keterangan')
@@ -260,7 +262,21 @@ class LaporanPerjalananDinasResource extends Resource
         $template->setValue('tanggal_kunjungan', $record->tanggal_kunjungan->translatedFormat('d F Y'));
 
         // Strip HTML tags from rich text editor
-        $template->setValue('uraian_kegiatan', strip_tags($record->uraian_kegiatan));
+        // Strip HTML tags and handle newlines more intelligently
+        $uraian = $record->uraian_kegiatan;
+        // Basic replacements for paragraphs and breaks
+        $uraian = str_replace(['<p>', '<br>', '<br/>'], ["", "\n", "\n"], $uraian);
+        $uraian = str_replace('</p>', "\n\n", $uraian); // double newline for paragraphs
+        // Basic replacements for lists
+        $uraian = str_replace('<li>', "• ", $uraian);
+        $uraian = str_replace('</li>', "\n", $uraian);
+        $uraian = str_replace(['<ul>', '</ul>', '<ol>', '</ol>'], ["\n", "\n", "\n", "\n"], $uraian);
+
+        $cleanUraian = strip_tags($uraian);
+        $cleanUraian = html_entity_decode($cleanUraian);
+        $cleanUraian = trim($cleanUraian);
+
+        $template->setValue('uraian_kegiatan', $cleanUraian);
 
         $template->setValue('nama_pejabat', $record->nama_pejabat ?? '-');
         $template->setValue('desa_pejabat', $record->desa_pejabat ?? '-');
@@ -270,20 +286,27 @@ class LaporanPerjalananDinasResource extends Resource
         for ($i = 1; $i <= 10; $i++) {
             $foto = $fotos->get($i - 1);
             if ($foto && Storage::exists('public/' . $foto->file_path)) {
-                $template->setImageValue("foto_{$i}", [
-                    'path' => storage_path('app/public/' . $foto->file_path),
-                    'width' => 600,
-                    'ratio' => true
-                ]);
-                $template->setValue("keterangan_foto_{$i}", $foto->keterangan ?? '');
+                try {
+                    $template->setImageValue("foto_{$i}", [
+                        'path' => storage_path('app/public/' . $foto->file_path),
+                        'width' => 1500,
+                        'height' => 1500,
+                        'ratio' => true
+                    ]);
+                    $template->setValue("keterangan_foto_{$i}", $foto->keterangan ?? '');
+                } catch (\Exception $e) {
+                    // Fallback if image fails (e.g. invalid format)
+                    $template->setValue("foto_{$i}", '[Error format foto]');
+                    $template->setValue("keterangan_foto_{$i}", '');
+                }
             } else {
                 $template->setValue("foto_{$i}", '');
                 $template->setValue("keterangan_foto_{$i}", '');
             }
         }
 
-        // Save temp
-        $safeFilename = str_replace(['/', '\\'], '_', $record->nomor_surat_tugas);
+        // Save temp with safe filename
+        $safeFilename = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $record->nomor_surat_tugas);
         $fileName = "Laporan_Dinas_{$safeFilename}.docx";
         $tempPath = storage_path('app/temp_laporan_' . $fileName);
         $template->saveAs($tempPath);
