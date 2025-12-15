@@ -283,15 +283,40 @@ class LaporanPerjalananDinasResource extends Resource
 
         // Photos (max 10)
         $fotos = $record->fotos()->orderBy('urutan')->take(10)->get();
+        $photoCount = $fotos->count();
+
+        // Dynamic sizing logic "Fit to Page"
+        // Base config: A4 (approx 600px usable width for standard margins)
+        // Scenario 1: 1-2 Photos -> Large (Full Width)
+        // Scenario 2: 3-4 Photos -> Medium (Half Page vertical or Grid)
+        // Scenario 3: 5+ Photos -> Small
+
+        $targetWidth = 600;
+        $targetHeight = 800;
+
+        if ($photoCount <= 1) {
+            $targetWidth = 600;
+            $targetHeight = 600;
+        } elseif ($photoCount <= 2) {
+            $targetWidth = 600;
+            $targetHeight = 400; // Restrict height to fit 2 vertically
+        } elseif ($photoCount <= 4) {
+            $targetWidth = 250;  // Assume user might want grid or smaller vertical
+            $targetHeight = 300;
+        } else {
+            $targetWidth = 250;
+            $targetHeight = 200;
+        }
+
         for ($i = 1; $i <= 10; $i++) {
             $foto = $fotos->get($i - 1);
             if ($foto && Storage::exists('public/' . $foto->file_path)) {
                 try {
                     $template->setImageValue("foto_{$i}", [
                         'path' => storage_path('app/public/' . $foto->file_path),
-                        'width' => 1500,
-                        'height' => 1500,
-                        'ratio' => true
+                        'width' => $targetWidth,
+                        'height' => $targetHeight,
+                        'ratio' => true // Maintain aspect ratio within target box
                     ]);
                     $template->setValue("keterangan_foto_{$i}", $foto->keterangan ?? '');
                 } catch (\Exception $e) {

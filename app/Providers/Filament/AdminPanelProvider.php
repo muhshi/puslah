@@ -44,8 +44,16 @@ class AdminPanelProvider extends PanelProvider
                 'logout' => MenuItem::make()->label('Log out'),
             ])
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => Color::hex('#005596'), // BPS Blue
+                'gray' => Color::Slate,
+                'info' => Color::hex('#03A9F4'),    // Light Blue
+                'success' => Color::hex('#6CBE45'), // BPS Green
+                'warning' => Color::hex('#F2911B'), // BPS Orange
+                'danger' => Color::Red,
             ])
+            ->font('Inter')
+            ->brandName('PUSLAH')
+            ->brandLogoHeight('3rem')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
