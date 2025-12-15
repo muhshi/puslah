@@ -59,6 +59,22 @@ class LaporanPerjalananDinasPolicy
     }
 
     /**
+     * Determine whether the user can permanently delete.
+     */
+    public function forceDelete(User $user, LaporanPerjalananDinas $laporanPerjalananDinas): bool
+    {
+        return $user->can('{{ ForceDelete }}');
+    }
+
+    /**
+     * Determine whether the user can permanently bulk delete.
+     */
+    public function forceDeleteAny(User $user): bool
+    {
+        return $user->can('{{ ForceDeleteAny }}');
+    }
+
+    /**
      * Determine whether the user can restore.
      */
     public function restore(User $user, LaporanPerjalananDinas $laporanPerjalananDinas): bool
@@ -79,7 +95,7 @@ class LaporanPerjalananDinasPolicy
      */
     public function replicate(User $user, LaporanPerjalananDinas $laporanPerjalananDinas): bool
     {
-        return $user->can('replicate_laporan::perjalanan::dinas');
+        return $user->can('{{ Replicate }}');
     }
 
     /**
@@ -87,6 +103,6 @@ class LaporanPerjalananDinasPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_laporan::perjalanan::dinas');
+        return $user->can('{{ Reorder }}');
     }
 }
