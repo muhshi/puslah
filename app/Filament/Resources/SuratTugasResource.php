@@ -386,6 +386,20 @@ class SuratTugasResource extends Resource
             ]);
     }
 
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        if ($user && !$user->hasRole(['super_admin', 'Admin Pegawai'])) {
+            $query->where('user_id', $user->id);
+        }
+
+        return $query;
+    }
+
     public static function getRelations(): array
     {
         return [

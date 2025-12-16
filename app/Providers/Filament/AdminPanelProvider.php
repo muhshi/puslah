@@ -98,6 +98,7 @@ class AdminPanelProvider extends PanelProvider
                         'default' => 1,
                         'sm' => 2,
                     ]),
-            ]);
+            ])
+            ->renderHook('panels::auth.login.form.after', fn() => view('filament.auth.login-google'));
     }
 }

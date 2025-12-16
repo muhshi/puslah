@@ -14,6 +14,9 @@ Route::get('/login', function () {
     return redirect('admin/login');
 })->name('login');
 
+Route::get('/admin/auth/google', [\App\Http\Controllers\SocialiteController::class, 'redirectToGoogle'])->name('auth.google');
+Route::get('/admin/auth/google/callback', [\App\Http\Controllers\SocialiteController::class, 'handleGoogleCallback'])->name('auth.google.callback');
+
 Route::group(['middleware' => 'auth'], function () {
     Route::get('presensi', Presensi::class)->name('presensi');
 });
