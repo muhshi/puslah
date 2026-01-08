@@ -221,19 +221,18 @@ class SuratTugasResource extends Resource
                 Tables\Columns\TextColumn::make('nomor_surat')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('user.name')
-                    ->label('Pegawai')
+                Tables\Columns\TextColumn::make('survey.name')
+                    ->label('Nama Survei')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('jabatan')
+                Tables\Columns\TextColumn::make('user.name')
+                    ->label('Pegawai')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('tanggal')
                     ->date()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('signer_name')
-                    ->label('Penandatangan')
-                    ->searchable(),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -246,6 +245,7 @@ class SuratTugasResource extends Resource
                 Tables\Actions\Action::make('preview')
                     ->label('Preview')
                     ->icon('heroicon-o-eye')
+                    ->visible(false)
                     ->color('info')
                     ->url(fn(SuratTugas $record) => route('surat-tugas.preview', $record->id))
                     ->openUrlInNewTab(),
