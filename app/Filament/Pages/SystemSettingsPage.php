@@ -55,6 +55,7 @@ class SystemSettingsPage extends Page implements HasForms
             'surat_tugas_template_path' => $s->surat_tugas_template_path,
             'laporan_dinas_template_path' => $s->laporan_dinas_template_path,
             'surat_pernyataan_template_path' => $s->surat_pernyataan_template_path,
+            'logo_bps_path' => $s->logo_bps_path,
         ]);
     }
 
@@ -66,6 +67,13 @@ class SystemSettingsPage extends Page implements HasForms
                 ->schema([
                     TextInput::make('office_code')->label('Kode Kantor')->required()->maxLength(20),
                     TextInput::make('surat_prefix')->label('Prefix Surat')->required()->maxLength(10),
+                    FileUpload::make('logo_bps_path')
+                        ->label('Logo BPS')
+                        ->image()
+                        ->directory('logos')
+                        ->visibility('public')
+                        ->maxSize(2048)
+                        ->columnSpanFull(),
                 ])->columns(2),
             Group::make()->schema([ // ====== KOLOM KIRI
                 Section::make('Lokasi Kantor Default')->schema([

@@ -243,10 +243,55 @@ class SuratTugasResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\Action::make('preview')
+                    ->label('Preview')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
+                    ->url(fn(SuratTugas $record) => route('surat-tugas.preview', $record->id))
+                    ->openUrlInNewTab(),
+                Tables\Actions\Action::make('pdf')
+                    ->label('PDF')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('danger')
+                    ->action(function (SuratTugas $record) {
+                        // 1. Ensure Hash exists
+                        if (!$record->hash) {
+                            $record->update(['hash' => \Illuminate\Support\Str::random(32)]);
+                        }
+
+                        // 2. Load Logo Base64 (using optimized static file - 17KB only!)
+                        $logoBase64 = \Illuminate\Support\Facades\Cache::remember('logo_bps_static_base64', 86400, function () {
+                            $logoPath = public_path('images/logo_bps.png');
+                            if (file_exists($logoPath)) {
+                                return 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+                            }
+                            return null;
+                        });
+
+                        // 3. Generate QR
+                        $verifyUrl = route('surat-tugas.verify', $record->hash);
+                        $qrPng = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')->size(100)->margin(0)->generate($verifyUrl);
+                        $qrBase64 = 'data:image/png;base64,' . base64_encode($qrPng);
+
+                        // 4. Prepare Data
+                        $periode = self::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
+
+                        // 5. Generate PDF
+                        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('surat-tugas.pdf', [
+                            'surat' => $record,
+                            'logoBase64' => $logoBase64,
+                            'qrBase64' => $qrBase64,
+                            'periode' => $periode,
+                            'is_preview' => false,
+                        ])->setPaper('a4', 'portrait');
+
+                        return response()->streamDownload(fn() => print ($pdf->output()), str_replace(['/', '\\'], '_', $record->nomor_surat) . '.pdf');
+                    }),
                 Tables\Actions\Action::make('word')
                     ->label('Word')
                     ->icon('heroicon-o-document-text')
                     ->color('success')
+                    ->visible(true) // Hidden as per request
                     ->action(function (SuratTugas $record) {
                         $settings = app(SystemSettings::class);
                         $templatePath = $settings->surat_tugas_template_path; // Stored in storage/app/public/templates
@@ -430,7 +475,7 @@ class SuratTugasResource extends Resource
         $set('nomor_surat', $nomor);
     }
 
-    protected static function formatPeriodeTugas($mulai, $selesai): string
+    public static function formatPeriodeTugas($mulai, $selesai): string
     {
         if (!$mulai || !$selesai) {
             return '-';
