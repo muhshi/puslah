@@ -15,6 +15,7 @@ class Survey extends Model
     protected $fillable = [
         'name',
         'description',
+        'dasar_surat',
         'start_date',
         'end_date',
         'is_active',

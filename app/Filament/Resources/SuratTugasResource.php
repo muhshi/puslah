@@ -175,11 +175,6 @@ class SuratTugasResource extends Resource
                         ->required()
                         ->columnSpanFull(),
 
-                    Forms\Components\Textarea::make('dasar_surat')
-                        ->label('Dasar Surat')
-                        ->placeholder('Contoh: DIPA BPS Kabupaten Demak Tahun Anggaran 2025...')
-                        ->columnSpanFull(),
-
                     Forms\Components\TextInput::make('tempat_tugas')
                         ->label('Tempat Tugas')
                         ->placeholder('Contoh: Kecamatan Demak')
@@ -281,7 +276,7 @@ class SuratTugasResource extends Resource
 
                         $template->setValue('jabatan_tugas', $record->jabatan);
                         $template->setValue('keperluan', $record->keperluan);
-                        $template->setValue('dasar_surat', $record->dasar_surat ?? '-');
+                        $template->setValue('dasar_surat', $record->survey?->dasar_surat ?? '-');
                         $template->setValue('tempat_tugas', $record->tempat_tugas ?? '-');
                         $template->setValue('tanggal_surat', $record->tanggal->translatedFormat('d F Y'));
 
@@ -346,7 +341,7 @@ class SuratTugasResource extends Resource
                                 $template->setValue('jabatan_pegawai', $record->user->profile->jabatan ?? '-');
                                 $template->setValue('jabatan_tugas', $record->jabatan);
                                 $template->setValue('keperluan', $record->keperluan);
-                                $template->setValue('dasar_surat', $record->dasar_surat ?? '-');
+                                $template->setValue('dasar_surat', $record->survey?->dasar_surat ?? '-');
                                 $template->setValue('tempat_tugas', $record->tempat_tugas ?? '-');
                                 $template->setValue('tanggal_surat', $record->tanggal->translatedFormat('d F Y'));
 
@@ -383,7 +378,8 @@ class SuratTugasResource extends Resource
                         }),
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultSort('created_at', 'desc');
     }
 
     public static function getEloquentQuery(): Builder
