@@ -20,7 +20,6 @@ class SuratTugas extends Model
         'kode_klasifikasi',
         'jabatan',
         'keperluan',
-        'dasar_surat',
         'tempat_tugas',
         'tanggal',
         'waktu_mulai',

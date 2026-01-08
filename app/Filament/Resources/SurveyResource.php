@@ -37,6 +37,7 @@ class SurveyResource extends Resource
                 Forms\Components\Textarea::make('dasar_surat')
                     ->label('Dasar Surat')
                     ->placeholder('Contoh: DIPA BPS Kabupaten Demak Tahun Anggaran 2025...')
+                    ->required()
                     ->columnSpanFull(),
                 Forms\Components\DatePicker::make('start_date')
                     ->label('Mulai'),

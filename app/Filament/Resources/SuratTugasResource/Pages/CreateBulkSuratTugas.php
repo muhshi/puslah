@@ -132,10 +132,6 @@ class CreateBulkSuratTugas extends Page implements HasForms
                             ->required()
                             ->columnSpanFull(),
 
-                        Forms\Components\Textarea::make('dasar_surat')
-                            ->label('Dasar Surat')
-                            ->columnSpanFull(),
-
                         Forms\Components\TextInput::make('tempat_tugas')
                             ->label('Tempat Tugas')
                             ->maxLength(255)
@@ -200,7 +196,6 @@ class CreateBulkSuratTugas extends Page implements HasForms
                     'kode_klasifikasi' => $klasifikasi,
                     'jabatan' => $data['jabatan'],
                     'keperluan' => $data['keperluan'],
-                    'dasar_surat' => $data['dasar_surat'] ?? null,
                     'tempat_tugas' => $data['tempat_tugas'] ?? null,
                     'tanggal' => $data['tanggal'],
                     'waktu_mulai' => $data['waktu_mulai'],
