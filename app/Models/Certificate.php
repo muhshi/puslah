@@ -24,10 +24,7 @@ class Certificate extends Model
         'revoked' => 'bool',
     ];
 
-    public function getRouteKeyName(): string
-    {
-        return 'certificate_no';
-    }
+
 
     public function survey()
     {
