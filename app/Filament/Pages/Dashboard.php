@@ -2,17 +2,16 @@
 
 namespace App\Filament\Pages;
 
-use App\Filament\Widgets\AttendanceLast7DaysChart;
-use App\Filament\Widgets\TodayAttendanceStats;
-use App\Filament\Widgets\TodayPresencePie;
-use Faker\Provider\Base;
+use App\Filament\Widgets\StatsOverviewWidget;
+use App\Filament\Widgets\SuratTugasChartWidget;
+use App\Filament\Widgets\LatestSuratTugasWidget;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Url;
 
 class Dashboard extends BaseDashboard
 {
-    protected static ?string $navigationIcon = 'heroicon-m-presentation-chart-bar';
+    protected static ?string $navigationIcon = 'heroicon-o-home';
 
     protected static string $view = 'filament.pages.dashboard';
     #[Url] public ?string $dateFrom = null;
@@ -20,10 +19,8 @@ class Dashboard extends BaseDashboard
 
     protected function isAdmin(): bool
     {
-        // shield/spatie-roles
-        return Auth::user()->roles[0]->name == 'super_admin';
-        // kalau kamu pakai nama role lain, tambah OR di sini
-        // || Auth::user()?->hasRole('admin')
+        // Check for super_admin or roles that should see the dashboard
+        return Auth::user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag']);
     }
 
     protected function isPegawai(): bool
@@ -35,9 +32,9 @@ class Dashboard extends BaseDashboard
     {
         return $this->isAdmin()
             ? [
-                TodayAttendanceStats::class,
-                AttendanceLast7DaysChart::class,
-                TodayPresencePie::class,
+                StatsOverviewWidget::class,
+                SuratTugasChartWidget::class,
+                LatestSuratTugasWidget::class,
             ]
             : [];
     }

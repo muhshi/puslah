@@ -13,6 +13,7 @@
         "bezhansalleh/filament-shield": "^3.2",
         "dotswan/filament-map-picker": "^1.2",
         "filament/filament": "^3.2.0",
+        "flowframe/laravel-trend": "^0.4.0",
         "humaidem/filament-map-picker": "^0.1.5",
         "joshembling/image-optimizer": "^1.5",
         "laravel/framework": "^11.0",
@@ -24,7 +25,8 @@
         "phpoffice/phpword": "^1.4",
         "pxlrbt/filament-excel": "^2.5",
         "simplesoftwareio/simple-qrcode": "^4.2",
-        "spatie/laravel-settings": "^3.4"
+        "spatie/laravel-settings": "^3.4",
+        "wireui/heroicons": "^2.9"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
