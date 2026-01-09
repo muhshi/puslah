@@ -81,7 +81,7 @@ class SurveyUserResource extends Resource
                 }),
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make()->label('Tambah Peserta'),
+                // Tables\Actions\CreateAction::make()->label('Tambah Peserta'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkAction::make('approveSelected')

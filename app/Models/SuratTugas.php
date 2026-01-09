@@ -30,6 +30,7 @@ class SuratTugas extends Model
         'signer_city',
         'signer_signature_path',
         'hash',
+        'status',
     ];
 
     protected $casts = [

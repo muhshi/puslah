@@ -233,6 +233,14 @@ class SuratTugasResource extends Resource
                     ->date()
                     ->sortable(),
 
+                Tables\Columns\TextColumn::make('status')
+                    ->badge()
+                    ->color(fn(string $state): string => match ($state) {
+                        'approved' => 'success',
+                        'rejected' => 'danger',
+                        default => 'warning',
+                    })
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -249,17 +257,25 @@ class SuratTugasResource extends Resource
                     ->color('info')
                     ->url(fn(SuratTugas $record) => route('surat-tugas.preview', $record->id))
                     ->openUrlInNewTab(),
+                Tables\Actions\Action::make('approve')
+                    ->label('Approve')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->visible(function (SuratTugas $record) {
+                        return $record->status === 'pending' && auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag']);
+                    })
+                    ->action(fn(SuratTugas $record) => $record->update(['status' => 'approved'])),
                 Tables\Actions\Action::make('pdf')
                     ->label('PDF')
                     ->icon('heroicon-o-document-arrow-down')
-                    ->color('danger')
+                    ->color(fn(SuratTugas $record) => $record->status === 'approved' ? 'danger' : 'gray')
                     ->action(function (SuratTugas $record) {
                         // 1. Ensure Hash exists
                         if (!$record->hash) {
                             $record->update(['hash' => \Illuminate\Support\Str::random(32)]);
                         }
 
-                        // 2. Load Logo Base64 (using optimized static file - 17KB only!)
+                        // 2. Load Logo Base64
                         $logoBase64 = \Illuminate\Support\Facades\Cache::remember('logo_bps_static_base64', 86400, function () {
                             $logoPath = public_path('images/logo_bps.png');
                             if (file_exists($logoPath)) {
@@ -268,10 +284,13 @@ class SuratTugasResource extends Resource
                             return null;
                         });
 
-                        // 3. Generate QR
-                        $verifyUrl = route('surat-tugas.verify', $record->hash);
-                        $qrSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(100)->margin(0)->generate($verifyUrl);
-                        $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
+                        // 3. Generate QR (ONLY IF APPROVED)
+                        $qrBase64 = null;
+                        if ($record->status === 'approved') {
+                            $verifyUrl = route('surat-tugas.verify', $record->hash);
+                            $qrSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(100)->margin(0)->generate($verifyUrl);
+                            $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
+                        }
 
                         // 4. Prepare Data
                         $periode = self::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
@@ -340,13 +359,38 @@ class SuratTugasResource extends Resource
                         $fileName = "Surat_Tugas_{$safeFilename}.docx";
                         $tempPath = storage_path('app/temp_' . $fileName);
                         $template->saveAs($tempPath);
-
                         return response()->download($tempPath)->deleteFileAfterSend();
                     }),
                 Tables\Actions\EditAction::make(),
             ])
+            ->headerActions([
+                \pxlrbt\FilamentExcel\Actions\Tables\ExportAction::make()
+                    ->exports([
+                        \pxlrbt\FilamentExcel\Exports\ExcelExport::make()
+                            ->fromTable()
+                            ->withFilename('Surat_Tugas_' . date('Y-m-d'))
+                            ->withColumns([
+                                \pxlrbt\FilamentExcel\Columns\Column::make('nomor_surat'),
+                                \pxlrbt\FilamentExcel\Columns\Column::make('user.name')->heading('Pegawai'),
+                                \pxlrbt\FilamentExcel\Columns\Column::make('jabatan')->heading('Jabatan'),
+                                \pxlrbt\FilamentExcel\Columns\Column::make('survey.name')->heading('Survei'),
+                                \pxlrbt\FilamentExcel\Columns\Column::make('tanggal'),
+                                \pxlrbt\FilamentExcel\Columns\Column::make('keperluan'),
+                                \pxlrbt\FilamentExcel\Columns\Column::make('tempat_tugas'),
+                                \pxlrbt\FilamentExcel\Columns\Column::make('waktu_mulai'),
+                                \pxlrbt\FilamentExcel\Columns\Column::make('waktu_selesai'),
+                            ]),
+                    ]),
+            ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('approveBulk')
+                        ->label('Approve Selected')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->visible(fn() => auth()->user()->hasAnyRole(['super_admin', 'kepala', 'kasubag']))
+                        ->action(fn(\Illuminate\Database\Eloquent\Collection $records) => $records->each->update(['status' => 'approved'])),
+                    \pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction::make(),
                     Tables\Actions\BulkAction::make('downloadBulk')
                         ->label('Download Semua (ZIP)')
                         ->icon('heroicon-o-arrow-down-tray')
@@ -434,7 +478,7 @@ class SuratTugasResource extends Resource
         /** @var \App\Models\User $user */
         $user = auth()->user();
 
-        if ($user && !$user->hasRole(['super_admin', 'Admin Pegawai'])) {
+        if ($user && !$user->hasRole(['super_admin', 'Admin Pegawai', 'Kepala'])) {
             $query->where('user_id', $user->id);
         }
 
