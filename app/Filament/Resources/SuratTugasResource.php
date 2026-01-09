@@ -270,14 +270,14 @@ class SuratTugasResource extends Resource
 
                         // 3. Generate QR
                         $verifyUrl = route('surat-tugas.verify', $record->hash);
-                        $qrPng = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')->size(100)->margin(0)->generate($verifyUrl);
-                        $qrBase64 = 'data:image/png;base64,' . base64_encode($qrPng);
+                        $qrSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(100)->margin(0)->generate($verifyUrl);
+                        $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
 
                         // 4. Prepare Data
                         $periode = self::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
 
                         // 5. Generate PDF
-                        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('surat-tugas.pdf', [
+                        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('surat-tugas.pdf_table_layout', [
                             'surat' => $record,
                             'logoBase64' => $logoBase64,
                             'qrBase64' => $qrBase64,

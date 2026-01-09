@@ -85,13 +85,14 @@ Route::get('/surat-tugas/preview/{id?}', function ($id = null) {
 
     // Generate QR
     $verifyUrl = route('surat-tugas.verify', $surat->hash);
-    $qrPng = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')->size(100)->margin(0)->generate($verifyUrl);
-    $qrBase64 = 'data:image/png;base64,' . base64_encode($qrPng);
+    $qrSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(100)->margin(0)->generate($verifyUrl);
+    $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
 
     // Format periode
     $periode = \App\Filament\Resources\SuratTugasResource::formatPeriodeTugas($surat->waktu_mulai, $surat->waktu_selesai);
 
-    return view('surat-tugas.pdf', [
+    //return view('surat-tugas.pdf', [
+    return view('surat-tugas.pdf_table_layout', [
         'surat' => $surat,
         'logoBase64' => $logoBase64,
         'qrBase64' => $qrBase64,
