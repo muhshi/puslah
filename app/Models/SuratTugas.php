@@ -20,7 +20,6 @@ class SuratTugas extends Model
         'kode_klasifikasi',
         'jabatan',
         'keperluan',
-        'dasar_surat',
         'tempat_tugas',
         'tanggal',
         'waktu_mulai',
@@ -30,6 +29,7 @@ class SuratTugas extends Model
         'signer_title',
         'signer_city',
         'signer_signature_path',
+        'hash',
     ];
 
     protected $casts = [

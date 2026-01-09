@@ -175,11 +175,6 @@ class SuratTugasResource extends Resource
                         ->required()
                         ->columnSpanFull(),
 
-                    Forms\Components\Textarea::make('dasar_surat')
-                        ->label('Dasar Surat')
-                        ->placeholder('Contoh: DIPA BPS Kabupaten Demak Tahun Anggaran 2025...')
-                        ->columnSpanFull(),
-
                     Forms\Components\TextInput::make('tempat_tugas')
                         ->label('Tempat Tugas')
                         ->placeholder('Contoh: Kecamatan Demak')
@@ -226,19 +221,18 @@ class SuratTugasResource extends Resource
                 Tables\Columns\TextColumn::make('nomor_surat')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('user.name')
-                    ->label('Pegawai')
+                Tables\Columns\TextColumn::make('survey.name')
+                    ->label('Nama Survei')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('jabatan')
+                Tables\Columns\TextColumn::make('user.name')
+                    ->label('Pegawai')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('tanggal')
                     ->date()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('signer_name')
-                    ->label('Penandatangan')
-                    ->searchable(),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -248,10 +242,56 @@ class SuratTugasResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\Action::make('preview')
+                    ->label('Preview')
+                    ->icon('heroicon-o-eye')
+                    ->visible(false)
+                    ->color('info')
+                    ->url(fn(SuratTugas $record) => route('surat-tugas.preview', $record->id))
+                    ->openUrlInNewTab(),
+                Tables\Actions\Action::make('pdf')
+                    ->label('PDF')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('danger')
+                    ->action(function (SuratTugas $record) {
+                        // 1. Ensure Hash exists
+                        if (!$record->hash) {
+                            $record->update(['hash' => \Illuminate\Support\Str::random(32)]);
+                        }
+
+                        // 2. Load Logo Base64 (using optimized static file - 17KB only!)
+                        $logoBase64 = \Illuminate\Support\Facades\Cache::remember('logo_bps_static_base64', 86400, function () {
+                            $logoPath = public_path('images/logo_bps.png');
+                            if (file_exists($logoPath)) {
+                                return 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+                            }
+                            return null;
+                        });
+
+                        // 3. Generate QR
+                        $verifyUrl = route('surat-tugas.verify', $record->hash);
+                        $qrPng = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')->size(100)->margin(0)->generate($verifyUrl);
+                        $qrBase64 = 'data:image/png;base64,' . base64_encode($qrPng);
+
+                        // 4. Prepare Data
+                        $periode = self::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
+
+                        // 5. Generate PDF
+                        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('surat-tugas.pdf', [
+                            'surat' => $record,
+                            'logoBase64' => $logoBase64,
+                            'qrBase64' => $qrBase64,
+                            'periode' => $periode,
+                            'is_preview' => false,
+                        ])->setPaper('a4', 'portrait');
+
+                        return response()->streamDownload(fn() => print ($pdf->output()), str_replace(['/', '\\'], '_', $record->nomor_surat) . '.pdf');
+                    }),
                 Tables\Actions\Action::make('word')
                     ->label('Word')
                     ->icon('heroicon-o-document-text')
                     ->color('success')
+                    ->visible(true) // Hidden as per request
                     ->action(function (SuratTugas $record) {
                         $settings = app(SystemSettings::class);
                         $templatePath = $settings->surat_tugas_template_path; // Stored in storage/app/public/templates
@@ -281,7 +321,7 @@ class SuratTugasResource extends Resource
 
                         $template->setValue('jabatan_tugas', $record->jabatan);
                         $template->setValue('keperluan', $record->keperluan);
-                        $template->setValue('dasar_surat', $record->dasar_surat ?? '-');
+                        $template->setValue('dasar_surat', $record->survey?->dasar_surat ?? '-');
                         $template->setValue('tempat_tugas', $record->tempat_tugas ?? '-');
                         $template->setValue('tanggal_surat', $record->tanggal->translatedFormat('d F Y'));
 
@@ -346,7 +386,7 @@ class SuratTugasResource extends Resource
                                 $template->setValue('jabatan_pegawai', $record->user->profile->jabatan ?? '-');
                                 $template->setValue('jabatan_tugas', $record->jabatan);
                                 $template->setValue('keperluan', $record->keperluan);
-                                $template->setValue('dasar_surat', $record->dasar_surat ?? '-');
+                                $template->setValue('dasar_surat', $record->survey?->dasar_surat ?? '-');
                                 $template->setValue('tempat_tugas', $record->tempat_tugas ?? '-');
                                 $template->setValue('tanggal_surat', $record->tanggal->translatedFormat('d F Y'));
 
@@ -383,7 +423,8 @@ class SuratTugasResource extends Resource
                         }),
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultSort('created_at', 'desc');
     }
 
     public static function getEloquentQuery(): Builder
@@ -434,7 +475,7 @@ class SuratTugasResource extends Resource
         $set('nomor_surat', $nomor);
     }
 
-    protected static function formatPeriodeTugas($mulai, $selesai): string
+    public static function formatPeriodeTugas($mulai, $selesai): string
     {
         if (!$mulai || !$selesai) {
             return '-';

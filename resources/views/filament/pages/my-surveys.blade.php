@@ -74,18 +74,14 @@
 
                     <div class="flex gap-2">
                         @if ($cert)
-                            <x-filament::button tag="a" target="_blank"
-                                href="{{ route('certificates.preview', $cert) }}" color="gray" size="sm">
-                                Lihat Sertifikat
-                            </x-filament::button>
-                            <x-filament::button tag="a" href="{{ route('certificates.download', $cert) }}"
-                                color="success" size="sm">
+
+                            <x-filament::button tag="a" href="{{ route('certificates.download', $cert) }}" color="success"
+                                size="sm">
                                 Unduh Sertifikat
                             </x-filament::button>
                         @endif
                         @if (isAdmin())
-                            <x-filament::button tag="a"
-                                href="{{ url('/admin/surveys/' . $survey->id . '/edit') }}" size="sm">
+                            <x-filament::button tag="a" href="{{ url('/admin/surveys/' . $survey->id . '/edit') }}" size="sm">
                                 Buka
                             </x-filament::button>
                         @endif

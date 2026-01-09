@@ -51,9 +51,9 @@ class ParticipantsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
-            ->recordTitleAttribute('user.name')
+            ->recordTitleAttribute('name')
             ->columns([
-                Tables\Columns\TextColumn::make('user.name')->label('Nama')->searchable(),
+                Tables\Columns\TextColumn::make('name')->label('Nama')->searchable(),
                 Tables\Columns\TextColumn::make('status')->colors([
                     'warning' => 'registered',
                     'success' => 'approved',
@@ -115,7 +115,7 @@ class ParticipantsRelationManager extends RelationManager
                     ->action(function (array $data, $livewire) {
                         /** @var \App\Models\Survey $survey */
                         $survey = $livewire->getOwnerRecord(); // record parent (Survey)
-                        $now = Carbon::now('Asia/Jakarta');
+                        $now = now();
 
                         // Merge users from both role categories
                         $mitraUsers = $data['mitra_users'] ?? [];
@@ -188,7 +188,7 @@ class ParticipantsRelationManager extends RelationManager
                     }),
                 Tables\Actions\DeleteBulkAction::make(),
             ])
-            ->defaultSort('id', 'desc');
+            ->defaultSort('survey_users.id', 'desc');
     }
 
     protected function approveOne(SurveyUser $r): void
@@ -206,7 +206,7 @@ class ParticipantsRelationManager extends RelationManager
             return;
 
         $cfg = app(SystemSettings::class);
-        $now = Carbon::now('Asia/Jakarta');
+        $now = now();
         $y = $now->year;
         $m = str_pad($now->month, 2, '0', STR_PAD_LEFT);
 

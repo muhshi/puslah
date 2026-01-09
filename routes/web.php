@@ -48,3 +48,54 @@ Route::get('/verify', function () {
     }
     return view('certificates.verify', ['ok' => true, 'cert' => $cert]);
 })->name('certificates.verify');
+
+Route::get('/surat-tugas/verify/{hash}', function ($hash) {
+    $surat = \App\Models\SuratTugas::with('user.profile', 'survey')->where('hash', $hash)->first();
+    if (!$surat) {
+        return view('surat-tugas.verify', ['ok' => false]);
+    }
+    return view('surat-tugas.verify', ['ok' => true, 'surat' => $surat]);
+})->name('surat-tugas.verify');
+
+// Preview route for layout testing (development only)
+Route::get('/surat-tugas/preview/{id?}', function ($id = null) {
+    if ($id) {
+        $surat = \App\Models\SuratTugas::with('user.profile', 'survey')->findOrFail($id);
+    } else {
+        // Use the latest surat tugas if no ID specified
+        $surat = \App\Models\SuratTugas::with('user.profile', 'survey')->latest()->first();
+        if (!$surat) {
+            return 'No Surat Tugas found. Create one first.';
+        }
+    }
+
+    // Generate hash if not exists
+    if (!$surat->hash) {
+        $surat->update(['hash' => \Illuminate\Support\Str::random(32)]);
+    }
+
+    // Cache logo
+    $logoBase64 = \Illuminate\Support\Facades\Cache::remember('logo_bps_static_base64', 86400, function () {
+        $logoPath = public_path('images/logo_bps.png');
+        if (file_exists($logoPath)) {
+            return 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+        }
+        return null;
+    });
+
+    // Generate QR
+    $verifyUrl = route('surat-tugas.verify', $surat->hash);
+    $qrPng = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')->size(100)->margin(0)->generate($verifyUrl);
+    $qrBase64 = 'data:image/png;base64,' . base64_encode($qrPng);
+
+    // Format periode
+    $periode = \App\Filament\Resources\SuratTugasResource::formatPeriodeTugas($surat->waktu_mulai, $surat->waktu_selesai);
+
+    return view('surat-tugas.pdf', [
+        'surat' => $surat,
+        'logoBase64' => $logoBase64,
+        'qrBase64' => $qrBase64,
+        'periode' => $periode,
+        'is_preview' => true,
+    ]);
+})->name('surat-tugas.preview');

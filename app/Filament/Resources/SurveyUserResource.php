@@ -142,11 +142,19 @@ class SurveyUserResource extends Resource
         if (Certificate::where('survey_id', $row->survey_id)->where('user_id', $row->user_id)->exists())
             return;
 
+        // 1. Get Active Template
+        $template = \App\Models\CertificateTemplate::where('active', true)->first();
+        if (!$template) {
+            Notification::make()->title('Gagal: Tidak ada template sertifikat yang aktif.')->danger()->send();
+            return;
+        }
+
         $cfg = app(SystemSettings::class);
         $now = Carbon::now('Asia/Jakarta');
         $y = $now->year;
         $m = str_pad($now->month, 2, '0', STR_PAD_LEFT);
 
+        // 2. Generate Number
         $seqByYear = $cfg->cert_number_seq_by_year ?? [];
         $next = ($seqByYear[$y] ?? 0) + 1;
         $seqByYear[$y] = $next;
@@ -156,21 +164,60 @@ class SurveyUserResource extends Resource
         $seq6 = str_pad((string) $next, 6, '0', STR_PAD_LEFT);
         $no = "{$cfg->cert_number_prefix}/{$y}/{$m}/{$seq6}";
 
-        $verifyUrl = route('certificates.verify', ['no' => $no]);
-        $qrPng = QrCode::format('png')->size(220)->margin(0)->generate($verifyUrl);
-        $qrPath = "certificates/qr/{$y}{$m}-{$row->user_id}-{$row->survey_id}.png";
-        Storage::put($qrPath, $qrPng);
+        // 3. Prepare Assets (Base64) for PDF
+        // Background
+        $bgBase64 = null;
+        if ($template->background_path && Storage::disk('public')->exists($template->background_path)) {
+            $bgData = Storage::disk('public')->get($template->background_path);
+            $mime = Storage::disk('public')->mimeType($template->background_path) ?? 'image/jpeg';
+            // Convert WEBP to JPEG if needed (GD)
+            if ($mime === 'image/webp' && function_exists('imagecreatefromstring')) {
+                $im = @imagecreatefromstring($bgData);
+                if ($im) {
+                    ob_start();
+                    imagejpeg($im, null, 85);
+                    $bgData = ob_get_clean();
+                    imagedestroy($im);
+                    $mime = 'image/jpeg';
+                }
+            }
+            $bgBase64 = 'data:' . $mime . ';base64,' . base64_encode($bgData);
+        }
 
-        $pdf = Pdf::loadView('certificates.simple', [
-            'no' => $no,
+        // Signature Image
+        $signBase64 = null;
+        if ($template->signer_image_path && Storage::disk('public')->exists($template->signer_image_path)) {
+            $signData = Storage::disk('public')->get($template->signer_image_path);
+            $signBase64 = 'data:image/png;base64,' . base64_encode($signData);
+        }
+
+        // QRs
+        $verifyUrl = route('certificates.verify', ['no' => $no]);
+
+        // QR Main
+        $qrPng = QrCode::format('png')->size($template->qr_size ?? 120)->margin(0)->generate($verifyUrl);
+        $qrBase64 = 'data:image/png;base64,' . base64_encode($qrPng);
+
+        // QR Signature (Small)
+        $signQrPng = QrCode::format('png')->size(120)->margin(0)->generate($verifyUrl);
+        $signQrBase64 = 'data:image/png;base64,' . base64_encode($signQrPng);
+
+        // 4. Generate PDF
+        $pdf = Pdf::loadView('certificates.pdf', [
+            'certificate' => null, // Not created yet
+            'template' => $template,
             'user' => $row->user,
             'survey' => $row->survey,
+            'no' => $no,
             'issuedAt' => $now,
-            'signerName' => $cfg->cert_signer_name,
-            'signerTitle' => $cfg->cert_signer_title,
-            'signPath' => $cfg->cert_signer_signature_path,
-            'qrPath' => storage_path('app/' . $qrPath),
-        ])->setPaper('a4', 'landscape');
+            'signatureDate' => $now,
+            'bgBase64' => $bgBase64,
+            'signBase64' => $signBase64,
+            'qrBase64' => $qrBase64,
+            'signQrBase64' => $signQrBase64,
+            'qrUrl' => $verifyUrl,
+            'preview' => false,
+        ])->setPaper($template->paper ?? 'a4', $template->orientation ?? 'landscape');
 
         $pdfPath = "certificates/pdf/{$y}{$m}-{$row->user_id}-{$row->survey_id}.pdf";
         Storage::put($pdfPath, $pdf->output());
@@ -184,6 +231,7 @@ class SurveyUserResource extends Resource
             'issued_at' => $now,
             'file_path' => $pdfPath,
             'hash' => $hash,
+            'certificate_template_id' => $template->id,
         ]);
     }
 

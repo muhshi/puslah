@@ -252,7 +252,6 @@
         @php $verifTop = $template->qr_top + $template->qr_size + 8; @endphp
         <div class="box fs-11 muted"
             style="top: {{ $verifTop }}px; left: {{ $template->qr_left }}px; width: 300px;">
-            {{ $qrUrl }}
         </div>
 
         <!-- Tanggal & Kota (kanan bawah sebelum tanda tangan) -->

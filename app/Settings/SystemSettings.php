@@ -25,6 +25,7 @@ class SystemSettings extends Settings
     public ?string $cert_signer_signature_path;
     public string $cert_number_prefix;        // ex: 'BPS-DMK'
     public array $cert_number_seq_by_year;    // ex: ['2025'=>123]
+    public ?string $logo_bps_path;
 
     public static function defaults(): array
     {
@@ -43,6 +44,7 @@ class SystemSettings extends Settings
             'office_code' => '33210',
             'surat_prefix' => 'B',
             'surat_tugas_template_path' => null,
+            'logo_bps_path' => null,
         ];
     }
 
