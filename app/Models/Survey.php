@@ -40,4 +40,9 @@ class Survey extends Model
     {
         return $this->hasMany(SuratTugas::class);
     }
+
+    public function surveyUsers(): HasMany
+    {
+        return $this->hasMany(SurveyUser::class);
+    }
 }

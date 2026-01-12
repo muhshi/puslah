@@ -26,7 +26,7 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class ParticipantsRelationManager extends RelationManager
 {
-    protected static string $relationship = 'participants';
+    protected static string $relationship = 'surveyUsers';
     protected static ?string $title = 'Peserta';
 
     public function form(Form $form): Form
@@ -51,9 +51,9 @@ class ParticipantsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
-            ->recordTitleAttribute('name')
+            ->recordTitleAttribute('id')
             ->columns([
-                Tables\Columns\TextColumn::make('name')->label('Nama')->searchable(),
+                Tables\Columns\TextColumn::make('user.name')->label('Nama')->searchable(),
                 Tables\Columns\TextColumn::make('status')->colors([
                     'warning' => 'registered',
                     'success' => 'approved',
