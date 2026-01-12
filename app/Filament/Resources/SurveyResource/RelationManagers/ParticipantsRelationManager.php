@@ -291,19 +291,30 @@ class ParticipantsRelationManager extends RelationManager
         $qrPath = "certificates/qr/{$y}{$m}-{$row->user_id}-{$row->survey_id}.svg";
         Storage::put($qrPath, $qrSvg);
 
-        // Render PDF (pakai view sederhana; bisa ganti template nanti)
+        // Get template for proper rendering
+        $template = \App\Models\CertificateTemplate::where('active', 1)->first();
+        if (!$template) {
+            throw new \Exception('No active certificate template found');
+        }
+
+        // Render PDF using proper template
         $user = $row->user;
         $survey = $row->survey;
-        $pdf = Pdf::loadView('certificates.simple', [
-            'no' => $no,
+        $pdf = Pdf::loadView('certificates.pdf', [
+            'certificate' => null, // Not created yet
+            'template' => $template,
             'user' => $user,
             'survey' => $survey,
+            'no' => $no,
             'issuedAt' => $now,
-            'signerName' => $cfg->cert_signer_name,
-            'signerTitle' => $cfg->cert_signer_title,
-            'signPath' => $cfg->cert_signer_signature_path,
-            'qrPath' => storage_path('app/' . $qrPath),
-        ])->setPaper('a4', 'landscape');
+            'signatureDate' => $now,
+            'bgBase64' => null, // Add if needed
+            'signBase64' => null, // Add if needed
+            'qrBase64' => 'data:image/svg+xml;base64,' . base64_encode($qrSvg),
+            'signQrBase64' => 'data:image/svg+xml;base64,' . base64_encode($qrSvg),
+            'qrUrl' => $verifyUrl,
+            'preview' => false,
+        ])->setPaper($template->paper ?? 'a4', $template->orientation ?? 'landscape');
 
         $pdfPath = "certificates/pdf/{$y}{$m}-{$row->user_id}-{$row->survey_id}.pdf";
         Storage::put($pdfPath, $pdf->output());
