@@ -154,7 +154,15 @@ class ParticipantsRelationManager extends RelationManager
                     ->label('Approve + Sertifikat')
                     ->icon('heroicon-o-check-circle')
                     ->requiresConfirmation()
+                    ->visible(fn(SurveyUser $r) => $r->status !== 'approved')
                     ->action(fn(SurveyUser $r) => $this->approveOne($r)),
+                Action::make('unapprove')
+                    ->label('Batal Approve')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->visible(fn(SurveyUser $r) => $r->status === 'approved')
+                    ->action(fn(SurveyUser $r) => $this->unapproveOne($r)),
                 Action::make('downloadCert')
                     ->label('Unduh Sertifikat')
                     ->url(function (SurveyUser $r) {
@@ -196,6 +204,14 @@ class ParticipantsRelationManager extends RelationManager
         $r->update(['status' => 'approved']);
         $this->issueCertificate($r);
         Notification::make()->title('Approved & sertifikat terbit')->success()->send();
+    }
+
+    protected function unapproveOne(SurveyUser $r): void
+    {
+        $r->update(['status' => 'registered']);
+        // Optional: Delete certificate?
+        // For now, just change status. Certificate remains record but status reverts.
+        Notification::make()->title('Approval dibatalkan')->success()->send();
     }
 
     /** Generate nomor + PDF + simpan Certificate */

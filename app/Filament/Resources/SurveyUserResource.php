@@ -125,6 +125,16 @@ class SurveyUserResource extends Resource
                         $r->update(['status' => 'approved']);
                         self::issueCertificate($r);
                     }),
+                Action::make('unapprove')
+                    ->label('Batal Approve')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->visible(fn(SurveyUser $r) => $r->status === 'approved')
+                    ->action(function (SurveyUser $r) {
+                        $r->update(['status' => 'registered']);
+                        Notification::make()->title('Approval dibatalkan')->success()->send();
+                    }),
                 Action::make('downloadCert')
                     ->label('Unduh Sertifikat')
                     ->url(function (SurveyUser $r) {

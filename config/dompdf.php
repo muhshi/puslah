@@ -279,6 +279,13 @@ return array(
          * @var bool
          */
         "enable_html5_parser" => true,
+
+        /**
+         * Image Renderer
+         * 
+         * Force GD renderer to avoid imagick dependency
+         */
+        'renderer' => 'GD',
     ),
 
 
