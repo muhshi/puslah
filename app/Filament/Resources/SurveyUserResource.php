@@ -113,6 +113,26 @@ class SurveyUserResource extends Resource
                             Log::error('Bulk approve error', ['e' => $e]);
                         }
                     }),
+                Tables\Actions\BulkAction::make('unapproveSelected')
+                    ->label('Batal Approve (Bulk)')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->deselectRecordsAfterCompletion()
+                    ->action(function (Collection $records): void {
+                        $count = 0;
+                        $records->each(function (\App\Models\SurveyUser $row) use (&$count) {
+                            if ($row->status === 'approved') {
+                                $row->update(['status' => 'registered']);
+                                $count++;
+                            }
+                        });
+
+                        Notification::make()
+                            ->title("Berhasil membatalkan approval {$count} peserta")
+                            ->success()
+                            ->send();
+                    }),
                 Tables\Actions\DeleteBulkAction::make(),
             ])
             ->actions([
@@ -122,8 +142,30 @@ class SurveyUserResource extends Resource
                     ->icon('heroicon-o-check-circle')
                     ->visible(fn(SurveyUser $r) => $r->status !== 'approved')
                     ->action(function (SurveyUser $r) {
-                        $r->update(['status' => 'approved']);
-                        self::issueCertificate($r);
+                        try {
+                            // Try to issue certificate first
+                            $certCreated = self::issueCertificateWithResult($r);
+
+                            if ($certCreated) {
+                                $r->update(['status' => 'approved']);
+                                Notification::make()
+                                    ->title('Berhasil approve & sertifikat diterbitkan')
+                                    ->success()
+                                    ->send();
+                            } else {
+                                Notification::make()
+                                    ->title('Gagal: Cek apakah template sertifikat sudah aktif')
+                                    ->danger()
+                                    ->send();
+                            }
+                        } catch (\Throwable $e) {
+                            Notification::make()
+                                ->title('Error saat menerbitkan sertifikat')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                            Log::error('Certificate issuance error', ['error' => $e]);
+                        }
                     }),
                 Action::make('unapprove')
                     ->label('Batal Approve')
@@ -147,13 +189,46 @@ class SurveyUserResource extends Resource
             ->defaultSort('id', 'desc');
     }
 
+    protected static function issueCertificateWithResult(SurveyUser $row): bool
+    {
+        // Check if certificate already exists
+        if (Certificate::where('survey_id', $row->survey_id)->where('user_id', $row->user_id)->exists()) {
+            return true; // Certificate already exists, consider it as success
+        }
+
+        // Get Active Template with detailed logging
+        $template = \App\Models\CertificateTemplate::where('active', 1)->first();
+
+        // Debug logging
+        Log::info('Certificate Template Check', [
+            'template_found' => $template ? 'YES' : 'NO',
+            'template_id' => $template?->id,
+            'template_name' => $template?->name,
+            'total_templates' => \App\Models\CertificateTemplate::count(),
+            'active_templates' => \App\Models\CertificateTemplate::where('active', 1)->count(),
+        ]);
+
+        if (!$template) {
+            return false; // No active template
+        }
+
+        try {
+            self::issueCertificate($row);
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('Certificate creation failed', ['error' => $e, 'survey_user_id' => $row->id]);
+            return false;
+        }
+    }
+
+
     protected static function issueCertificate(SurveyUser $row): void
     {
         if (Certificate::where('survey_id', $row->survey_id)->where('user_id', $row->user_id)->exists())
             return;
 
         // 1. Get Active Template
-        $template = \App\Models\CertificateTemplate::where('active', true)->first();
+        $template = \App\Models\CertificateTemplate::where('active', 1)->first();
         if (!$template) {
             Notification::make()->title('Gagal: Tidak ada template sertifikat yang aktif.')->danger()->send();
             return;
@@ -204,13 +279,13 @@ class SurveyUserResource extends Resource
         // QRs
         $verifyUrl = route('certificates.verify', ['no' => $no]);
 
-        // QR Main
-        $qrPng = QrCode::format('png')->size($template->qr_size ?? 120)->margin(0)->generate($verifyUrl);
-        $qrBase64 = 'data:image/png;base64,' . base64_encode($qrPng);
+        // QR Main (using SVG to avoid imagick)
+        $qrSvg = QrCode::format('svg')->size($template->qr_size ?? 120)->margin(0)->generate($verifyUrl);
+        $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
 
-        // QR Signature (Small)
-        $signQrPng = QrCode::format('png')->size(120)->margin(0)->generate($verifyUrl);
-        $signQrBase64 = 'data:image/png;base64,' . base64_encode($signQrPng);
+        // QR Signature (Small, using SVG to avoid imagick)
+        $signQrSvg = QrCode::format('svg')->size(120)->margin(0)->generate($verifyUrl);
+        $signQrBase64 = 'data:image/svg+xml;base64,' . base64_encode($signQrSvg);
 
         // 4. Generate PDF
         $pdf = Pdf::loadView('certificates.pdf', [

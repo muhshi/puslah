@@ -194,6 +194,26 @@ class ParticipantsRelationManager extends RelationManager
                             Log::error('RM bulk approve error', ['e' => $e]);
                         }
                     }),
+                Tables\Actions\BulkAction::make('unapproveSelected')
+                    ->label('Batal Approve (Bulk)')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->deselectRecordsAfterCompletion()
+                    ->action(function (Collection $records): void {
+                        $count = 0;
+                        foreach ($records as $row) {
+                            if ($row->status === 'approved') {
+                                $row->update(['status' => 'registered']);
+                                $count++;
+                            }
+                        }
+
+                        Notification::make()
+                            ->title("Berhasil membatalkan approval {$count} peserta")
+                            ->success()
+                            ->send();
+                    }),
                 Tables\Actions\DeleteBulkAction::make(),
             ])
             ->defaultSort('survey_users.id', 'desc');
@@ -201,9 +221,38 @@ class ParticipantsRelationManager extends RelationManager
 
     protected function approveOne(SurveyUser $r): void
     {
-        $r->update(['status' => 'approved']);
-        $this->issueCertificate($r);
-        Notification::make()->title('Approved & sertifikat terbit')->success()->send();
+        try {
+            // Check if certificate already exists or can be created
+            if (Certificate::where('survey_id', $r->survey_id)->where('user_id', $r->user_id)->exists()) {
+                // Certificate exists, just update status
+                $r->update(['status' => 'approved']);
+                Notification::make()->title('Approved & sertifikat sudah ada')->success()->send();
+                return;
+            }
+
+            // Check if template exists
+            $template = \App\Models\CertificateTemplate::where('active', 1)->first();
+            if (!$template) {
+                Notification::make()
+                    ->title('Gagal: Tidak ada template sertifikat yang aktif')
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            // Try to create certificate
+            $this->issueCertificate($r);
+            $r->update(['status' => 'approved']);
+            Notification::make()->title('Approved & sertifikat terbit')->success()->send();
+
+        } catch (\Throwable $e) {
+            Notification::make()
+                ->title('Error saat menerbitkan sertifikat')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+            Log::error('Certificate issuance error in RM', ['error' => $e, 'survey_user_id' => $r->id]);
+        }
     }
 
     protected function unapproveOne(SurveyUser $r): void
@@ -236,11 +285,11 @@ class ParticipantsRelationManager extends RelationManager
         $seq6 = str_pad((string) $next, 6, '0', STR_PAD_LEFT);
         $no = "{$cfg->cert_number_prefix}/{$y}/{$m}/{$seq6}";
 
-        // QR
+        // QR (using SVG to avoid imagick dependency)
         $verifyUrl = route('certificates.verify', ['no' => $no]);
-        $qrPng = QrCode::format('png')->size(220)->margin(0)->generate($verifyUrl);
-        $qrPath = "certificates/qr/{$y}{$m}-{$row->user_id}-{$row->survey_id}.png";
-        Storage::put($qrPath, $qrPng);
+        $qrSvg = QrCode::format('svg')->size(220)->margin(0)->generate($verifyUrl);
+        $qrPath = "certificates/qr/{$y}{$m}-{$row->user_id}-{$row->survey_id}.svg";
+        Storage::put($qrPath, $qrSvg);
 
         // Render PDF (pakai view sederhana; bisa ganti template nanti)
         $user = $row->user;
