@@ -99,7 +99,7 @@
                         class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
                 </span>
-                Sistem Administrasi Terintegrasi
+                DINAMIT (Data dan Informasi Mitra Terintegrasi)
             </div>
 
             <h1 class="text-4xl md:text-6xl font-extrabold text-bps-dark tracking-tight mb-6">
