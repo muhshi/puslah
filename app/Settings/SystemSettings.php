@@ -36,7 +36,7 @@ class SystemSettings extends Settings
             'default_work_start' => '08:00',
             'default_work_end' => '16:00',
             'default_workdays' => [1, 2, 3, 4, 5],
-            'default_office_name' => 'Puslah BPS Demak',
+            'default_office_name' => 'BPS Kabupaten Demak',
             'cert_city' => 'Demak',
             'cert_signer_name' => '-',
             'cert_signer_nip' => '-',

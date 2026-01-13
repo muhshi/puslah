@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ config('app.name', 'PUSLAH BPS Demak') }}</title>
+    <title>{{ config('app.name', 'DINAMIT BPS Demak') }}</title>
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -57,7 +57,7 @@
                         </svg>
                     </div>
                     <div>
-                        <h1 class="text-xl font-bold text-bps-dark tracking-tight leading-none">PUSLAH</h1>
+                        <h1 class="text-xl font-bold text-bps-dark tracking-tight leading-none">DINAMIT</h1>
                         <p class="text-[10px] font-medium text-bps-orange uppercase tracking-wider">BPS Kabupaten Demak
                         </p>
                     </div>
@@ -218,12 +218,14 @@
                 </div>
                 <div>
                     <div class="text-4xl font-extrabold text-bps-orange mb-2">
-                        {{ \App\Models\LaporanPerjalananDinas::count() }}</div>
+                        {{ \App\Models\LaporanPerjalananDinas::count() }}
+                    </div>
                     <div class="text-blue-200 text-sm uppercase tracking-wider font-semibold">Laporan Dinas</div>
                 </div>
                 <div>
                     <div class="text-4xl font-extrabold text-bps-orange mb-2">
-                        {{ \App\Models\Survey::where('is_active', true)->count() }}</div>
+                        {{ \App\Models\Survey::where('is_active', true)->count() }}
+                    </div>
                     <div class="text-blue-200 text-sm uppercase tracking-wider font-semibold">Survey Aktif</div>
                 </div>
             </div>
@@ -235,12 +237,12 @@
         <div
             class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
             <div class="text-center md:text-left">
-                <span class="block text-xl font-bold text-bps-dark">PUSLAH</span>
+                <span class="block text-xl font-bold text-bps-dark">DINAMIT</span>
                 <span class="text-slate-500 text-sm">Badan Pusat Statistik Kabupaten Demak</span>
             </div>
 
             <div class="text-slate-500 text-sm text-center md:text-right">
-                &copy; {{ date('Y') }} Puslah BPS Demak. All rights reserved.<br>
+                &copy; {{ date('Y') }} DINAMIT BPS Demak. All rights reserved.<br>
                 <span class="text-slate-400 text-xs">Jalan Sultan Fatah No. 10, Demak</span>
             </div>
         </div>
