@@ -22,6 +22,7 @@ class UserProfile extends Model
         'employment_status',   // 'aktif' / 'nonaktif'
         'jabatan',             // New Jabatan column
         'nip',                 // NIP for Pegawai BPS
+        'old_nip',             // NIP Lama for Pegawai BPS
         'pangkat_golongan',    // Pangkat/Golongan for Pegawai BPS
     ];
 

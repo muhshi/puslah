@@ -100,3 +100,7 @@ Route::get('/surat-tugas/preview/{id?}', function ($id = null) {
         'is_preview' => true,
     ]);
 })->name('surat-tugas.preview');
+
+Route::get('/templates/download/employee', function () {
+    return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\EmployeeTemplateExport, 'employee_import_template.xlsx');
+})->name('download.employee.template');
