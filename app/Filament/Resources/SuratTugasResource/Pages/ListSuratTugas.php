@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\SuratTugasResource\Pages;
 
 use App\Filament\Resources\SuratTugasResource;
+use App\Models\SuratTugas;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
@@ -19,6 +20,13 @@ class ListSuratTugas extends ListRecords
                 ->icon('heroicon-o-user-group')
                 ->color('success')
                 ->url(fn() => SuratTugasResource::getUrl('create-bulk')),
+        ];
+    }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            SuratTugasResource\Widgets\SkippedNumbersInfoWidget::class,
         ];
     }
 }

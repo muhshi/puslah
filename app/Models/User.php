@@ -60,6 +60,11 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasOne(\App\Models\UserProfile::class);
     }
 
+    public function suratTugas()
+    {
+        return $this->hasMany(SuratTugas::class);
+    }
+
     protected static function booted()
     {
         static::created(function ($user) {

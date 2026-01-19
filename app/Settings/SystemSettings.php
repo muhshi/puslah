@@ -44,6 +44,11 @@ class SystemSettings extends Settings
             'office_code' => '33210',
             'surat_prefix' => 'B',
             'surat_tugas_template_path' => null,
+            'laporan_dinas_template_path' => null,
+            'surat_pernyataan_template_path' => null,
+            'cert_signer_signature_path' => null,
+            'cert_number_prefix' => 'BPS-DMK',
+            'cert_number_seq_by_year' => [],
             'logo_bps_path' => null,
         ];
     }

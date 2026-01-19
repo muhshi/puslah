@@ -25,6 +25,7 @@
         "phpoffice/phpword": "^1.4",
         "pxlrbt/filament-excel": "^2.5",
         "simplesoftwareio/simple-qrcode": "^4.2",
+        "spatie/laravel-backup": "^9.3",
         "spatie/laravel-settings": "^3.4",
         "wireui/heroicons": "^2.9"
     },

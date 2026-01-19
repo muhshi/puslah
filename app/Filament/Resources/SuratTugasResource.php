@@ -52,6 +52,20 @@ class SuratTugasResource extends Resource
                                     if ($survey) {
                                         $set('keperluan', "Pendataan {$survey->name}");
                                     }
+
+                                    // Checker for empty users
+                                    $hasParticipants = \App\Models\SurveyUser::where('survey_id', $state)
+                                        ->whereDoesntHave('user.suratTugas', function ($q) use ($state) {
+                                        $q->where('survey_id', $state);
+                                    })
+                                        ->exists();
+
+                                    if (!$hasParticipants) {
+                                        \Filament\Notifications\Notification::make()
+                                            ->title('Semua petugas pada survey ini sudah memiliki Surat Tugas.')
+                                            ->warning()
+                                            ->send();
+                                    }
                                 }
                             }),
 
@@ -63,6 +77,9 @@ class SuratTugasResource extends Resource
                                 // If survey selected, filter by survey participants only
                                 if ($surveyId) {
                                     return \App\Models\SurveyUser::where('survey_id', $surveyId)
+                                        ->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
+                                            $q->where('survey_id', $surveyId);
+                                        })
                                         ->with('user.profile')
                                         ->get()
                                         ->mapWithKeys(function ($su) {

@@ -26,6 +26,7 @@ class ListUsers extends ListRecords
                         ->required(),
                 ])
                 ->action(function (array $data) {
+                    set_time_limit(300); // 5 minutes
                     $filePath = storage_path('app/public/' . $data['attachment']);
 
                     $import = new \App\Imports\UsersImport;
@@ -56,6 +57,7 @@ class ListUsers extends ListRecords
                         ->required(),
                 ])
                 ->action(function (array $data) {
+                    set_time_limit(300); // 5 minutes
                     $filePath = storage_path('app/public/' . $data['attachment']);
 
                     $import = new \App\Imports\EmployeesImport;

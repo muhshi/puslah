@@ -223,9 +223,9 @@ class LaporanPerjalananDinasResource extends Resource
                     ->icon('heroicon-o-document-check')
                     ->color('success')
                     ->visible(function (LaporanPerjalananDinas $record) {
-                        // Only visible if user is Pegawai BPS
+                        // Only visible if user is Organik
                         $user = $record->suratTugas->user;
-                        return $user->roles->pluck('name')->contains('Pegawai BPS');
+                        return $user->roles->pluck('name')->contains('Organik');
                     })
                     ->action(function (LaporanPerjalananDinas $record) {
                         return self::generateSuratPernyataan($record);

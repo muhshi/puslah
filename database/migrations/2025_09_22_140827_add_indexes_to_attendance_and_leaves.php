@@ -36,9 +36,11 @@ return new class extends Migration {
         });
 
         // ANALYZE TABLES
-        DB::statement('ANALYZE TABLE attendances');
-        DB::statement('ANALYZE TABLE leaves');
-        DB::statement('ANALYZE TABLE survey_users');
+        if (DB::connection()->getDriverName() !== 'sqlite') {
+            DB::statement('ANALYZE TABLE attendances');
+            DB::statement('ANALYZE TABLE leaves');
+            DB::statement('ANALYZE TABLE survey_users');
+        }
     }
 
     public function down(): void
@@ -60,6 +62,16 @@ return new class extends Migration {
 
     private function indexExists(string $table, string $indexName): bool
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            $indexes = DB::select("PRAGMA index_list('$table')");
+            foreach ($indexes as $index) {
+                if ($index->name === $indexName) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         $db = DB::getDatabaseName();
 
         return DB::table('information_schema.statistics')

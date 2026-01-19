@@ -92,13 +92,13 @@ class ParticipantsRelationManager extends RelationManager
                                 ->helperText('Cari dan pilih pegawai dengan role Mitra'),
 
                             Forms\Components\Select::make('pegawai_bps_users')
-                                ->label('Pegawai BPS')
+                                ->label('Pegawai Organik')
                                 ->multiple()
                                 ->searchable()
                                 ->preload()
                                 ->options(function () {
                                     return User::whereHas('roles', function ($query) {
-                                        $query->where('name', 'Pegawai BPS');
+                                        $query->where('name', 'Organik');
                                     })
                                         ->with('profile')
                                         ->get()
@@ -107,7 +107,7 @@ class ParticipantsRelationManager extends RelationManager
                                             return [$user->id => "{$user->name} ({$jabatan})"];
                                         });
                                 })
-                                ->helperText('Cari dan pilih pegawai dengan role Pegawai BPS'),
+                                ->helperText('Cari dan pilih pegawai dengan role Organik'),
                         ])->columns(2),
 
                         Forms\Components\Textarea::make('notes')->label('Catatan')->columnSpanFull(),

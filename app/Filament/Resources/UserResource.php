@@ -55,11 +55,11 @@ class UserResource extends Resource
                             ->visible(function ($get) {
                                 $roles = $get('roles');
                                 if (is_array($roles)) {
-                                    return in_array('Pegawai BPS', \Spatie\Permission\Models\Role::whereIn('id', $roles)->pluck('name')->toArray());
+                                    return in_array('Organik', \Spatie\Permission\Models\Role::whereIn('id', $roles)->pluck('name')->toArray());
                                 }
                                 return false;
                             })
-                            ->helperText('Khusus Pegawai BPS'),
+                            ->helperText('Khusus Pegawai Organik'),
 
                         Forms\Components\TextInput::make('profile.pangkat_golongan')
                             ->label('Pangkat/Golongan')
@@ -68,11 +68,11 @@ class UserResource extends Resource
                             ->visible(function ($get) {
                                 $roles = $get('roles');
                                 if (is_array($roles)) {
-                                    return in_array('Pegawai BPS', \Spatie\Permission\Models\Role::whereIn('id', $roles)->pluck('name')->toArray());
+                                    return in_array('Organik', \Spatie\Permission\Models\Role::whereIn('id', $roles)->pluck('name')->toArray());
                                 }
                                 return false;
                             })
-                            ->helperText('Khusus Pegawai BPS'),
+                            ->helperText('Khusus Pegawai Organik'),
                     ])->columns(2)
             ]);
     }
