@@ -41,10 +41,14 @@ class CalendarWidget extends FullCalendarWidget
                     'start' => $st->waktu_mulai,
                     'end' => $st->waktu_selesai,
                     'color' => '#3b82f6', // blue
-                    'url' => \App\Filament\Resources\SuratTugasResource::getUrl('edit', ['record' => $st]),
                     'extendedProps' => [
                         'type' => 'Surat Tugas',
+                        'survey_name' => $st->survey->name ?? 'No Survey',
+                        'user_name' => $st->user->name ?? 'N/A',
                         'keperluan' => $st->keperluan,
+                        'created_by' => $st->created_by,
+                        'model_id' => $st->id,
+                        'resource' => 'st',
                     ],
                 ];
             }
@@ -68,16 +72,64 @@ class CalendarWidget extends FullCalendarWidget
                     'start' => \Carbon\Carbon::parse($lpd->tanggal_kunjungan)->toDateString(),
                     'allDay' => true,
                     'color' => '#10b981', // green
-                    'url' => \App\Filament\Resources\LaporanPerjalananDinasResource::getUrl('edit', ['record' => $lpd]),
                     'extendedProps' => [
                         'type' => 'Laporan Perjalanan Dinas',
+                        'user_name' => $lpd->suratTugas->user->name ?? 'N/A',
                         'tujuan' => $lpd->tujuan,
+                        'model_id' => $lpd->id,
+                        'resource' => 'lpd',
                     ],
                 ];
             }
         }
 
         return $events;
+    }
+
+    public function onEventClick(array $info): void
+    {
+        $props = $info['event']['extendedProps'];
+        $type = $props['type'];
+        $userName = $props['user_name'];
+        $modelId = $props['model_id'];
+        $resourceType = $props['resource'];
+
+        $startTime = \Carbon\Carbon::parse($info['event']['start'])->translatedFormat('d F Y H:i');
+        $endTime = isset($info['event']['end']) ? \Carbon\Carbon::parse($info['event']['end'])->translatedFormat('d F Y H:i') : null;
+        $timeRange = $endTime ? "$startTime s/d $endTime" : $startTime;
+
+        $surveyInfo = $resourceType === 'st' ? "\n**Survey**: " . $props['survey_name'] : "";
+        $detailInfo = $resourceType === 'st' ? "\n**Keperluan**: " . $props['keperluan'] : "\n**Tujuan**: " . $props['tujuan'];
+
+        $canEdit = false;
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
+        if ($user->hasAnyRole(['super_admin', 'Operator'])) {
+            $canEdit = true;
+        } elseif ($resourceType === 'st' && $user->hasRole('Ketua Tim') && $props['created_by'] == $user->id) {
+            $canEdit = true;
+        }
+
+        $editUrl = $resourceType === 'st'
+            ? \App\Filament\Resources\SuratTugasResource::getUrl('edit', ['record' => $modelId])
+            : \App\Filament\Resources\LaporanPerjalananDinasResource::getUrl('edit', ['record' => $modelId]);
+
+        \Filament\Notifications\Notification::make()
+            ->title($type)
+            ->body("**Petugas**: $userName$surveyInfo$detailInfo\n**Waktu**: $timeRange")
+            ->actions([
+                \Filament\Notifications\Actions\Action::make('edit')
+                    ->label('Edit')
+                    ->color('primary')
+                    ->url($editUrl)
+                    ->visible($canEdit),
+                \Filament\Notifications\Actions\Action::make('close')
+                    ->label('Tutup')
+                    ->color('gray')
+                    ->close(),
+            ])
+            ->send();
     }
 
     protected function headerActions(): array
@@ -119,6 +171,7 @@ class CalendarWidget extends FullCalendarWidget
                 'center' => 'title',
                 'right' => 'dayGridMonth,timeGridWeek,timeGridDay,listWeek',
             ],
+            'eventClick' => true,
         ];
     }
 }
