@@ -293,6 +293,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
                     'signer_nip' => $settings->cert_signer_nip,
                     'signer_title' => $settings->cert_signer_title,
                     'signer_signature_path' => $settings->cert_signer_signature_path,
+                    'created_by' => auth()->id(),
                 ]);
             }
         });

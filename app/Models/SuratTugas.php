@@ -31,6 +31,7 @@ class SuratTugas extends Model
         'signer_signature_path',
         'hash',
         'status',
+        'created_by',
     ];
 
     protected $casts = [
@@ -47,6 +48,14 @@ class SuratTugas extends Model
     public function survey(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Survey::class);
+    }
+
+    /**
+     * Get the user who created this surat tugas.
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     /**
