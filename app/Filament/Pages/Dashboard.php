@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Filament\Widgets\StatsOverviewWidget;
 use App\Filament\Widgets\SuratTugasChartWidget;
 use App\Filament\Widgets\LatestSuratTugasWidget;
+use App\Filament\Widgets\CalendarWidget;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Url;
@@ -33,6 +34,7 @@ class Dashboard extends BaseDashboard
         return $this->isAdmin()
             ? [
                 StatsOverviewWidget::class,
+                CalendarWidget::class,
                 SuratTugasChartWidget::class,
                 LatestSuratTugasWidget::class,
             ]
@@ -41,10 +43,7 @@ class Dashboard extends BaseDashboard
 
     public function getColumns(): int|string|array
     {
-        // 2 kolom di desktop, 1 di mobile
-        return $this->isAdmin()
-            ? ['md' => 2, 'xl' => 2]
-            : 1;
+        return 2;
     }
     public function getViewData(): array
     {
