@@ -5,15 +5,24 @@ namespace App\Filament\Widgets;
 use App\Models\SuratTugas;
 use App\Models\LaporanPerjalananDinas;
 use Carbon\Carbon;
+use Filament\Actions\Action;
+use Filament\Actions\Concerns\InteractsWithActions;
+use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Toggle;
-use Filament\Notifications\Actions\Action as NotificationAction;
-use Filament\Notifications\Notification;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Concerns\InteractsWithInfolists;
+use Filament\Infolists\Contracts\HasInfolists;
+use Filament\Infolists\Infolist;
 use Illuminate\Database\Eloquent\Model;
 use Saade\FilamentFullCalendar\Widgets\FullCalendarWidget;
 
-class CalendarWidget extends FullCalendarWidget
+class CalendarWidget extends FullCalendarWidget implements HasActions, HasInfolists
 {
+    use InteractsWithActions;
+    use InteractsWithInfolists;
+
     protected int|string|array $columnSpan = 'full';
 
     public Model|string|null $model = SuratTugas::class;
@@ -39,9 +48,6 @@ class CalendarWidget extends FullCalendarWidget
         return $events;
     }
 
-    /**
-     * Get Surat Tugas events.
-     */
     private function getSuratTugasEvents(array $fetchInfo): array
     {
         $events = [];
@@ -74,9 +80,6 @@ class CalendarWidget extends FullCalendarWidget
         return $events;
     }
 
-    /**
-     * Get Laporan Perjalanan Dinas events.
-     */
     private function getLPDEvents(array $fetchInfo): array
     {
         $events = [];
@@ -112,54 +115,80 @@ class CalendarWidget extends FullCalendarWidget
     }
 
     /**
-     * Handle event click - show detail notification with Edit button.
-     */
-    /**
-     * Handle event click - show detail notification with Edit button.
+     * Handle event click - trigger the detail modal action.
      */
     public function onEventClick(array $info): void
     {
-        // In v3, $info contains the event data directly including extendedProps
-        $props = $info['extendedProps'] ?? [];
-
-        $type = $props['type'] ?? 'Event';
-        $userName = $props['user_name'] ?? 'N/A';
-        $modelId = $props['model_id'] ?? null;
-        $resourceType = $props['resource'] ?? '';
-
-        $startTime = Carbon::parse($info['start'] ?? now())->translatedFormat('d F Y H:i');
-        $endTime = isset($info['end']) ? Carbon::parse($info['end'])->translatedFormat('d F Y H:i') : null;
-        $timeRange = $endTime ? "{$startTime} s/d {$endTime}" : $startTime;
-
-        $surveyInfo = ($resourceType === 'st') ? "\n**Survey**: " . ($props['survey_name'] ?? '-') : '';
-        $detailInfo = ($resourceType === 'st')
-            ? "\n**Keperluan**: " . ($props['keperluan'] ?? '-')
-            : "\n**Tujuan**: " . ($props['tujuan'] ?? '-');
-
-        $canEdit = $this->checkEditPermission($resourceType, $props);
-
-        $editUrl = $this->getEditUrl($resourceType, $modelId);
-
-        Notification::make()
-            ->title($type)
-            ->body("**Petugas**: {$userName}{$surveyInfo}{$detailInfo}\n**Waktu**: {$timeRange}")
-            ->actions([
-                NotificationAction::make('edit')
-                    ->label('Edit')
-                    ->color('primary')
-                    ->url($editUrl)
-                    ->visible($canEdit && $editUrl !== null),
-                NotificationAction::make('close')
-                    ->label('Tutup')
-                    ->color('gray')
-                    ->close(),
-            ])
-            ->send();
+        $this->mountAction('viewEvent', [
+            'info' => $info,
+        ]);
     }
 
     /**
-     * Check if the current user can edit the event.
+     * Define the detail modal action.
      */
+    public function viewEventAction(): Action
+    {
+        return Action::make('viewEvent')
+            ->modalHeading(fn(array $arguments) => $arguments['info']['extendedProps']['type'] ?? 'Detail Event')
+            ->modalWidth('md')
+            ->modalSubmitAction(false)
+            ->modalCancelActionLabel('Tutup')
+            ->infolist(function (Infolist $infolist, array $arguments): Infolist {
+                $info = $arguments['info'] ?? [];
+                $props = $info['extendedProps'] ?? [];
+                $resourceType = $props['resource'] ?? '';
+
+                $startTime = Carbon::parse($info['start'] ?? now())->translatedFormat('d F Y H:i');
+                $endTime = isset($info['end']) ? Carbon::parse($info['end'])->translatedFormat('d F Y H:i') : null;
+                $timeRange = $endTime ? "{$startTime} s/d {$endTime}" : $startTime;
+
+                return $infolist
+                    ->schema([
+                        Section::make()
+                            ->schema([
+                                TextEntry::make('petugas')
+                                    ->label('Petugas')
+                                    ->default($props['user_name'] ?? '-'),
+
+                                TextEntry::make('survey')
+                                    ->label('Survey')
+                                    ->default($props['survey_name'] ?? '-')
+                                    ->visible($resourceType === 'st'),
+
+                                TextEntry::make('keperluan')
+                                    ->label($resourceType === 'st' ? 'Keperluan' : 'Tujuan')
+                                    ->default($resourceType === 'st' ? ($props['keperluan'] ?? '-') : ($props['tujuan'] ?? '-')),
+
+                                TextEntry::make('waktu')
+                                    ->label('Waktu')
+                                    ->default($timeRange),
+                            ])
+                            ->columns(1),
+                    ]);
+            })
+            ->extraModalFooterActions(function (array $arguments): array {
+                $info = $arguments['info'] ?? [];
+                $props = $info['extendedProps'] ?? [];
+                $resourceType = $props['resource'] ?? '';
+                $modelId = $props['model_id'] ?? null;
+
+                $canEdit = $this->checkEditPermission($resourceType, $props);
+                $editUrl = $this->getEditUrl($resourceType, $modelId);
+
+                if (!$canEdit || !$editUrl) {
+                    return [];
+                }
+
+                return [
+                    Action::make('edit')
+                        ->label('Edit Selengkapnya')
+                        ->color('primary')
+                        ->url($editUrl),
+                ];
+            });
+    }
+
     private function checkEditPermission(string $resourceType, array $props): bool
     {
         /** @var \App\Models\User|null $user */
@@ -180,9 +209,6 @@ class CalendarWidget extends FullCalendarWidget
         return false;
     }
 
-    /**
-     * Get the edit URL for the resource.
-     */
     private function getEditUrl(string $resourceType, ?int $modelId): ?string
     {
         if (!$modelId) {
@@ -194,16 +220,6 @@ class CalendarWidget extends FullCalendarWidget
             'lpd' => \App\Filament\Resources\LaporanPerjalananDinasResource::getUrl('edit', ['record' => $modelId]),
             default => null,
         };
-    }
-
-    protected function headerActions(): array
-    {
-        return [];
-    }
-
-    protected function modalActions(): array
-    {
-        return [];
     }
 
     public function getFormSchema(): array
@@ -235,7 +251,8 @@ class CalendarWidget extends FullCalendarWidget
                 'center' => 'title',
                 'right' => 'dayGridMonth,timeGridWeek,timeGridDay,listWeek',
             ],
+            'selectable' => false,
+            'editable' => false,
         ];
     }
 }
-
