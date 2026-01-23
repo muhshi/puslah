@@ -144,25 +144,27 @@ class CalendarWidget extends FullCalendarWidget implements HasActions, HasInfoli
                 $timeRange = $endTime ? "{$startTime} s/d {$endTime}" : $startTime;
 
                 return $infolist
+                    ->state([
+                        'petugas' => $props['user_name'] ?? '-',
+                        'survey' => $props['survey_name'] ?? '-',
+                        'keperluan' => ($resourceType === 'st') ? ($props['keperluan'] ?? '-') : ($props['tujuan'] ?? '-'),
+                        'waktu' => $timeRange,
+                    ])
                     ->schema([
                         Section::make()
                             ->schema([
                                 TextEntry::make('petugas')
-                                    ->label('Petugas')
-                                    ->default($props['user_name'] ?? '-'),
+                                    ->label('Petugas'),
 
                                 TextEntry::make('survey')
                                     ->label('Survey')
-                                    ->default($props['survey_name'] ?? '-')
                                     ->visible($resourceType === 'st'),
 
                                 TextEntry::make('keperluan')
-                                    ->label($resourceType === 'st' ? 'Keperluan' : 'Tujuan')
-                                    ->default($resourceType === 'st' ? ($props['keperluan'] ?? '-') : ($props['tujuan'] ?? '-')),
+                                    ->label($resourceType === 'st' ? 'Keperluan' : 'Tujuan'),
 
                                 TextEntry::make('waktu')
-                                    ->label('Waktu')
-                                    ->default($timeRange),
+                                    ->label('Waktu'),
                             ])
                             ->columns(1),
                     ]);
