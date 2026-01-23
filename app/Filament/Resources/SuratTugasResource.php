@@ -321,7 +321,11 @@ class SuratTugasResource extends Resource
                             'is_preview' => false,
                         ])->setPaper('a4', 'portrait');
 
-                        return response()->streamDownload(fn() => print ($pdf->output()), str_replace(['/', '\\'], '_', $record->nomor_surat) . '.pdf');
+                        $surveyName = $record->survey ? str_replace(['/', '\\', ' '], ['_', '_', '_'], $record->survey->name) : 'NoSurvey';
+                        $userName = str_replace(['/', '\\', ' '], ['_', '_', '_'], $record->user->name);
+                        $nomorSurat = str_replace(['/', '\\'], '_', $record->nomor_surat);
+                        $fileName = "{$nomorSurat}-{$surveyName}-{$userName}.pdf";
+                        return response()->streamDownload(fn() => print ($pdf->output()), $fileName);
                     }),
                 Tables\Actions\Action::make('word')
                     ->label('Word')
@@ -561,8 +565,10 @@ class SuratTugasResource extends Resource
                                 ])->setPaper('a4', 'portrait');
 
                                 // Save to temp
-                                $safeFilename = str_replace(['/', '\\'], '_', $record->nomor_surat);
-                                $fileName = "Surat_Tugas_{$safeFilename}.pdf";
+                                $surveyName = $record->survey ? str_replace(['/', '\\', ' '], ['_', '_', '_'], $record->survey->name) : 'NoSurvey';
+                                $userName = str_replace(['/', '\\', ' '], ['_', '_', '_'], $record->user->name);
+                                $nomorSurat = str_replace(['/', '\\'], '_', $record->nomor_surat);
+                                $fileName = "{$nomorSurat}-{$surveyName}-{$userName}.pdf";
                                 $tempPath = storage_path('app/temp_pdf_' . $fileName);
                                 file_put_contents($tempPath, $pdf->output());
                                 $tempFiles[] = $tempPath;
