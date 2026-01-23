@@ -21,8 +21,15 @@ class StatsOverviewWidget extends BaseWidget
                 ->descriptionIcon('heroicon-m-clock')
                 ->color('warning'),
 
-            Stat::make('Survey Aktif', \App\Models\Survey::whereDate('start_date', '<=', now())
-                ->whereDate('end_date', '>=', now())
+            Stat::make('Survey Aktif', \App\Models\Survey::where('is_active', true)
+                ->where(function ($query) {
+                    $query->whereNull('start_date')
+                        ->orWhereDate('start_date', '<=', now());
+                })
+                ->where(function ($query) {
+                    $query->whereNull('end_date')
+                        ->orWhereDate('end_date', '>=', now());
+                })
                 ->count())
                 ->description('Sedang berlangsung')
                 ->descriptionIcon('heroicon-m-clipboard-document-check')

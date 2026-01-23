@@ -406,7 +406,17 @@ class SuratTugasResource extends Resource
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->visible(fn() => auth()->user()->hasAnyRole(['super_admin', 'kepala', 'kasubag']))
-                        ->action(fn(\Illuminate\Database\Eloquent\Collection $records) => $records->each->update(['status' => 'approved'])),
+                        ->requiresConfirmation()
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $count = $records->where('status', '!=', 'approved')->count();
+                            $records->each->update(['status' => 'approved']);
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Berhasil!')
+                                ->body("{$count} surat tugas telah di-approve.")
+                                ->success()
+                                ->send();
+                        }),
                     \pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction::make(),
                     Tables\Actions\BulkAction::make('downloadBulk')
                         ->label('Download Semua (ZIP)')
@@ -475,6 +485,96 @@ class SuratTugasResource extends Resource
                             foreach ($records as $record) {
                                 $safeFilename = str_replace(['/', '\\'], '_', $record->nomor_surat);
                                 $tempPath = storage_path('app/temp_bulk_Surat_Tugas_' . $safeFilename . '.docx');
+                                if (file_exists($tempPath)) {
+                                    unlink($tempPath);
+                                }
+                            }
+
+                            return response()->download($zipPath)->deleteFileAfterSend();
+                        }),
+                    Tables\Actions\BulkAction::make('downloadPdfBulk')
+                        ->label('Download PDF (ZIP)')
+                        ->icon('heroicon-o-document-arrow-down')
+                        ->color('danger')
+                        ->modalHeading(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $pendingCount = $records->where('status', '!=', 'approved')->count();
+                            if ($pendingCount > 0) {
+                                return "⚠️ {$pendingCount} surat tugas belum di-approve";
+                            }
+                            return 'Download PDF';
+                        })
+                        ->modalDescription(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $pendingCount = $records->where('status', '!=', 'approved')->count();
+                            if ($pendingCount > 0) {
+                                return "Ada {$pendingCount} surat tugas yang belum di-approve. PDF yang belum approved tidak akan memiliki QR Code. Tetap download?";
+                            }
+                            return "Download {$records->count()} surat tugas sebagai PDF dalam file ZIP?";
+                        })
+                        ->requiresConfirmation()
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            // Load Logo Base64
+                            $logoBase64 = \Illuminate\Support\Facades\Cache::remember('logo_bps_static_base64', 86400, function () {
+                                $logoPath = public_path('images/logo_bps.png');
+                                if (file_exists($logoPath)) {
+                                    return 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+                                }
+                                return null;
+                            });
+
+                            // Create ZIP
+                            $zipFileName = 'Surat_Tugas_PDF_' . now()->format('YmdHis') . '.zip';
+                            $zipPath = storage_path('app/' . $zipFileName);
+                            $zip = new \ZipArchive();
+
+                            if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Gagal membuat file ZIP')
+                                    ->danger()
+                                    ->send();
+                                return;
+                            }
+
+                            $tempFiles = [];
+                            foreach ($records as $record) {
+                                // Ensure Hash exists
+                                if (!$record->hash) {
+                                    $record->update(['hash' => \Illuminate\Support\Str::random(32)]);
+                                }
+
+                                // Generate QR (ONLY IF APPROVED)
+                                $qrBase64 = null;
+                                if ($record->status === 'approved') {
+                                    $verifyUrl = route('surat-tugas.verify', $record->hash);
+                                    $qrSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(100)->margin(0)->generate($verifyUrl);
+                                    $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
+                                }
+
+                                $periode = self::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
+
+                                // Generate PDF
+                                $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('surat-tugas.pdf_table_layout', [
+                                    'surat' => $record,
+                                    'logoBase64' => $logoBase64,
+                                    'qrBase64' => $qrBase64,
+                                    'periode' => $periode,
+                                    'is_preview' => false,
+                                ])->setPaper('a4', 'portrait');
+
+                                // Save to temp
+                                $safeFilename = str_replace(['/', '\\'], '_', $record->nomor_surat);
+                                $fileName = "Surat_Tugas_{$safeFilename}.pdf";
+                                $tempPath = storage_path('app/temp_pdf_' . $fileName);
+                                file_put_contents($tempPath, $pdf->output());
+                                $tempFiles[] = $tempPath;
+
+                                // Add to ZIP
+                                $zip->addFile($tempPath, $fileName);
+                            }
+
+                            $zip->close();
+
+                            // Clean up temp files
+                            foreach ($tempFiles as $tempPath) {
                                 if (file_exists($tempPath)) {
                                     unlink($tempPath);
                                 }
