@@ -9,6 +9,7 @@ use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Saade\FilamentFullCalendar\FilamentFullCalendarPlugin;
 use Filament\Navigation\MenuItem;
 use Filament\Pages;
 use Filament\Panel;
@@ -64,6 +65,7 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,
+                Widgets\CalendarWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,
@@ -98,6 +100,7 @@ class AdminPanelProvider extends PanelProvider
                         'default' => 1,
                         'sm' => 2,
                     ]),
+                FilamentFullCalendarPlugin::make(),
             ])
             ->renderHook('panels::auth.login.form.after', fn() => view('filament.auth.login-google'));
     }
