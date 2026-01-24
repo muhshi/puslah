@@ -6,6 +6,7 @@ use App\Filament\Widgets\StatsOverviewWidget;
 use App\Filament\Widgets\SuratTugasChartWidget;
 use App\Filament\Widgets\LatestSuratTugasWidget;
 use App\Filament\Widgets\CalendarWidget;
+use App\Filament\Widgets\SurveyChartWidget;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Url;
@@ -36,6 +37,7 @@ class Dashboard extends BaseDashboard
                 StatsOverviewWidget::class,
                 CalendarWidget::class,
                 SuratTugasChartWidget::class,
+                SurveyChartWidget::class,
                 LatestSuratTugasWidget::class,
             ]
             : [];

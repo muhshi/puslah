@@ -71,6 +71,7 @@ class SuratTugasResource extends Resource
 
                         Forms\Components\Select::make('user_id')
                             ->label('Pegawai yang Ditugaskan')
+                            ->relationship('user', 'name')
                             ->options(function (Get $get) {
                                 $surveyId = $get('survey_id');
 
