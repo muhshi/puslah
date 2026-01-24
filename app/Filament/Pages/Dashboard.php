@@ -32,15 +32,13 @@ class Dashboard extends BaseDashboard
 
     public function getWidgets(): array
     {
-        return $this->isAdmin()
-            ? [
-                StatsOverviewWidget::class,
-                CalendarWidget::class,
-                SuratTugasChartWidget::class,
-                SurveyChartWidget::class,
-                LatestSuratTugasWidget::class,
-            ]
-            : [];
+        return [
+            StatsOverviewWidget::class,
+            CalendarWidget::class,
+            SuratTugasChartWidget::class,
+            SurveyChartWidget::class,
+            LatestSuratTugasWidget::class,
+        ];
     }
 
     public function getColumns(): int|string|array
