@@ -52,10 +52,22 @@ class CalendarWidget extends FullCalendarWidget implements HasActions, HasInfoli
     {
         $events = [];
 
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
         $suratTugasList = SuratTugas::query()
             ->where('waktu_mulai', '>=', $fetchInfo['start'])
             ->where('waktu_selesai', '<=', $fetchInfo['end'])
-            ->where('user_id', auth()->id())
+            ->when(!$user->hasAnyRole(['super_admin', 'Operator', 'Kepala', 'Kasubag']), function ($query) use ($user) {
+                if ($user->hasRole('Ketua Tim')) {
+                    $query->where(function ($q) use ($user) {
+                        $q->where('user_id', $user->id)
+                            ->orWhere('created_by', $user->id);
+                    });
+                } else {
+                    $query->where('user_id', $user->id);
+                }
+            })
             ->whereHas('user.roles', function ($query) {
                 $query->where('name', '!=', 'Mitra');
             })
@@ -88,11 +100,23 @@ class CalendarWidget extends FullCalendarWidget implements HasActions, HasInfoli
     {
         $events = [];
 
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+
         $lpdList = LaporanPerjalananDinas::query()
             ->where('tanggal_kunjungan', '>=', $fetchInfo['start'])
             ->where('tanggal_kunjungan', '<=', $fetchInfo['end'])
-            ->whereHas('suratTugas', function ($query) {
-                $query->where('user_id', auth()->id());
+            ->when(!$user->hasAnyRole(['super_admin', 'Operator', 'Kepala', 'Kasubag']), function ($query) use ($user) {
+                $query->whereHas('suratTugas', function ($q) use ($user) {
+                    if ($user->hasRole('Ketua Tim')) {
+                        $q->where(function ($sq) use ($user) {
+                            $sq->where('user_id', $user->id)
+                                ->orWhere('created_by', $user->id);
+                        });
+                    } else {
+                        $q->where('user_id', $user->id);
+                    }
+                });
             })
             ->whereHas('suratTugas.user.roles', function ($query) {
                 $query->where('name', '!=', 'Mitra');
