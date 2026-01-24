@@ -55,6 +55,9 @@ class CalendarWidget extends FullCalendarWidget implements HasActions, HasInfoli
         $suratTugasList = SuratTugas::query()
             ->where('waktu_mulai', '>=', $fetchInfo['start'])
             ->where('waktu_selesai', '<=', $fetchInfo['end'])
+            ->whereHas('user.roles', function ($query) {
+                $query->where('name', '!=', 'Mitra');
+            })
             ->with(['user', 'survey'])
             ->get();
 
@@ -87,6 +90,9 @@ class CalendarWidget extends FullCalendarWidget implements HasActions, HasInfoli
         $lpdList = LaporanPerjalananDinas::query()
             ->where('tanggal_kunjungan', '>=', $fetchInfo['start'])
             ->where('tanggal_kunjungan', '<=', $fetchInfo['end'])
+            ->whereHas('suratTugas.user.roles', function ($query) {
+                $query->where('name', '!=', 'Mitra');
+            })
             ->with(['suratTugas.user'])
             ->get();
 
