@@ -239,7 +239,7 @@ class CalendarWidget extends FullCalendarWidget implements HasActions, HasInfoli
                 ->color($this->showSuratTugas ? 'info' : 'gray')
                 ->action(function () {
                     $this->showSuratTugas = !$this->showSuratTugas;
-                    $this->refreshEvents();
+                    $this->refreshRecords();
                 }),
             Action::make('toggleLPD')
                 ->label($this->showLPD ? 'Sembunyikan LPD' : 'Tampilkan LPD')
@@ -247,7 +247,7 @@ class CalendarWidget extends FullCalendarWidget implements HasActions, HasInfoli
                 ->color($this->showLPD ? 'success' : 'gray')
                 ->action(function () {
                     $this->showLPD = !$this->showLPD;
-                    $this->refreshEvents();
+                    $this->refreshRecords();
                 }),
         ];
     }
@@ -261,12 +261,12 @@ class CalendarWidget extends FullCalendarWidget implements HasActions, HasInfoli
                         ->label('Tampilkan Surat Tugas')
                         ->default(true)
                         ->live()
-                        ->afterStateUpdated(fn() => $this->refreshEvents()),
+                        ->afterStateUpdated(fn() => $this->refreshRecords()),
                     Toggle::make('showLPD')
                         ->label('Tampilkan Laporan Perjalanan Dinas')
                         ->default(true)
                         ->live()
-                        ->afterStateUpdated(fn() => $this->refreshEvents()),
+                        ->afterStateUpdated(fn() => $this->refreshRecords()),
                 ])
                 ->columns(2),
         ];
