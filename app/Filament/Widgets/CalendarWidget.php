@@ -230,7 +230,7 @@ class CalendarWidget extends FullCalendarWidget implements HasActions, HasInfoli
         };
     }
 
-    protected function getHeaderActions(): array
+    protected function headerActions(): array
     {
         return [
             Action::make('toggleSuratTugas')
