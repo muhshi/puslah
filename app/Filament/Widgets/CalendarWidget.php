@@ -230,6 +230,28 @@ class CalendarWidget extends FullCalendarWidget implements HasActions, HasInfoli
         };
     }
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('toggleSuratTugas')
+                ->label($this->showSuratTugas ? 'Sembunyikan Surat Tugas' : 'Tampilkan Surat Tugas')
+                ->icon($this->showSuratTugas ? 'heroicon-m-eye' : 'heroicon-m-eye-slash')
+                ->color($this->showSuratTugas ? 'info' : 'gray')
+                ->action(function () {
+                    $this->showSuratTugas = !$this->showSuratTugas;
+                    $this->refreshEvents();
+                }),
+            Action::make('toggleLPD')
+                ->label($this->showLPD ? 'Sembunyikan LPD' : 'Tampilkan LPD')
+                ->icon($this->showLPD ? 'heroicon-m-eye' : 'heroicon-m-eye-slash')
+                ->color($this->showLPD ? 'success' : 'gray')
+                ->action(function () {
+                    $this->showLPD = !$this->showLPD;
+                    $this->refreshEvents();
+                }),
+        ];
+    }
+
     public function getFormSchema(): array
     {
         return [
