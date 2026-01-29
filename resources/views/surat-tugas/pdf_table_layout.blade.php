@@ -151,7 +151,8 @@
                 <td></td>
                 <td><span class="f12 arial">b.</span></td>
                 <td class="text-justify"><span class="f12 arial">bahwa berdasarkan sebagaimana dimaksud pada huruf a,
-                        perlu menugaskan nama tersebut dalam surat tugas ini untuk {{ $surat->keperluan }}.</span></td>
+                        perlu menugaskan nama tersebut dalam surat tugas ini untuk melaksanakan
+                        {{ $surat->keperluan }}.</span></td>
             </tr>
         </table>
 
@@ -231,8 +232,8 @@
                 <td class="label-col"><span class="f12 arial">Untuk</span></td>
                 <td class="colon-col"><span class="f12 arial">:</span></td>
                 <td class="number-col"><span class="f12 arial">1.</span></td>
-                <td class="text-justify"><span class="f12 arial">{{ $surat->keperluan }} tanggal {{ $periode }} di
-                        {{ $surat->tempat_tugas ?? '-' }}.</span></td>
+                <td class="text-justify"><span class="f12 arial">Melaksanakan {{ $surat->keperluan }} tanggal
+                        {{ $periode }} di {{ $surat->tempat_tugas ?? '-' }}.</span></td>
             </tr>
             <tr>
                 <td></td>

@@ -50,7 +50,7 @@ class SuratTugasResource extends Resource
                                 if ($state) {
                                     $survey = \App\Models\Survey::find($state);
                                     if ($survey) {
-                                        $set('keperluan', "Pendataan {$survey->name}");
+                                        $set('keperluan', "{$survey->name}");
                                     }
 
                                     // Checker for empty users
