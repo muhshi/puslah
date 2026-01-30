@@ -602,17 +602,17 @@ class SuratTugasResource extends Resource
         /** @var \App\Models\User $user */
         $user = auth()->user();
 
-        if ($user && !$user->hasRole(['super_admin', 'Kasubag', 'Kepala', 'Operator'])) {
+        if ($user && !$user->hasRole(['super_admin', 'Kasubag', 'Kepala', 'Operator', 'Ketua Tim'])) {
             // Ketua Tim: bisa lihat surat tugas yang mereka buat ATAU yang ditujukan untuk mereka
-            if ($user->hasRole('Ketua Tim')) {
-                $query->where(function ($q) use ($user) {
-                    $q->where('created_by', $user->id)
-                        ->orWhere('user_id', $user->id);
-                });
-            } else {
-                // Pegawai biasa: hanya bisa lihat surat tugas untuk diri sendiri
-                $query->where('user_id', $user->id);
-            }
+            // if ($user->hasRole('Ketua Tim')) {
+            //     $query->where(function ($q) use ($user) {
+            //         $q->where('created_by', $user->id)
+            //             ->orWhere('user_id', $user->id);
+            //     });
+            // } else {
+            // Pegawai biasa: hanya bisa lihat surat tugas untuk diri sendiri
+            $query->where('user_id', $user->id);
+            //}
         }
 
         return $query;
