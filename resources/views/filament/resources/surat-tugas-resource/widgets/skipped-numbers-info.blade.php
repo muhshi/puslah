@@ -32,7 +32,7 @@
                         <div
                             class="rounded-md bg-warning-50 p-2 dark:bg-warning-950/50 border border-warning-200 dark:border-warning-900">
                             <h3
-                                class="text-xs font-semibold uppercase tracking-wider text-warning-800 dark:text-warning-200 mb-0.5">
+                                class="text-xs font-semibold uppercase tracking-wider text-danger-600 dark:text-danger-400 mb-0.5">
                                 {{ $month }}
                             </h3>
                             <div class="text-xs font-bold text-warning-700 dark:text-warning-300 break-words leading-tight">
