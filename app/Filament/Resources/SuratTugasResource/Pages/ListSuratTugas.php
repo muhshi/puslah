@@ -14,7 +14,6 @@ class ListSuratTugas extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
             Actions\Action::make('create-bulk')
                 ->label('Buat Kolektif')
                 ->icon('heroicon-o-user-group')

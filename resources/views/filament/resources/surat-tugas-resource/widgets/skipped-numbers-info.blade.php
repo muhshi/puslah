@@ -22,23 +22,24 @@
         </div>
 
         <div class="mt-4">
-            @if ($this->getSkippedNumbers())
-                <div class="rounded-lg bg-warning-50 p-4 dark:bg-warning-950/50">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <x-heroicon-m-exclamation-triangle class="h-5 w-5 text-warning-400" />
-                        </div>
-                        <div class="ml-3">
-                            <h3 class="text-sm font-medium text-warning-800 dark:text-warning-200">
-                                Nomor Terlewat (Tahun {{ $selectedYear }})
+            @php
+                $missingByMonth = $this->getSkippedNumbersByMonth();
+            @endphp
+
+            @if (!empty($missingByMonth))
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                    @foreach ($missingByMonth as $month => $ranges)
+                        <div
+                            class="rounded-md bg-warning-50 p-2 dark:bg-warning-950/50 border border-warning-200 dark:border-warning-900">
+                            <h3
+                                class="text-xs font-semibold uppercase tracking-wider text-warning-800 dark:text-warning-200 mb-0.5">
+                                {{ $month }}
                             </h3>
-                            <div class="mt-2 text-sm text-warning-700 dark:text-warning-300">
-                                <p>
-                                    {{ $this->getFormattedSkippedNumbers() }}
-                                </p>
+                            <div class="text-xs font-bold text-warning-700 dark:text-warning-300 break-words leading-tight">
+                                {{ $ranges }}
                             </div>
                         </div>
-                    </div>
+                    @endforeach
                 </div>
             @else
                 <div class="rounded-lg bg-success-50 p-4 dark:bg-success-950/50">

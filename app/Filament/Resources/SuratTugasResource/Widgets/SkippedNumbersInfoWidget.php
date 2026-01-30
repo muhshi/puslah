@@ -18,14 +18,9 @@ class SkippedNumbersInfoWidget extends Widget
         $this->selectedYear = now()->year;
     }
 
-    public function getSkippedNumbers(): array
+    public function getSkippedNumbersByMonth(): array
     {
-        return SuratTugas::getSkippedNumbers($this->selectedYear);
-    }
-
-    public function getFormattedSkippedNumbers(): string
-    {
-        return SuratTugas::formatSkippedNumbers($this->getSkippedNumbers());
+        return SuratTugas::getSkippedNumbersByMonth($this->selectedYear);
     }
 
     public function getAvailableYears(): array

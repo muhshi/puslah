@@ -112,4 +112,47 @@ class SuratTugas extends Model
     {
         return (self::whereYear('tanggal', $year)->max('nomor_urut') ?? 0) + 1;
     }
+
+    /**
+     * Get skipped numbers grouped by Month name.
+     * Logic: A missing number belongs to the month of the *previous* existing number.
+     * If missing at start, defaults to January.
+     */
+    public static function getSkippedNumbersByMonth(int $year): array
+    {
+        // Get all existing (nomor_urut, month) pairs for the year
+        // We select tanggal to know the month
+        $existing = self::whereYear('tanggal', $year)
+            ->select('nomor_urut', 'tanggal')
+            ->orderBy('nomor_urut')
+            ->get();
+
+        if ($existing->isEmpty()) {
+            return [];
+        }
+
+        $maxUrut = $existing->last()->nomor_urut;
+        $existingMap = $existing->pluck('tanggal', 'nomor_urut'); // [urut => '2023-01-30', ...]
+
+        $missingByMonth = [];
+        $currentMonthName = 'Januari'; // Default start
+
+        for ($i = 1; $i <= $maxUrut; $i++) {
+            if (isset($existingMap[$i])) {
+                // Number exists, update current reference month
+                $date = \Carbon\Carbon::parse($existingMap[$i])->locale('id');
+                $currentMonthName = $date->translatedFormat('F');
+            } else {
+                // Number missing, assign to current reference month
+                $missingByMonth[$currentMonthName][] = $i;
+            }
+        }
+
+        // Format the arrays to be readable ranges
+        foreach ($missingByMonth as $month => $numbers) {
+            $missingByMonth[$month] = self::formatSkippedNumbers($numbers);
+        }
+
+        return $missingByMonth;
+    }
 }
