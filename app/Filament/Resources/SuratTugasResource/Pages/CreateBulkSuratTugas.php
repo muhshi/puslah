@@ -60,7 +60,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                 if ($state) {
                                     $survey = \App\Models\Survey::find($state);
                                     if ($survey) {
-                                        $set('keperluan', "Pendataan {$survey->name}");
+                                        $set('keperluan', "{$survey->name}");
                                     }
 
                                     // Checker for empty users (those who don't have surat tugas yet)
