@@ -45,11 +45,6 @@ class SurveyResource extends Resource
                     ->label('Selesai'),
                 Forms\Components\Toggle::make('is_active')
                     ->required(),
-                Forms\Components\TextInput::make('complete_rule')
-                    ->required()
-                    ->label('Aktif')
-                    ->maxLength(255)
-                    ->default('approved'),
             ]);
     }
 
@@ -72,8 +67,6 @@ class SurveyResource extends Resource
                 Tables\Columns\TextColumn::make('participants_count')
                     ->counts('participants')
                     ->label('Peserta'),
-                Tables\Columns\TextColumn::make('complete_rule')
-                    ->searchable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -121,11 +114,6 @@ class SurveyResource extends Resource
                         Forms\Components\Toggle::make('is_active')
                             ->label('Aktif')
                             ->default(fn(Survey $record) => $record->is_active),
-                        Forms\Components\TextInput::make('complete_rule')
-                            ->label('Rule')
-                            ->required()
-                            ->maxLength(255)
-                            ->default(fn(Survey $record) => $record->complete_rule ?? 'approved'),
                         Forms\Components\Toggle::make('copy_participants')
                             ->label('Copy Petugas/Peserta')
                             ->helperText('Centang untuk meng-copy semua petugas yang sudah di-assign ke survey asli')
