@@ -371,7 +371,7 @@ class SuratTugasResource extends Resource
                         $template->setValue('keperluan', $record->keperluan);
                         $template->setValue('dasar_surat', $record->survey?->dasar_surat ?? '-');
                         $template->setValue('tempat_tugas', $record->tempat_tugas ?? '-');
-                        $template->setValue('tanggal_surat', $record->tanggal->translatedFormat('d F Y'));
+                        $template->setValue('tanggal_surat', \Carbon\Carbon::parse($record->tanggal)->translatedFormat('d F Y'));
 
                         // Smart date range formatter
                         $periodeTugas = self::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);

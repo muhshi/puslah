@@ -150,6 +150,7 @@ class SurveyResource extends Resource
                 Tables\Actions\EditAction::make(),
             ])
             ->defaultSort('created_at', 'desc')
+            ->modifyQueryUsing(fn(Builder $query) => $query->orderBy('is_active', 'desc')->orderBy('created_at', 'desc'))
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
