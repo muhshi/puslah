@@ -56,6 +56,7 @@ php artisan serve
 - **Footer PDF Surat Tugas** — Footer berisi QR code dan disclaimer "*Dokumen ini telah ditandatangani secara elektronik...*"
 - **Verifikasi PDF** — Halaman verifikasi QR sekarang bisa menampilkan PDF langsung di browser.
 - **Optimasi Pengaturan Sistem** — Hanya menyimpan field yang diubah; file path tidak tertimpa null dari environment lokal.
+- **Tabel Surat Tugas** — Lebar kolom Nama Survei dan Pegawai dibatasi agar tabel lebih proporsional.
 
 ### 2026-02-10
 - Auto-deactivate survei yang sudah expired.
