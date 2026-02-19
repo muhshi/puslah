@@ -59,6 +59,8 @@ php artisan serve
 - **Tabel Surat Tugas** — Lebar kolom Nama Survei dan Pegawai dibatasi agar tabel lebih proporsional.
 - **Favicon Sistem** — Menggunakan logo BPS pada tab browser.
 - **Refinement Footer** — Update teks pada footer PDF Surat Tugas.
+- **Clickable Dashboard Stats** — Widget statistik di dashboard sekarang bisa diklik untuk menuju halaman terkait.
+- **Auto-Generate Sertifikat** — Command terjadwal (`app:generate-certificates`) untuk otomatis menerbitkan sertifikat bagi petugas yang surat tugasnya selesai (status approved).
 
 ### 2026-02-10
 - Auto-deactivate survei yang sudah expired.
