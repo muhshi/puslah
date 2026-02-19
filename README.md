@@ -57,6 +57,8 @@ php artisan serve
 - **Verifikasi PDF** — Halaman verifikasi QR sekarang bisa menampilkan PDF langsung di browser.
 - **Optimasi Pengaturan Sistem** — Hanya menyimpan field yang diubah; file path tidak tertimpa null dari environment lokal.
 - **Tabel Surat Tugas** — Lebar kolom Nama Survei dan Pegawai dibatasi agar tabel lebih proporsional.
+- **Favicon Sistem** — Menggunakan logo BPS pada tab browser.
+- **Refinement Footer** — Update teks pada footer PDF Surat Tugas.
 
 ### 2026-02-10
 - Auto-deactivate survei yang sudah expired.
