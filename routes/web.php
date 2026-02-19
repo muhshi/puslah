@@ -92,7 +92,7 @@ Route::get('/surat-tugas/verify/{hash}/pdf', function ($hash) {
     // Apply encryption if master password is set
     $settings = app(\App\Settings\SystemSettings::class);
     if (!empty($settings->pdf_master_password)) {
-        $pdf->setEncryption(null, $settings->pdf_master_password, ['print']);
+        $pdf->setEncryption('', $settings->pdf_master_password, ['print']);
     }
 
     return $pdf->stream('Surat_Tugas_' . str_replace(['/', '\\'], '_', $surat->nomor_surat) . '.pdf');

@@ -333,7 +333,7 @@ class SuratTugasResource extends Resource
                         $settings = app(SystemSettings::class);
                         if (!empty($settings->pdf_master_password)) {
                             // User password null (open freely), Owner password set, Permissions: print only
-                            $pdf->setEncryption(null, $settings->pdf_master_password, ['print']);
+                            $pdf->setEncryption('', $settings->pdf_master_password, ['print']);
                         }
 
                         $surveyName = $record->survey ? str_replace(['/', '\\', ' '], ['_', '_', '_'], $record->survey->name) : 'NoSurvey';
@@ -582,7 +582,7 @@ class SuratTugasResource extends Resource
                                 // Set Encryption if Master Password is set
                                 $settings = app(SystemSettings::class);
                                 if (!empty($settings->pdf_master_password)) {
-                                    $pdf->setEncryption(null, $settings->pdf_master_password, ['print']);
+                                    $pdf->setEncryption('', $settings->pdf_master_password, ['print']);
                                 }
 
                                 // Save to temp
