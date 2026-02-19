@@ -71,7 +71,8 @@
                         <img src="{{ $avatarUrl }}" class="w-10 h-10 rounded-full object-cover bg-gray-200">
                         <div>
                             <div class="text-gray-900 font-bold leading-tight">
-                                {{ $surat->user->profile->full_name ?? $surat->user->name }}</div>
+                                {{ $surat->user->profile->full_name ?? $surat->user->name }}
+                            </div>
                             <div class="text-gray-500 text-sm">{{ $surat->jabatan }}</div>
                         </div>
                     </div>
@@ -80,6 +81,17 @@
                 <div class="mt-2">
                     <label class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Keperluan</label>
                     <p class="text-gray-700 text-sm bg-gray-50 p-3 rounded">{{ $surat->keperluan }}</p>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-100">
+                    <a href="{{ route('surat-tugas.verify.pdf', $surat->hash) }}" target="_blank"
+                        class="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                            </path>
+                        </svg>
+                        Lihat Dokumen PDF
+                    </a>
                 </div>
             </div>
 

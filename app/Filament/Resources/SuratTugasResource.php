@@ -322,6 +322,13 @@ class SuratTugasResource extends Resource
                             'is_preview' => false,
                         ])->setPaper('a4', 'portrait');
 
+                        // 6. Set Encryption if Master Password is set
+                        $settings = app(SystemSettings::class);
+                        if (!empty($settings->pdf_master_password)) {
+                            // User password null (open freely), Owner password set, Permissions: print only
+                            $pdf->setEncryption(null, $settings->pdf_master_password, ['print']);
+                        }
+
                         $surveyName = $record->survey ? str_replace(['/', '\\', ' '], ['_', '_', '_'], $record->survey->name) : 'NoSurvey';
                         $userName = str_replace(['/', '\\', ' '], ['_', '_', '_'], $record->user->name);
                         $nomorSurat = str_replace(['/', '\\'], '_', $record->nomor_surat);
@@ -564,6 +571,12 @@ class SuratTugasResource extends Resource
                                     'periode' => $periode,
                                     'is_preview' => false,
                                 ])->setPaper('a4', 'portrait');
+
+                                // Set Encryption if Master Password is set
+                                $settings = app(SystemSettings::class);
+                                if (!empty($settings->pdf_master_password)) {
+                                    $pdf->setEncryption(null, $settings->pdf_master_password, ['print']);
+                                }
 
                                 // Save to temp
                                 $surveyName = $record->survey ? str_replace(['/', '\\', ' '], ['_', '_', '_'], $record->survey->name) : 'NoSurvey';

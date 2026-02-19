@@ -7,8 +7,8 @@
     <style>
         @page {
             size: 595.3pt 841.9pt;
-            /* Reduced left margin from 72pt to 54pt (approx 1.9cm) */
-            margin: 51.05pt 70.9pt 1.0cm 54.0pt;
+            /* top right bottom left */
+            margin: 36pt 70.9pt 1.8cm 54.0pt;
         }
 
         body {
@@ -21,7 +21,7 @@
         p {
             margin-top: 0cm;
             margin-right: 0cm;
-            margin-bottom: 8pt;
+            margin-bottom: 5pt;
             margin-left: 0cm;
             line-height: normal;
         }
@@ -116,26 +116,22 @@
 
     <div class="preview-container">
         {{-- Header Logo --}}
-        <div class="text-center" style="margin-bottom: 15pt;">
-            <img src="{{ $logoBase64 }}" alt="Logo BPS" style="width:63pt; height:55pt; display: inline-block;">
+        <div class="text-center" style="margin-bottom: 8pt;">
+            <img src="{{ $logoBase64 }}" alt="Logo BPS" style="width:55pt; height:48pt; display: inline-block;">
             <br>
-            <div style="margin-top: 5pt;">
+            <div style="margin-top: 3pt;">
                 <b class="italic"><span class="f14 arial">BADAN PUSAT STATISTIK KABUPATEN DEMAK</span></b>
             </div>
         </div>
 
-        <p class="p-normal" style="margin-bottom: 0pt;">
-            <span class="f9 arial">&nbsp;</span>
-        </p>
-
         <div class="text-center">
             <p class="p-normal" style="margin-bottom: 0;"><b><span class="f16 arial">SURAT TUGAS</span></b></p>
-            <p class="p-normal">
+            <p class="p-normal" style="margin-bottom: 4pt;">
                 <span class="f12 arial">NOMOR: {{ $surat->nomor_surat }}</span>
             </p>
         </div>
 
-        <br>
+        <div style="height: 6pt;"></div>
 
         {{-- Menimbang --}}
         <table>
@@ -156,7 +152,7 @@
             </tr>
         </table>
 
-        <div style="height: 10pt;"></div>
+        <div style="height: 5pt;"></div>
 
         {{-- Mengingat --}}
         <table>
@@ -198,7 +194,7 @@
             </tr>
         </table>
 
-        <br>
+        <div style="height: 6pt;"></div>
 
         <div class="text-center" style="margin-bottom: 5pt;">
             <b><span class="f12 arial">Memberi Perintah/Tugas :</span></b>
@@ -244,8 +240,7 @@
             </tr>
         </table>
 
-        <br>
-        <br>
+        <div style="height: 10pt;"></div>
 
         {{-- TTD --}}
         <table style="width: 100%;">
@@ -263,6 +258,25 @@
             </tr>
         </table>
 
+    </div>
+
+    {{-- Fixed Footer - positioned in the bottom margin --}}
+    <div
+        style="position: fixed; bottom: -35pt; left: 0; right: 0; height: 30pt; border-top: 1px solid #bbb; padding-top: 3pt;">
+        <table style="width: 100%; border: none;">
+            <tr>
+                <td style="width: 30pt; vertical-align: middle;">
+                    <img src="{{ $qrBase64 }}" width="25pt" height="25pt" alt="QR">
+                </td>
+                <td style="vertical-align: middle; color: #666; padding-left: 4pt;">
+                    <span class="arial italic" style="font-size: 6.5pt; line-height: 1.3;">
+                        Dokumen ini telah ditandatangani secara elektronik oleh Badan Pusat Statistik Kabupaten
+                        Demak<br>
+                        Pindai kode QR di samping untuk menampilkan file asli
+                    </span>
+                </td>
+            </tr>
+        </table>
     </div>
 
 </body>

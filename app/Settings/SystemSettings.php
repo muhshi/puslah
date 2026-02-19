@@ -26,6 +26,7 @@ class SystemSettings extends Settings
     public string $cert_number_prefix;        // ex: 'BPS-DMK'
     public array $cert_number_seq_by_year;    // ex: ['2025'=>123]
     public ?string $logo_bps_path;
+    public ?string $pdf_master_password;
 
     public static function defaults(): array
     {
@@ -50,6 +51,7 @@ class SystemSettings extends Settings
             'cert_number_prefix' => 'BPS-DMK',
             'cert_number_seq_by_year' => [],
             'logo_bps_path' => null,
+            'pdf_master_password' => null,
         ];
     }
 

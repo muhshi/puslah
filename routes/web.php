@@ -57,6 +57,47 @@ Route::get('/surat-tugas/verify/{hash}', function ($hash) {
     return view('surat-tugas.verify', ['ok' => true, 'surat' => $surat]);
 })->name('surat-tugas.verify');
 
+// Stream PDF inline for verified surat tugas
+Route::get('/surat-tugas/verify/{hash}/pdf', function ($hash) {
+    $surat = \App\Models\SuratTugas::with('user.profile', 'survey')->where('hash', $hash)->first();
+    if (!$surat) {
+        abort(404);
+    }
+
+    // Logo
+    $logoBase64 = \Illuminate\Support\Facades\Cache::remember('logo_bps_static_base64', 86400, function () {
+        $logoPath = public_path('images/logo_bps.png');
+        if (file_exists($logoPath)) {
+            return 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+        }
+        return null;
+    });
+
+    // QR
+    $verifyUrl = route('surat-tugas.verify', $surat->hash);
+    $qrSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(100)->margin(0)->generate($verifyUrl);
+    $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
+
+    // Periode
+    $periode = \App\Filament\Resources\SuratTugasResource::formatPeriodeTugas($surat->waktu_mulai, $surat->waktu_selesai);
+
+    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('surat-tugas.pdf_table_layout', [
+        'surat' => $surat,
+        'logoBase64' => $logoBase64,
+        'qrBase64' => $qrBase64,
+        'periode' => $periode,
+        'is_preview' => false,
+    ])->setPaper('a4', 'portrait');
+
+    // Apply encryption if master password is set
+    $settings = app(\App\Settings\SystemSettings::class);
+    if (!empty($settings->pdf_master_password)) {
+        $pdf->setEncryption(null, $settings->pdf_master_password, ['print']);
+    }
+
+    return $pdf->stream('Surat_Tugas_' . str_replace(['/', '\\'], '_', $surat->nomor_surat) . '.pdf');
+})->name('surat-tugas.verify.pdf');
+
 // Preview route for layout testing (development only)
 Route::get('/surat-tugas/preview/{id?}', function ($id = null) {
     if ($id) {

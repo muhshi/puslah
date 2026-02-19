@@ -56,6 +56,7 @@ class SystemSettingsPage extends Page implements HasForms
             'laporan_dinas_template_path' => $s->laporan_dinas_template_path,
             'surat_pernyataan_template_path' => $s->surat_pernyataan_template_path,
             'logo_bps_path' => $s->logo_bps_path,
+            'pdf_master_password' => $s->pdf_master_password,
         ]);
     }
 
@@ -120,6 +121,14 @@ class SystemSettingsPage extends Page implements HasForms
                         ->label('Radius (m)')
                         ->numeric()->minValue(10)->required()->suffix('m'),
                 ]),
+
+                Section::make('Proteksi Dokumen PDF')->schema([
+                    TextInput::make('pdf_master_password')
+                        ->label('Password Master (Anti-Edit)')
+                        ->password()
+                        ->revealable()
+                        ->helperText('Jika diisi, PDF Surat Tugas akan bersifat Read-Only (tidak bisa diedit/copy). Admin memerlukan password ini untuk membuka akses edit.'),
+                ])->columns(1),
 
 
             ])->columns(1),
@@ -209,7 +218,44 @@ class SystemSettingsPage extends Page implements HasForms
             return;
         }
 
-        app(SystemSettings::class)->fill($state)->save();
+        // Only save fields that were actually changed
+        $settings = app(SystemSettings::class);
+        $changed = [];
+
+        // File/upload fields that should not be overwritten with null
+        $fileFields = [
+            'surat_tugas_template_path',
+            'laporan_dinas_template_path',
+            'surat_pernyataan_template_path',
+            'cert_signer_signature_path',
+            'logo_bps_path',
+        ];
+
+        foreach ($state as $key => $value) {
+            if (!property_exists($settings, $key)) {
+                continue;
+            }
+
+            $original = $settings->{$key};
+
+            // Skip file fields if new value is empty but original has a value
+            // This prevents local env (without files) from wiping production paths
+            if (in_array($key, $fileFields) && empty($value) && !empty($original)) {
+                continue;
+            }
+
+            // Compare values (handle type coercion for numeric fields)
+            if ($original != $value) {
+                $changed[$key] = $value;
+            }
+        }
+
+        if (empty($changed)) {
+            Notification::make()->title('Tidak ada perubahan')->info()->send();
+            return;
+        }
+
+        $settings->fill($changed)->save();
 
         Notification::make()->title('Pengaturan tersimpan')->success()->send();
     }
