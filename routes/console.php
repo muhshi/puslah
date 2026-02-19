@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 \Illuminate\Support\Facades\Schedule::command('backup:clean')->weekly()->at('01:00');
 \Illuminate\Support\Facades\Schedule::command('backup:run')->weekly()->at('01:30');
 \Illuminate\Support\Facades\Schedule::command('surveys:deactivate-expired')->daily();
+\Illuminate\Support\Facades\Schedule::command('app:generate-certificates')->daily();

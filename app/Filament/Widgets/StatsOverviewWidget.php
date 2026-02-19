@@ -14,12 +14,14 @@ class StatsOverviewWidget extends BaseWidget
             Stat::make('Surat Tugas Bulan Ini', SuratTugas::whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count())
                 ->description('Total surat tugas dibuat bulan ini')
                 ->descriptionIcon('heroicon-m-document-text')
-                ->color('primary'),
+                ->color('primary')
+                ->url(route('filament.admin.resources.surat-tugas.index')),
 
             Stat::make('Pending Approval', SuratTugas::where('status', 'pending')->count())
                 ->description('Menunggu persetujuan')
                 ->descriptionIcon('heroicon-m-clock')
-                ->color('warning'),
+                ->color('warning')
+                ->url(route('filament.admin.resources.surat-tugas.index', ['tableFilters[status][value]' => 'pending'])),
 
             Stat::make('Survey Aktif', \App\Models\Survey::where('is_active', 1)
                 ->where(function ($query) {
@@ -33,7 +35,8 @@ class StatsOverviewWidget extends BaseWidget
                 ->count())
                 ->description('Sedang berlangsung')
                 ->descriptionIcon('heroicon-m-clipboard-document-check')
-                ->color('success'),
+                ->color('success')
+                ->url(route('filament.admin.resources.surveys.index')),
 
             Stat::make('Sertifikat Terbit', \App\Models\Certificate::count())
                 ->description('Total sertifikat dikeluarkan')
