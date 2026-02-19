@@ -56,6 +56,7 @@ class AdminPanelProvider extends PanelProvider
             ->font('Inter')
             ->brandName('DINAMIT')
             ->brandLogoHeight('3rem')
+            ->favicon(asset('images/logo_bps.png'))
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([

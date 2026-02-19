@@ -272,7 +272,7 @@
                     <span class="arial italic" style="font-size: 6.5pt; line-height: 1.3;">
                         Dokumen ini telah ditandatangani secara elektronik oleh Badan Pusat Statistik Kabupaten
                         Demak<br>
-                        Pindai kode QR di samping untuk menampilkan file asli
+                        Pindai kode QR pada tanda tangan digital untuk menampilkan file asli
                     </span>
                 </td>
             </tr>
