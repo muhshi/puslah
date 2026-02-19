@@ -247,7 +247,7 @@ class SuratTugasResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->wrap() // Allow wrapping for long numbers
-                    ->width('20%'), // Explicit width suggestion
+                    ->width('18%'), // Explicit width suggestion
                 Tables\Columns\TextColumn::make('survey.name')
                     ->label('Nama Survei')
                     ->searchable()
