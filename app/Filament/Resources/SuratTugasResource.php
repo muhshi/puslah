@@ -245,15 +245,26 @@ class SuratTugasResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('nomor_surat')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->wrap() // Allow wrapping for long numbers
+                    ->width('20%'), // Explicit width suggestion
                 Tables\Columns\TextColumn::make('survey.name')
                     ->label('Nama Survei')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->limit(40) // Limit characters
+                    ->tooltip(function (Tables\Columns\TextColumn $column): ?string {
+                        return $column->getState();
+                    })
+                    ->wrap(), // Wrap if still long within limit
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Pegawai')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->limit(25)
+                    ->tooltip(function (Tables\Columns\TextColumn $column): ?string {
+                        return $column->getState();
+                    }),
                 Tables\Columns\TextColumn::make('tanggal')
                     ->date()
                     ->sortable(),
