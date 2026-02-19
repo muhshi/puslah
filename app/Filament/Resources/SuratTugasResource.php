@@ -46,11 +46,18 @@ class SuratTugasResource extends Resource
                             ->afterStateUpdated(function (Set $set, $state) {
                                 // Reset user_id when survey changes
                                 $set('user_id', null);
-                                // Auto-fill keperluan if survey selected
+                                // Auto-fill keperluan and dates if survey selected
                                 if ($state) {
                                     $survey = \App\Models\Survey::find($state);
                                     if ($survey) {
                                         $set('keperluan', "{$survey->name}");
+                                        // Auto-fill waktu_mulai/selesai from survey dates
+                                        if ($survey->start_date) {
+                                            $set('waktu_mulai', \Carbon\Carbon::parse($survey->start_date)->setTime(8, 0));
+                                        }
+                                        if ($survey->end_date) {
+                                            $set('waktu_selesai', \Carbon\Carbon::parse($survey->end_date)->setTime(16, 0));
+                                        }
                                     }
 
                                     // Checker for empty users
@@ -371,7 +378,7 @@ class SuratTugasResource extends Resource
                         $template->setValue('keperluan', $record->keperluan);
                         $template->setValue('dasar_surat', $record->survey?->dasar_surat ?? '-');
                         $template->setValue('tempat_tugas', $record->tempat_tugas ?? '-');
-                        $template->setValue('tanggal_surat', $record->tanggal->translatedFormat('d F Y'));
+                        $template->setValue('tanggal_surat', \Carbon\Carbon::parse($record->tanggal)->translatedFormat('d F Y'));
 
                         // Smart date range formatter
                         $periodeTugas = self::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
@@ -605,7 +612,7 @@ class SuratTugasResource extends Resource
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ])
-            ->defaultSort('created_at', 'desc');
+            ->defaultSort('nomor_urut', 'desc');
     }
 
     public static function getEloquentQuery(): Builder
