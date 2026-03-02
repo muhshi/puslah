@@ -208,9 +208,44 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                         $totalPegawai = $mitraCount + $pegawaiCount;
                                         $start = (int) ($get('nomor_urut_mulai') ?? 1);
 
+                                        // Check if starting number already exists
+                                        $tanggal = $get('tanggal');
+                                        $year = $tanggal ? \Carbon\Carbon::parse($tanggal)->year : now()->year;
+                                        $exists = SuratTugas::whereYear('tanggal', $year)
+                                            ->where('nomor_urut', $start)
+                                            ->exists();
+
+                                        $warning = '';
+                                        if ($exists) {
+                                            $warning = '⚠️ Nomor ' . $start . ' sudah dipakai, akan otomatis dilewati. ';
+                                        }
+
                                         if ($totalPegawai > 0) {
-                                            $end = $start + $totalPegawai - 1;
-                                            return "{$totalPegawai} pegawai terpilih → Nomor #{$start} s/d #{$end}";
+                                            // Calculate actual numbers that will be used (skipping existing ones)
+                                            $usedNumbers = SuratTugas::whereYear('tanggal', $year)
+                                                ->pluck('nomor_urut')
+                                                ->flip()
+                                                ->toArray();
+                                            $assignedNumbers = [];
+                                            $currentUrut = $start - 1;
+                                            for ($i = 0; $i < $totalPegawai; $i++) {
+                                                $currentUrut++;
+                                                while (isset($usedNumbers[$currentUrut])) {
+                                                    $currentUrut++;
+                                                }
+                                                $assignedNumbers[] = $currentUrut;
+                                            }
+                                            $first = $assignedNumbers[0];
+                                            $last = end($assignedNumbers);
+                                            return new \Illuminate\Support\HtmlString(
+                                                ($warning ? '<span class="text-warning-600 dark:text-warning-400">' . $warning . '</span><br>' : '')
+                                                . "{$totalPegawai} pegawai terpilih → Nomor #{$first} s/d #{$last} (nomor terpakai otomatis dilewati)"
+                                            );
+                                        }
+                                        if ($warning) {
+                                            return new \Illuminate\Support\HtmlString(
+                                                '<span class="text-warning-600 dark:text-warning-400">' . $warning . '</span>'
+                                            );
                                         }
                                         return 'Pilih pegawai untuk melihat range nomor';
                                     }),
@@ -281,44 +316,52 @@ class CreateBulkSuratTugas extends Page implements HasForms
             ->flip()
             ->toArray();
 
-        DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $year, &$currentUrut, $usedNumbers) {
-            foreach ($userIds as $userId) {
-                $currentUrut++;
-                // Skip over already-used nomor_urut
-                while (isset($usedNumbers[$currentUrut])) {
+        try {
+            DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $year, &$currentUrut, $usedNumbers) {
+                foreach ($userIds as $userId) {
                     $currentUrut++;
+                    // Skip over already-used nomor_urut
+                    while (isset($usedNumbers[$currentUrut])) {
+                        $currentUrut++;
+                    }
+
+                    $urut = str_pad($currentUrut, 4, '0', STR_PAD_LEFT);
+                    $nomorSurat = "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$year}";
+
+                    SuratTugas::create([
+                        'user_id' => $userId,
+                        'survey_id' => $data['survey_id'],
+                        'nomor_surat' => $nomorSurat,
+                        'nomor_urut' => $currentUrut,
+                        'kode_klasifikasi' => $klasifikasi,
+                        'jabatan' => $data['jabatan'],
+                        'keperluan' => $data['keperluan'],
+                        'tempat_tugas' => $data['tempat_tugas'] ?? null,
+                        'tanggal' => $data['tanggal'],
+                        'waktu_mulai' => $data['waktu_mulai'],
+                        'waktu_selesai' => $data['waktu_selesai'],
+                        'signer_city' => $settings->cert_city,
+                        'signer_name' => $settings->cert_signer_name,
+                        'signer_nip' => $settings->cert_signer_nip,
+                        'signer_title' => $settings->cert_signer_title,
+                        'signer_signature_path' => $settings->cert_signer_signature_path,
+                        'created_by' => auth()->id(),
+                    ]);
                 }
+            });
 
-                $urut = str_pad($currentUrut, 4, '0', STR_PAD_LEFT);
-                $nomorSurat = "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$year}";
+            Notification::make()
+                ->title('Berhasil membuat ' . count($userIds) . ' surat tugas')
+                ->success()
+                ->send();
 
-                SuratTugas::create([
-                    'user_id' => $userId,
-                    'survey_id' => $data['survey_id'],
-                    'nomor_surat' => $nomorSurat,
-                    'nomor_urut' => $currentUrut,
-                    'kode_klasifikasi' => $klasifikasi,
-                    'jabatan' => $data['jabatan'],
-                    'keperluan' => $data['keperluan'],
-                    'tempat_tugas' => $data['tempat_tugas'] ?? null,
-                    'tanggal' => $data['tanggal'],
-                    'waktu_mulai' => $data['waktu_mulai'],
-                    'waktu_selesai' => $data['waktu_selesai'],
-                    'signer_city' => $settings->cert_city,
-                    'signer_name' => $settings->cert_signer_name,
-                    'signer_nip' => $settings->cert_signer_nip,
-                    'signer_title' => $settings->cert_signer_title,
-                    'signer_signature_path' => $settings->cert_signer_signature_path,
-                    'created_by' => auth()->id(),
-                ]);
-            }
-        });
-
-        Notification::make()
-            ->title('Berhasil membuat ' . count($userIds) . ' surat tugas')
-            ->success()
-            ->send();
-
-        $this->redirect(SuratTugasResource::getUrl('index'));
+            $this->redirect(SuratTugasResource::getUrl('index'));
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Gagal membuat surat tugas')
+                ->body('Terjadi kesalahan: Nomor surat duplikat atau data tidak valid. Silakan cek nomor urut dan coba lagi.')
+                ->danger()
+                ->send();
+        }
     }
 }
