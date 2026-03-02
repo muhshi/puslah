@@ -31,8 +31,8 @@ class CreateBulkSuratTugas extends Page implements HasForms
 
         $this->form->fill([
             'tanggal' => now(),
-            'waktu_mulai' => now()->setTime(8, 0),
-            'waktu_selesai' => now()->setTime(16, 0),
+            'waktu_mulai' => now()->format('Y-m-d'),
+            'waktu_selesai' => now()->format('Y-m-d'),
             'kode_klasifikasi' => 'KP.650',
             'nomor_urut_mulai' => $nextNumber,
         ]);
@@ -63,10 +63,10 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                         $set('keperluan', "{$survey->name}");
                                         // Auto-fill waktu_mulai/selesai from survey dates
                                         if ($survey->start_date) {
-                                            $set('waktu_mulai', \Carbon\Carbon::parse($survey->start_date)->setTime(8, 0));
+                                            $set('waktu_mulai', \Carbon\Carbon::parse($survey->start_date)->format('Y-m-d'));
                                         }
                                         if ($survey->end_date) {
-                                            $set('waktu_selesai', \Carbon\Carbon::parse($survey->end_date)->setTime(16, 0));
+                                            $set('waktu_selesai', \Carbon\Carbon::parse($survey->end_date)->format('Y-m-d'));
                                         }
                                     }
 
@@ -185,14 +185,12 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                         $set('nomor_urut_mulai', $nextNumber);
                                     }
                                 }),
-                            Forms\Components\DateTimePicker::make('waktu_mulai')
+                            Forms\Components\DatePicker::make('waktu_mulai')
                                 ->label('Mulai')
-                                ->seconds(false)
-                                ->default(now()->setTime(8, 0)),
-                            Forms\Components\DateTimePicker::make('waktu_selesai')
+                                ->default(now()),
+                            Forms\Components\DatePicker::make('waktu_selesai')
                                 ->label('Selesai')
-                                ->seconds(false)
-                                ->default(now()->setTime(16, 0)),
+                                ->default(now()),
                         ])->columns(3),
 
                         Forms\Components\Section::make('Penomoran Surat')
@@ -277,9 +275,20 @@ class CreateBulkSuratTugas extends Page implements HasForms
         // Use custom starting number from user input
         $currentUrut = (int) $data['nomor_urut_mulai'] - 1;
 
-        DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $year, &$currentUrut) {
+        // Get all existing nomor_urut for this year to skip over them
+        $usedNumbers = SuratTugas::whereYear('tanggal', $year)
+            ->pluck('nomor_urut')
+            ->flip()
+            ->toArray();
+
+        DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $year, &$currentUrut, $usedNumbers) {
             foreach ($userIds as $userId) {
                 $currentUrut++;
+                // Skip over already-used nomor_urut
+                while (isset($usedNumbers[$currentUrut])) {
+                    $currentUrut++;
+                }
+
                 $urut = str_pad($currentUrut, 4, '0', STR_PAD_LEFT);
                 $nomorSurat = "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$year}";
 
