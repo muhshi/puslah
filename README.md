@@ -53,6 +53,8 @@ php artisan serve
 
 ### 2026-03-02
 - **Auto-fill Tanggal Surat Tugas Kolektif** — Field "Mulai" dan "Selesai" di form pembuatan surat tugas kolektif sekarang otomatis terisi sesuai tanggal mulai dan selesai dari survey yang dipilih.
+- **Smart Penomoran Surat Tugas Kolektif** — Penomoran otomatis melewati nomor yang sudah terpakai. Preview nomor aktual yang akan digunakan ditampilkan di helper text.
+- **Warning Nomor Duplikat** — Jika user memasukkan nomor urut mulai yang sudah ada, muncul warning kuning. Error SQL mentah diganti dengan notifikasi user-friendly.
 
 ### 2026-02-19
 - **Proteksi PDF Surat Tugas** — Fitur password master untuk membuat PDF read-only (anti-edit). Konfigurasi di Pengaturan Sistem.
