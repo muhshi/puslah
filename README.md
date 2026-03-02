@@ -51,6 +51,9 @@ php artisan serve
 
 ## Changelog
 
+### 2026-03-02
+- **Auto-fill Tanggal Surat Tugas Kolektif** — Field "Mulai" dan "Selesai" di form pembuatan surat tugas kolektif sekarang otomatis terisi sesuai tanggal mulai dan selesai dari survey yang dipilih.
+
 ### 2026-02-19
 - **Proteksi PDF Surat Tugas** — Fitur password master untuk membuat PDF read-only (anti-edit). Konfigurasi di Pengaturan Sistem.
 - **Footer PDF Surat Tugas** — Footer berisi QR code dan disclaimer "*Dokumen ini telah ditandatangani secara elektronik...*"

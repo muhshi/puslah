@@ -56,11 +56,18 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                 $set('mitra_user_ids', []);
                                 $set('pegawai_bps_user_ids', []);
 
-                                // Auto-fill keperluan
+                                // Auto-fill keperluan and dates
                                 if ($state) {
                                     $survey = \App\Models\Survey::find($state);
                                     if ($survey) {
                                         $set('keperluan', "{$survey->name}");
+                                        // Auto-fill waktu_mulai/selesai from survey dates
+                                        if ($survey->start_date) {
+                                            $set('waktu_mulai', \Carbon\Carbon::parse($survey->start_date)->setTime(8, 0));
+                                        }
+                                        if ($survey->end_date) {
+                                            $set('waktu_selesai', \Carbon\Carbon::parse($survey->end_date)->setTime(16, 0));
+                                        }
                                     }
 
                                     // Checker for empty users (those who don't have surat tugas yet)
