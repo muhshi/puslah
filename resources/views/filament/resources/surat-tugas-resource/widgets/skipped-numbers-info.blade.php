@@ -21,25 +21,29 @@
             </div>
         </div>
 
-        <div class="mt-4">
+        <div class="mt-4 space-y-4">
+            {{-- Bagian Nomor Terlewat --}}
             @php
                 $missingByMonth = $this->getSkippedNumbersByMonth();
             @endphp
 
             @if (!empty($missingByMonth))
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                    @foreach ($missingByMonth as $month => $ranges)
-                        <div
-                            class="rounded-md bg-warning-50 p-2 dark:bg-warning-950/50 border border-warning-200 dark:border-warning-900">
-                            <h3
-                                class="text-xs font-semibold uppercase tracking-wider text-danger-600 dark:text-danger-400 mb-0.5">
-                                {{ $month }}
-                            </h3>
-                            <div class="text-xs font-bold text-warning-700 dark:text-warning-300 break-words leading-tight">
-                                {{ $ranges }}
+                <div>
+                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Belum Terpakai / Terlewat</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                        @foreach ($missingByMonth as $month => $ranges)
+                            <div
+                                class="rounded-md bg-warning-50 p-2 dark:bg-warning-950/50 border border-warning-200 dark:border-warning-900">
+                                <h4
+                                    class="text-xs font-semibold uppercase tracking-wider text-danger-600 dark:text-danger-400 mb-0.5">
+                                    {{ $month }}
+                                </h4>
+                                <div class="text-xs font-bold text-warning-700 dark:text-warning-300 break-words leading-tight">
+                                    {{ $ranges }}
+                                </div>
                             </div>
-                        </div>
-                    @endforeach
+                        @endforeach
+                    </div>
                 </div>
             @else
                 <div class="rounded-lg bg-success-50 p-4 dark:bg-success-950/50">
@@ -51,6 +55,35 @@
                             <p class="text-sm font-medium text-success-800 dark:text-success-200">
                                 Tidak ada nomor yang terlewat di tahun {{ $selectedYear }}.
                             </p>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            {{-- Bagian Nomor Di-block --}}
+            @php
+                $blockedNumbers = $this->getBlockedNumbersFormatted();
+            @endphp
+            @if ($blockedNumbers)
+                <div>
+                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 mt-4">Nomor Di-block (Khusus / Reserved)</h3>
+                    <div class="flex items-start justify-between rounded-lg bg-gray-50 border border-gray-200 p-4 dark:bg-gray-900 dark:border-gray-800">
+                        <div class="flex-1">
+                            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">TERBLOKIR DI TAHUN {{ $selectedYear }}</h4>
+                            <div class="text-sm font-bold text-gray-900 dark:text-white break-words">
+                                {{ $blockedNumbers }}
+                            </div>
+                        </div>
+                        <div class="ml-4 flex-shrink-0">
+                            <x-filament::button
+                                href="{{ App\Filament\Resources\SuratTugasResource::getUrl('manage-blocked-numbers') }}"
+                                tag="a"
+                                color="success"
+                                size="sm"
+                                icon="heroicon-m-document-plus"
+                            >
+                                Kelola & Buat ST
+                            </x-filament::button>
                         </div>
                     </div>
                 </div>

@@ -165,6 +165,10 @@ class SuratTugas extends Model
         $maxUrut = $existing->last()->nomor_urut;
         $existingMap = $existing->pluck('tanggal', 'nomor_urut'); // [urut => '2023-01-30', ...]
 
+        // Get blocked numbers
+        $blockedNumbersFlatten = BlockedSuratTugasNumber::getBlockedNumbers($year);
+        $blockedMap = array_flip($blockedNumbersFlatten);
+
         $missingByMonth = [];
         $currentMonthName = 'Januari'; // Default start
 
@@ -173,8 +177,8 @@ class SuratTugas extends Model
                 // Number exists, update current reference month
                 $date = \Carbon\Carbon::parse($existingMap[$i])->locale('id');
                 $currentMonthName = $date->translatedFormat('F');
-            } else {
-                // Number missing, assign to current reference month
+            } elseif (!isset($blockedMap[$i])) {
+                // Number missing and not blocked, assign to current reference month
                 $missingByMonth[$currentMonthName][] = $i;
             }
         }

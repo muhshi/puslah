@@ -55,6 +55,7 @@ php artisan serve
 - **Fix Akses Approve Surat Tugas** — Perbaikan case-sensitivity role pada bulk approve (`'kepala'` → `'Kepala'`, `'kasubag'` → `'Kasubag'`). Tambah akses approve single untuk Kasubag.
 - **Fitur Block/Reserve Nomor Surat Tugas** — Fitur baru untuk memblokir/memesan nomor urut surat tugas agar tidak dipakai orang lain. Nomor yang di-block otomatis dilewati saat pembuatan surat tugas (single & bulk). Bisa di-release kapanpun dari halaman "Kelola Nomor Terblokir".
 - **Buat ST dari Nomor Terblokir** — Bisa langsung membuat surat tugas (single maupun kolektif) dari nomor-nomor yang sudah di-block melalui halaman Kelola Nomor Terblokir. Nomor akan otomatis di-release setelah ST terbentuk.
+- **Monitor Nomor Surat Detail** — Widget Monitor Nomor Surat di dashboard/list sekarang memisahkan antara "Nomor Belum Terpakai / Terlewat" dan "Nomor Di-block (Khusus / Reserved)". Tersedia juga tombol "Kelola & Buat ST" langsung pada widget.
 
 ### 2026-03-02
 - **Auto-fill Tanggal Surat Tugas Kolektif** — Field "Mulai" dan "Selesai" di form pembuatan surat tugas kolektif sekarang otomatis terisi sesuai tanggal mulai dan selesai dari survey yang dipilih.
