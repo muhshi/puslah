@@ -3,7 +3,7 @@
     <form wire:submit="blockNumbers">
         {{ $this->blockingForm }}
 
-        <div class="mt-4">
+        <div class="mt-6">
             <x-filament::button type="submit" size="lg" color="danger" icon="heroicon-o-lock-closed">
                 Block Nomor
             </x-filament::button>

@@ -5,6 +5,8 @@ namespace App\Filament\Resources\SuratTugasResource\Pages;
 use App\Filament\Resources\SuratTugasResource;
 use App\Models\BlockedSuratTugasNumber;
 use App\Models\SuratTugas;
+use App\Models\User;
+use App\Models\UserProfile;
 use App\Settings\SystemSettings;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -198,6 +200,166 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                     ->default(now()->year),
             ])
             ->actions([
+                Tables\Actions\Action::make('buatSuratTugas')
+                    ->label('Buat ST')
+                    ->icon('heroicon-o-document-plus')
+                    ->color('success')
+                    ->modalHeading(fn(BlockedSuratTugasNumber $record) => 'Buat Surat Tugas — Nomor #' . $record->nomor_urut)
+                    ->modalDescription(fn(BlockedSuratTugasNumber $record) => 'Nomor surat akan menggunakan nomor urut #' . $record->nomor_urut . ' yang sudah di-block. Setelah dibuat, nomor ini otomatis di-release.')
+                    ->modalSubmitActionLabel('Buat Surat Tugas')
+                    ->form(function (BlockedSuratTugasNumber $record) {
+                        $settings = app(SystemSettings::class);
+                        $prefix = $settings->surat_prefix ?? 'B';
+                        $office = $settings->office_code ?? '33210';
+                        $urut = str_pad($record->nomor_urut, 4, '0', STR_PAD_LEFT);
+                        $nomorSuratPreview = "{$prefix}-{$urut}/{$office}/KP.650/{$record->year}";
+
+                        return [
+                            Forms\Components\Placeholder::make('nomor_surat_info')
+                                ->label('Nomor Surat')
+                                ->content($nomorSuratPreview),
+
+                            Forms\Components\Select::make('survey_id')
+                                ->label('Survey (Opsional)')
+                                ->options(\App\Models\Survey::where('is_active', true)->pluck('name', 'id'))
+                                ->searchable()
+                                ->preload()
+                                ->live()
+                                ->afterStateUpdated(function (Forms\Set $set, $state) {
+                                    $set('user_id', null);
+                                    if ($state) {
+                                        $survey = \App\Models\Survey::find($state);
+                                        if ($survey) {
+                                            $set('keperluan', $survey->name);
+                                            if ($survey->start_date) {
+                                                $set('waktu_mulai', \Carbon\Carbon::parse($survey->start_date)->format('Y-m-d'));
+                                            }
+                                            if ($survey->end_date) {
+                                                $set('waktu_selesai', \Carbon\Carbon::parse($survey->end_date)->format('Y-m-d'));
+                                            }
+                                        }
+                                    }
+                                }),
+
+                            Forms\Components\Select::make('user_id')
+                                ->label('Pegawai yang Ditugaskan')
+                                ->options(function (Forms\Get $get) {
+                                    $surveyId = $get('survey_id');
+                                    if ($surveyId) {
+                                        return \App\Models\SurveyUser::where('survey_id', $surveyId)
+                                            ->with('user.profile')
+                                            ->get()
+                                            ->mapWithKeys(function ($su) {
+                                                $jabatan = $su->user->profile->jabatan ?? '-';
+                                                return [$su->user_id => "{$su->user->name} ({$jabatan})"];
+                                            });
+                                    }
+                                    return User::with('profile')->get()->mapWithKeys(function ($user) {
+                                        $jabatan = $user->profile->jabatan ?? '-';
+                                        return [$user->id => "{$user->name} ({$jabatan})"];
+                                    });
+                                })
+                                ->searchable()
+                                ->preload()
+                                ->live()
+                                ->required()
+                                ->afterStateUpdated(function (Forms\Set $set, $state) {
+                                    if ($state) {
+                                        $profile = UserProfile::where('user_id', $state)->first();
+                                        if ($profile && $profile->jabatan) {
+                                            $set('jabatan', $profile->jabatan);
+                                        }
+                                    }
+                                }),
+
+                            Forms\Components\TextInput::make('jabatan')
+                                ->label('Jabatan (Saat Tugas)')
+                                ->required()
+                                ->maxLength(255),
+
+                            Forms\Components\TextInput::make('kode_klasifikasi')
+                                ->label('Klasifikasi')
+                                ->default('KP.650')
+                                ->required(),
+
+                            Forms\Components\Textarea::make('keperluan')
+                                ->label('Keperluan')
+                                ->required(),
+
+                            Forms\Components\TextInput::make('tempat_tugas')
+                                ->label('Tempat Tugas')
+                                ->maxLength(255),
+
+                            Forms\Components\DatePicker::make('tanggal')
+                                ->label('Tanggal Surat')
+                                ->required()
+                                ->default(now()),
+
+                            Forms\Components\Group::make([
+                                Forms\Components\DatePicker::make('waktu_mulai')
+                                    ->label('Mulai')
+                                    ->default(now()),
+                                Forms\Components\DatePicker::make('waktu_selesai')
+                                    ->label('Selesai')
+                                    ->default(now()),
+                            ])->columns(2),
+                        ];
+                    })
+                    ->action(function (BlockedSuratTugasNumber $record, array $data) {
+                        $settings = app(SystemSettings::class);
+                        $prefix = $settings->surat_prefix ?? 'B';
+                        $office = $settings->office_code ?? '33210';
+                        $klasifikasi = $data['kode_klasifikasi'] ?? 'KP.650';
+                        $urut = str_pad($record->nomor_urut, 4, '0', STR_PAD_LEFT);
+                        $nomorSurat = "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$record->year}";
+
+                        // Check if nomor_surat already exists
+                        if (SuratTugas::where('nomor_surat', $nomorSurat)->exists()) {
+                            Notification::make()
+                                ->title('Nomor surat sudah dipakai!')
+                                ->body("Nomor {$nomorSurat} sudah ada di database.")
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        try {
+                            SuratTugas::create([
+                                'user_id' => $data['user_id'],
+                                'survey_id' => $data['survey_id'] ?? null,
+                                'nomor_surat' => $nomorSurat,
+                                'nomor_urut' => $record->nomor_urut,
+                                'kode_klasifikasi' => $klasifikasi,
+                                'jabatan' => $data['jabatan'],
+                                'keperluan' => $data['keperluan'],
+                                'tempat_tugas' => $data['tempat_tugas'] ?? null,
+                                'tanggal' => $data['tanggal'],
+                                'waktu_mulai' => $data['waktu_mulai'],
+                                'waktu_selesai' => $data['waktu_selesai'],
+                                'signer_city' => $settings->cert_city,
+                                'signer_name' => $settings->cert_signer_name,
+                                'signer_nip' => $settings->cert_signer_nip,
+                                'signer_title' => $settings->cert_signer_title,
+                                'signer_signature_path' => $settings->cert_signer_signature_path,
+                                'created_by' => auth()->id(),
+                            ]);
+
+                            // Release the blocked number
+                            $record->delete();
+
+                            Notification::make()
+                                ->title('Surat Tugas berhasil dibuat!')
+                                ->body("Nomor {$nomorSurat} sudah dibuat dan nomor blokir otomatis di-release.")
+                                ->success()
+                                ->send();
+                        } catch (\Exception $e) {
+                            Notification::make()
+                                ->title('Gagal membuat surat tugas')
+                                ->body('Terjadi kesalahan: ' . $e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
                 Tables\Actions\Action::make('release')
                     ->label('Release')
                     ->icon('heroicon-o-lock-open')
