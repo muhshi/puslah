@@ -19,6 +19,11 @@ class ListSuratTugas extends ListRecords
                 ->icon('heroicon-o-user-group')
                 ->color('success')
                 ->url(fn() => SuratTugasResource::getUrl('create-bulk')),
+            Actions\Action::make('manage-blocked-numbers')
+                ->label('Block Nomor')
+                ->icon('heroicon-o-lock-closed')
+                ->color('warning')
+                ->url(fn() => SuratTugasResource::getUrl('manage-blocked-numbers')),
         ];
     }
 

@@ -135,8 +135,8 @@ class SuratTugasResource extends Resource
 
                                 // Default uses current year since tanggal default is now()
                                 $year = now()->year;
-                                $max = SuratTugas::whereYear('tanggal', $year)->max('nomor_urut');
-                                $nextUrut = $max ? $max + 1 : 1;
+                                $max = SuratTugas::getNextNomorUrut($year) - 1;
+                                $nextUrut = $max + 1;
                                 $urut = str_pad($nextUrut, 4, '0', STR_PAD_LEFT);
 
                                 $klasifikasi = 'KP.650';
@@ -160,8 +160,7 @@ class SuratTugasResource extends Resource
                                     ->numeric()
                                     ->default(function () {
                                         // Get max nomor_urut for current year (tanggal default is now)
-                                        $max = SuratTugas::whereYear('tanggal', now()->year)->max('nomor_urut');
-                                        return $max ? $max + 1 : 1;
+                                        return SuratTugas::getNextNomorUrut(now()->year);
                                     })
                                     ->live()
                                     ->afterStateUpdated(function (Get $get, Set $set) {
@@ -180,8 +179,7 @@ class SuratTugasResource extends Resource
                                 // If year changes, re-fetch max sequence for that year
                                 if ($state) {
                                     $year = \Carbon\Carbon::parse($state)->year;
-                                    $max = SuratTugas::whereYear('tanggal', $year)->max('nomor_urut');
-                                    $next = $max ? $max + 1 : 1;
+                                    $next = SuratTugas::getNextNomorUrut($year);
                                     $set('nomor_urut', $next);
                                 }
                                 self::updateNomorSurat($get, $set);
@@ -298,7 +296,7 @@ class SuratTugasResource extends Resource
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(function (SuratTugas $record) {
-                        return $record->status === 'pending' && auth()->user()->hasAnyRole(['super_admin', 'Kepala']);
+                        return $record->status === 'pending' && auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag']);
                     })
                     ->action(fn(SuratTugas $record) => $record->update(['status' => 'approved'])),
                 Tables\Actions\Action::make('pdf')
@@ -435,7 +433,7 @@ class SuratTugasResource extends Resource
                         ->label('Approve Selected')
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
-                        ->visible(fn() => auth()->user()->hasAnyRole(['super_admin', 'kepala', 'kasubag']))
+                        ->visible(fn() => auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag']))
                         ->requiresConfirmation()
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
                             $count = $records->where('status', '!=', 'approved')->count();
@@ -662,6 +660,7 @@ class SuratTugasResource extends Resource
             'index' => Pages\ListSuratTugas::route('/'),
             'create' => Pages\CreateSuratTugas::route('/create'),
             'create-bulk' => Pages\CreateBulkSuratTugas::route('/create-bulk'),
+            'manage-blocked-numbers' => Pages\ManageBlockedNumbers::route('/manage-blocked-numbers'),
             'edit' => Pages\EditSuratTugas::route('/{record}/edit'),
         ];
     }

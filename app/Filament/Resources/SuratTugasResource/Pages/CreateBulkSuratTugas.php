@@ -221,11 +221,8 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                         }
 
                                         if ($totalPegawai > 0) {
-                                            // Calculate actual numbers that will be used (skipping existing ones)
-                                            $usedNumbers = SuratTugas::whereYear('tanggal', $year)
-                                                ->pluck('nomor_urut')
-                                                ->flip()
-                                                ->toArray();
+                                            // Calculate actual numbers that will be used (skipping existing and blocked ones)
+                                            $usedNumbers = SuratTugas::getOccupiedNumbers($year);
                                             $assignedNumbers = [];
                                             $currentUrut = $start - 1;
                                             for ($i = 0; $i < $totalPegawai; $i++) {
@@ -310,11 +307,8 @@ class CreateBulkSuratTugas extends Page implements HasForms
         // Use custom starting number from user input
         $currentUrut = (int) $data['nomor_urut_mulai'] - 1;
 
-        // Get all existing nomor_urut for this year to skip over them
-        $usedNumbers = SuratTugas::whereYear('tanggal', $year)
-            ->pluck('nomor_urut')
-            ->flip()
-            ->toArray();
+        // Get all existing and blocked nomor_urut for this year to skip over them
+        $usedNumbers = SuratTugas::getOccupiedNumbers($year);
 
         try {
             DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $year, &$currentUrut, $usedNumbers) {

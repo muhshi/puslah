@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\BlockedSuratTugasNumber;
 
 class SuratTugas extends Model
 {
@@ -59,7 +60,7 @@ class SuratTugas extends Model
     }
 
     /**
-     * Get skipped/unused nomor_urut for a given year
+     * Get skipped/unused nomor_urut for a given year (excludes blocked numbers)
      */
     public static function getSkippedNumbers(int $year): array
     {
@@ -74,8 +75,18 @@ class SuratTugas extends Model
             return [];
         }
 
-        $allNumbers = range(1, max($usedNumbers));
-        return array_values(array_diff($allNumbers, $usedNumbers));
+        // Get blocked numbers for this year
+        $blockedNumbers = BlockedSuratTugasNumber::getBlockedNumbers($year);
+
+        // All occupied numbers = used + blocked
+        $occupiedNumbers = array_unique(array_merge($usedNumbers, $blockedNumbers));
+        sort($occupiedNumbers);
+
+        $maxUsed = max($usedNumbers);
+        $allNumbers = range(1, $maxUsed);
+
+        // Skipped = numbers not in used AND not in blocked (truly missing)
+        return array_values(array_diff($allNumbers, $occupiedNumbers));
     }
 
     /**
@@ -106,11 +117,31 @@ class SuratTugas extends Model
     }
 
     /**
-     * Get next available nomor_urut for a given year
+     * Get next available nomor_urut for a given year (skips blocked numbers)
      */
     public static function getNextNomorUrut(int $year): int
     {
-        return (self::whereYear('tanggal', $year)->max('nomor_urut') ?? 0) + 1;
+        $maxUsed = self::whereYear('tanggal', $year)->max('nomor_urut') ?? 0;
+        $maxBlocked = BlockedSuratTugasNumber::where('year', $year)->max('nomor_urut') ?? 0;
+        $next = max($maxUsed, $maxBlocked) + 1;
+
+        return $next;
+    }
+
+    /**
+     * Get all occupied nomor_urut (used + blocked) for a given year, as a flipped array for fast lookup
+     */
+    public static function getOccupiedNumbers(int $year): array
+    {
+        $usedNumbers = self::whereYear('tanggal', $year)
+            ->pluck('nomor_urut')
+            ->toArray();
+
+        $blockedNumbers = BlockedSuratTugasNumber::getBlockedNumbers($year);
+
+        $all = array_unique(array_merge($usedNumbers, $blockedNumbers));
+
+        return array_flip($all);
     }
 
     /**
