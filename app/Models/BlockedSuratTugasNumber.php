@@ -39,6 +39,29 @@ class BlockedSuratTugasNumber extends Model
     }
 
     /**
+     * Get blocked numbers grouped by keterangan 
+     */
+    public static function getBlockedNumbersGroupedByKeterangan(int $year): array
+    {
+        $records = self::where('year', $year)
+            ->orderBy('nomor_urut')
+            ->get();
+            
+        $grouped = [];
+        foreach ($records as $record) {
+            $ket = $record->keterangan ?? 'Tanpa Keterangan';
+            $grouped[$ket][] = $record->nomor_urut;
+        }
+
+        $formatted = [];
+        foreach ($grouped as $ket => $numbers) {
+            $formatted[$ket] = SuratTugas::formatSkippedNumbers($numbers);
+        }
+
+        return $formatted;
+    }
+
+    /**
      * Check if a specific nomor_urut is blocked for a given year
      */
     public static function isBlocked(int $nomorUrut, int $year): bool

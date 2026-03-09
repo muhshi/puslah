@@ -23,10 +23,9 @@ class SkippedNumbersInfoWidget extends Widget
         return SuratTugas::getSkippedNumbersByMonth($this->selectedYear);
     }
 
-    public function getBlockedNumbersFormatted(): string
+    public function getBlockedNumbersGrouped(): array
     {
-        $blocked = \App\Models\BlockedSuratTugasNumber::getBlockedNumbers($this->selectedYear);
-        return SuratTugas::formatSkippedNumbers($blocked);
+        return \App\Models\BlockedSuratTugasNumber::getBlockedNumbersGroupedByKeterangan($this->selectedYear);
     }
 
     public function getAvailableYears(): array
