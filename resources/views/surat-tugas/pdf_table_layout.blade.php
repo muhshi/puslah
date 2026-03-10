@@ -248,8 +248,7 @@
                 <td style="width: 50%;"></td>
                 <td class="text-center">
                     <span class="f12 arial">Demak, {{ $surat->tanggal->translatedFormat('d F Y') }}</span><br>
-                    <span class="f12 arial">Kepala Badan Pusat Statistik</span><br>
-                    <span class="f12 arial">Kabupaten Demak,</span><br>
+                    <span class="f12 arial">{{ $surat->signer_title }},</span><br>
                     <br>
                     <img src="{{ $qrBase64 }}" width="60pt" height="60pt" alt="QR"><br>
                     <br>

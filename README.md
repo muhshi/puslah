@@ -51,6 +51,9 @@ php artisan serve
 
 ## Changelog
 
+### 2026-03-10
+- **Fix Template PDF Surat Tugas** — Menyesuaikan template PDF Surat Tugas agar nama dan jabatan penandatangan (Kepala/Pejabat Lainnya) ditarik secara dinamis dari pengaturan sistem, tidak lagi hardcoded "Kepala BPS".
+
 ### 2026-03-09
 - **Fix Akses Approve Surat Tugas** — Perbaikan case-sensitivity role pada bulk approve (`'kepala'` → `'Kepala'`, `'kasubag'` → `'Kasubag'`). Tambah akses approve single untuk Kasubag.
 - **Fitur Block/Reserve Nomor Surat Tugas** — Fitur baru untuk memblokir/memesan nomor urut surat tugas agar tidak dipakai orang lain. Nomor yang di-block otomatis dilewati saat pembuatan surat tugas (single & bulk). Bisa di-release kapanpun dari halaman "Kelola Nomor Terblokir".
