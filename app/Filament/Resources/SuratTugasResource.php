@@ -291,6 +291,7 @@ class SuratTugasResource extends Resource
                     ->color('info')
                     ->url(fn(SuratTugas $record) => route('surat-tugas.preview', $record->id))
                     ->openUrlInNewTab(),
+                //tombol sync pejabat darurat
                 Tables\Actions\Action::make('sync_pejabat')
                     ->label('Update Pejabat')
                     ->icon('heroicon-o-arrow-path')
