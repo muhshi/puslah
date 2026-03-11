@@ -52,6 +52,7 @@ php artisan serve
 ## Changelog
 
 ### 2026-03-11
+- **Auto-Approve Sertifikat saat Survey Berakhir** — Command otomatisasi sertifikat (`app:generate-certificates`) sekarang tidak lagi mengecek "waktu selesai" di masing-masing Surat Tugas, melainkan mengecek status survey-nya. Ketika masa survey berakhir (survey otomatis menjadi `inactive`), sistem akan secara massal dan otomatis melakukan *Approve* & menerbitkan sertifikat untuk seluruh petugas yang terdaftar di survey tersebut.
 - **Sort & Filter Survey di Surat Tugas Kolektif** — Dropdown pilihan survey pada form Kolektif (Bulk) sekarang diurutkan berdasarkan yang terbaru (tanggal dibuat), dan otomatis menyembunyikan survey yang seluruh petugasnya sudah dibuatkan Surat Tugas.
 - **Pilih Sumber Jabatan di Surat Tugas Kolektif** — Form bulk surat tugas sekarang punya opsi untuk menggunakan data Jabatan dari profil database masing-masing pegawai, atau diketik seragam secara manual. Tampilannya juga sudah dioptimalkan menggunakan *Toggle Buttons* agar lebih rapi.
 - **Hide Field Klasifikasi** — Field Kode Klasifikasi (KP.650) pada form pembuatan Surat Tugas (baik single maupun bulk) disembunyikan agar form terlihat lebih ringkas dan bersih.

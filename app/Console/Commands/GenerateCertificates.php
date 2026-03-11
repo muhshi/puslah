@@ -29,34 +29,37 @@ class GenerateCertificates extends Command
         $now = now();
         $this->info("Starting certificate generation check at {$now}...");
 
-        // 1. Find eligible Surat Tugas
-        // - Waktu selesai has passed
-        // - Status approved
+        // 1. Find eligible SurveyUsers (Participants)
+        // - Survey is inactive (ended)
+        // - Status is not approved
         // - User name is NOT 'terlampir' (case-insensitive)
-        $candidates = \App\Models\SuratTugas::with(['user', 'survey'])
-            ->where('waktu_selesai', '<', $now)
-            ->where('status', 'approved')
+        $candidates = \App\Models\SurveyUser::with(['user', 'survey'])
+            ->where('status', '!=', 'approved')
+            ->whereHas('survey', function ($query) {
+                $query->where('is_active', false);
+            })
             ->whereHas('user', function ($query) {
                 $query->whereRaw('LOWER(name) NOT LIKE ?', ['%terlampir%']);
             })
             ->get();
 
-        $this->info("Found {$candidates->count()} candidate Surat Tugas records.");
+        $this->info("Found {$candidates->count()} candidate participants from inactive surveys.");
         $generatedCount = 0;
 
-        foreach ($candidates as $surat) {
+        foreach ($candidates as $participant) {
             try {
                 // Ensure User and Survey exist
-                if (!$surat->user || !$surat->survey) {
+                if (!$participant->user || !$participant->survey) {
                     continue;
                 }
 
                 // Check if certificate already exists
-                $exists = \App\Models\Certificate::where('survey_id', $surat->survey_id)
-                    ->where('user_id', $surat->user_id)
+                $exists = \App\Models\Certificate::where('survey_id', $participant->survey_id)
+                    ->where('user_id', $participant->user_id)
                     ->exists();
 
                 if ($exists) {
+                    $participant->update(['status' => 'approved']);
                     continue;
                 }
 
@@ -67,17 +70,15 @@ class GenerateCertificates extends Command
                     return;
                 }
 
-                $this->info("Generating certificate for: {$surat->user->name} (Survey: {$surat->survey->name})");
-                $this->issueCertificate($surat->user, $surat->survey, $template);
+                $this->info("Generating certificate for: {$participant->user->name} (Survey: {$participant->survey->name})");
+                $this->issueCertificate($participant->user, $participant->survey, $template);
                 $generatedCount++;
 
-                // Also update SurveyUser status to approved if exists
-                \App\Models\SurveyUser::where('survey_id', $surat->survey_id)
-                    ->where('user_id', $surat->user_id)
-                    ->update(['status' => 'approved']);
+                // Also update SurveyUser status to approved
+                $participant->update(['status' => 'approved']);
 
             } catch (\Exception $e) {
-                $this->error("Failed to generate for ID {$surat->id}: " . $e->getMessage());
+                $this->error("Failed to generate for Participant ID {$participant->id}: " . $e->getMessage());
             }
         }
 
