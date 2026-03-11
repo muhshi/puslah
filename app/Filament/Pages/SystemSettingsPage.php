@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Get;
 use Filament\Pages\Page;
 
@@ -153,7 +154,7 @@ class SystemSettingsPage extends Page implements HasForms
                     TextInput::make('cert_city')->label('Kota Penetapan')->required(),
                     TextInput::make('cert_signer_name')->label('Nama Pejabat')->required(),
                     TextInput::make('cert_signer_nip')->label('NIP')->required(),
-                    Forms\Components\Textarea::make('cert_signer_title')->label('Jabatan')->required()->rows(3),
+                    Textarea::make('cert_signer_title')->label('Jabatan')->required()->rows(3),
                     FileUpload::make('cert_signer_signature_path')
                         ->label('Scan Tanda Tangan')
                         ->image()
