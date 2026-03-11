@@ -153,8 +153,8 @@ class CreateBulkSuratTugas extends Page implements HasForms
                             Forms\Components\ToggleButtons::make('sumber_jabatan')
                                 ->label('Sumber Jabatan Pegawai')
                                 ->options([
-                                    'database' => 'Ambil dari Database Profil',
-                                    'manual' => 'Ketik Manual (Semua Sama)',
+                                    'database' => 'Database',
+                                    'manual' => 'Manual',
                                 ])
                                 ->default('database')
                                 ->inline()
@@ -170,7 +170,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
 
                             Forms\Components\Hidden::make('kode_klasifikasi')
                                 ->default('KP.650'),
-                        ])->columns(1),
+                        ])->columns(2),
 
                         Forms\Components\Textarea::make('keperluan')
                             ->label('Keperluan')
