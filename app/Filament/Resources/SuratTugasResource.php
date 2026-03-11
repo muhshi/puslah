@@ -53,10 +53,10 @@ class SuratTugasResource extends Resource
                                         $set('keperluan', "{$survey->name}");
                                         // Auto-fill waktu_mulai/selesai from survey dates
                                         if ($survey->start_date) {
-                                            $set('waktu_mulai', \Carbon\Carbon::parse($survey->start_date)->setTime(8, 0));
+                                            $set('waktu_mulai', \Carbon\Carbon::parse($survey->start_date)->format('Y-m-d'));
                                         }
                                         if ($survey->end_date) {
-                                            $set('waktu_selesai', \Carbon\Carbon::parse($survey->end_date)->setTime(16, 0));
+                                            $set('waktu_selesai', \Carbon\Carbon::parse($survey->end_date)->format('Y-m-d'));
                                         }
                                     }
 
@@ -184,14 +184,12 @@ class SuratTugasResource extends Resource
                                 }
                                 self::updateNomorSurat($get, $set);
                             }),
-                        Forms\Components\DateTimePicker::make('waktu_mulai')
+                        Forms\Components\DatePicker::make('waktu_mulai')
                             ->label('Mulai')
-                            ->seconds(false)
-                            ->default(now()->setTime(8, 0)),
-                        Forms\Components\DateTimePicker::make('waktu_selesai')
+                            ->default(now()),
+                        Forms\Components\DatePicker::make('waktu_selesai')
                             ->label('Selesai')
-                            ->seconds(false)
-                            ->default(now()->setTime(16, 0)),
+                            ->default(now()),
                     ])->columns(1),
 
                     Forms\Components\Textarea::make('keperluan')

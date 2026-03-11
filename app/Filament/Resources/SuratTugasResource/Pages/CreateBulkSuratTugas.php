@@ -150,10 +150,23 @@ class CreateBulkSuratTugas extends Page implements HasForms
                 Forms\Components\Section::make('Data Surat (Berlaku untuk Semua)')
                     ->schema([
                         Forms\Components\Group::make()->schema([
-                            Forms\Components\TextInput::make('jabatan')
-                                ->label('Jabatan (Saat Tugas)')
-                                ->helperText('Jabatan yang sama untuk semua pegawai terpilih.')
+                            Forms\Components\Radio::make('sumber_jabatan')
+                                ->label('Sumber Jabatan Pegawai')
+                                ->options([
+                                    'database' => 'Gunakan data jabatan di Profil',
+                                    'manual' => 'Ketik Seragam (Sama untuk semua)',
+                                ])
+                                ->default('database')
+                                ->inline()
+                                ->live()
                                 ->required()
+                                ->columnSpanFull(),
+
+                            Forms\Components\TextInput::make('jabatan')
+                                ->label('Jabatan (Manual)')
+                                ->helperText('Berlaku sama untuk semua pegawai terpilih.')
+                                ->required(fn(Forms\Get $get) => $get('sumber_jabatan') === 'manual')
+                                ->visible(fn(Forms\Get $get) => $get('sumber_jabatan') === 'manual')
                                 ->maxLength(255),
 
                             Forms\Components\TextInput::make('kode_klasifikasi')
@@ -310,8 +323,11 @@ class CreateBulkSuratTugas extends Page implements HasForms
         // Get all existing and blocked nomor_urut for this year to skip over them
         $usedNumbers = SuratTugas::getOccupiedNumbers($year);
 
+        $sumberJabatan = $data['sumber_jabatan'] ?? 'database';
+        $jabatanManual = $data['jabatan'] ?? '-';
+
         try {
-            DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $year, &$currentUrut, $usedNumbers) {
+            DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $year, &$currentUrut, $usedNumbers, $sumberJabatan, $jabatanManual) {
                 foreach ($userIds as $userId) {
                     $currentUrut++;
                     // Skip over already-used nomor_urut
@@ -322,13 +338,19 @@ class CreateBulkSuratTugas extends Page implements HasForms
                     $urut = str_pad($currentUrut, 4, '0', STR_PAD_LEFT);
                     $nomorSurat = "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$year}";
 
+                    $jabatanPegawai = $jabatanManual;
+                    if ($sumberJabatan === 'database') {
+                        $profile = \App\Models\UserProfile::where('user_id', $userId)->first();
+                        $jabatanPegawai = $profile && !empty($profile->jabatan) ? $profile->jabatan : '-';
+                    }
+
                     SuratTugas::create([
                         'user_id' => $userId,
                         'survey_id' => $data['survey_id'],
                         'nomor_surat' => $nomorSurat,
                         'nomor_urut' => $currentUrut,
                         'kode_klasifikasi' => $klasifikasi,
-                        'jabatan' => $data['jabatan'],
+                        'jabatan' => $jabatanPegawai,
                         'keperluan' => $data['keperluan'],
                         'tempat_tugas' => $data['tempat_tugas'] ?? null,
                         'tanggal' => $data['tanggal'],

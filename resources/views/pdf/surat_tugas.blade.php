@@ -142,13 +142,7 @@
                     <td>Waktu Pelaksanaan</td>
                     <td>: {{ $record->tanggal->translatedFormat('d F Y') }}</td>
                 </tr>
-                @if($record->waktu_mulai && $record->waktu_selesai)
-                    <tr>
-                        <td>Jam</td>
-                        <td>: {{ $record->waktu_mulai->format('H:i') }} WIB - {{ $record->waktu_selesai->format('H:i') }}
-                            WIB</td>
-                    </tr>
-                @endif
+
             </table>
         </div>
 
