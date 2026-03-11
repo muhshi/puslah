@@ -148,13 +148,8 @@ class SuratTugasResource extends Resource
                         Section::make('Generator Nomor Surat')
                             ->description('Ubah komponen ini untuk menghasilkan nomor surat.')
                             ->schema([
-                                Forms\Components\TextInput::make('kode_klasifikasi')
-                                    ->label('Klasifikasi')
-                                    ->default('KP.650')
-                                    ->live()
-                                    ->afterStateUpdated(function (Get $get, Set $set) {
-                                        self::updateNomorSurat($get, $set);
-                                    }),
+                                Forms\Components\Hidden::make('kode_klasifikasi')
+                                    ->default('KP.650'),
                                 Forms\Components\TextInput::make('nomor_urut')
                                     ->label('No. Urut')
                                     ->numeric()
@@ -165,8 +160,9 @@ class SuratTugasResource extends Resource
                                     ->live()
                                     ->afterStateUpdated(function (Get $get, Set $set) {
                                         self::updateNomorSurat($get, $set);
-                                    }),
-                            ])->columns(2),
+                                    })
+                                    ->columnSpanFull(),
+                            ]),
                     ])->columns(1),
 
                     Forms\Components\Group::make()->schema([

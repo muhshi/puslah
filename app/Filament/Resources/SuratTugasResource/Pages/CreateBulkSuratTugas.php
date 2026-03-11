@@ -150,17 +150,16 @@ class CreateBulkSuratTugas extends Page implements HasForms
                 Forms\Components\Section::make('Data Surat (Berlaku untuk Semua)')
                     ->schema([
                         Forms\Components\Group::make()->schema([
-                            Forms\Components\Radio::make('sumber_jabatan')
+                            Forms\Components\ToggleButtons::make('sumber_jabatan')
                                 ->label('Sumber Jabatan Pegawai')
                                 ->options([
-                                    'database' => 'Gunakan data jabatan di Profil',
-                                    'manual' => 'Ketik Seragam (Sama untuk semua)',
+                                    'database' => 'Ambil dari Database Profil',
+                                    'manual' => 'Ketik Manual (Semua Sama)',
                                 ])
                                 ->default('database')
                                 ->inline()
                                 ->live()
-                                ->required()
-                                ->columnSpanFull(),
+                                ->required(),
 
                             Forms\Components\TextInput::make('jabatan')
                                 ->label('Jabatan (Manual)')
@@ -169,11 +168,9 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                 ->visible(fn(Forms\Get $get) => $get('sumber_jabatan') === 'manual')
                                 ->maxLength(255),
 
-                            Forms\Components\TextInput::make('kode_klasifikasi')
-                                ->label('Klasifikasi')
-                                ->default('KP.650')
-                                ->required(),
-                        ])->columns(2),
+                            Forms\Components\Hidden::make('kode_klasifikasi')
+                                ->default('KP.650'),
+                        ])->columns(1),
 
                         Forms\Components\Textarea::make('keperluan')
                             ->label('Keperluan')

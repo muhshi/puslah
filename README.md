@@ -52,7 +52,8 @@ php artisan serve
 ## Changelog
 
 ### 2026-03-11
-- **Pilih Sumber Jabatan di Surat Tugas Kolektif** — Form bulk surat tugas sekarang punya opsi untuk menggunakan data Jabatan dari profil database masing-masing pegawai, atau diketik seragam secara manual.
+- **Pilih Sumber Jabatan di Surat Tugas Kolektif** — Form bulk surat tugas sekarang punya opsi untuk menggunakan data Jabatan dari profil database masing-masing pegawai, atau diketik seragam secara manual. Tampilannya juga sudah dioptimalkan menggunakan *Toggle Buttons* agar lebih rapi.
+- **Hide Field Klasifikasi** — Field Kode Klasifikasi (KP.650) pada form pembuatan Surat Tugas (baik single maupun bulk) disembunyikan agar form terlihat lebih ringkas dan bersih.
 - **Hapus Pilihan Jam pada Surat Tugas** — Input "Mulai" dan "Selesai" di form Surat Tugas (single maupun kolektif) sekarang difokuskan pada Tanggal/Bulan/Tahun saja (tanpa jam). Cetakan PDF dari template sistem juga disesuaikan untuk tidak menampilkan tabel jam.
 - **Format Jabatan Multiline di PDF** — Field Jabatan Penandatangan di Pengaturan Sistem sekarang menggunakan Textarea sehingga admin bisa menggunakan enter/baris baru. Baris baru ini akan dirender secara dinamis di cetakan PDF Surat Tugas.
 
