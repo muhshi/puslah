@@ -51,6 +51,9 @@ php artisan serve
 
 ## Changelog
 
+### 2026-03-11
+- **Format Jabatan Multiline di PDF** — Field Jabatan Penandatangan di Pengaturan Sistem sekarang menggunakan Textarea sehingga admin bisa menggunakan enter/baris baru. Baris baru ini akan dirender secara dinamis di cetakan PDF Surat Tugas.
+
 ### 2026-03-10
 - **Fix Template PDF Surat Tugas** — Menyesuaikan template PDF Surat Tugas agar nama dan jabatan penandatangan (Kepala/Pejabat Lainnya) ditarik secara dinamis dari pengaturan sistem, tidak lagi hardcoded "Kepala BPS".
 

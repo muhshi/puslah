@@ -110,7 +110,7 @@
                 </tr>
                 <tr>
                     <td>Jabatan</td>
-                    <td>: {{ $record->signer_title }}</td>
+                    <td>: {!! nl2br(e($record->signer_title)) !!}</td>
                 </tr>
             </table>
         </div>
@@ -159,7 +159,7 @@
         <div class="footer">
             <div class="ttd-box">
                 {{ $record->signer_city }}, {{ $record->tanggal->translatedFormat('d F Y') }}<br>
-                {{ $record->signer_title }}
+                {!! nl2br(e($record->signer_title)) !!}
                 <br>
                 @if($record->signer_signature_path)
                     <img src="{{ storage_path('app/public/' . $record->signer_signature_path) }}" class="signature-img">

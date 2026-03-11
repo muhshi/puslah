@@ -220,8 +220,9 @@ class SuratTugasResource extends Resource
                             ->label('NIP')
                             ->default(fn() => app(SystemSettings::class)->cert_signer_nip)
                             ->readOnly(),
-                        Forms\Components\TextInput::make('signer_title')
+                        Forms\Components\Textarea::make('signer_title')
                             ->label('Jabatan Pejabat')
+                            ->rows(3)
                             ->default(fn() => app(SystemSettings::class)->cert_signer_title)
                             ->readOnly()
                             ->columnSpanFull(),
