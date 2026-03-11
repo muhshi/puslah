@@ -47,7 +47,17 @@ class CreateBulkSuratTugas extends Page implements HasForms
                     ->schema([
                         Forms\Components\Select::make('survey_id')
                             ->label('Survey')
-                            ->options(\App\Models\Survey::where('is_active', true)->pluck('name', 'id'))
+                            ->options(function () {
+                                return \App\Models\Survey::where('is_active', true)
+                                    ->whereHas('users', function ($q) {
+                                        // Hanya survey yang punya user tanpa surat tugas untuk survey tersebut
+                                        $q->whereDoesntHave('suratTugas', function ($q_st) {
+                                            $q_st->whereColumn('surat_tugas.survey_id', 'surveys.id');
+                                        });
+                                    })
+                                    ->orderByDesc('created_at')
+                                    ->pluck('name', 'id');
+                            })
                             ->searchable()
                             ->preload()
                             ->live()

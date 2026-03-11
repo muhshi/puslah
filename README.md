@@ -52,6 +52,7 @@ php artisan serve
 ## Changelog
 
 ### 2026-03-11
+- **Sort & Filter Survey di Surat Tugas Kolektif** — Dropdown pilihan survey pada form Kolektif (Bulk) sekarang diurutkan berdasarkan yang terbaru (tanggal dibuat), dan otomatis menyembunyikan survey yang seluruh petugasnya sudah dibuatkan Surat Tugas.
 - **Pilih Sumber Jabatan di Surat Tugas Kolektif** — Form bulk surat tugas sekarang punya opsi untuk menggunakan data Jabatan dari profil database masing-masing pegawai, atau diketik seragam secara manual. Tampilannya juga sudah dioptimalkan menggunakan *Toggle Buttons* agar lebih rapi.
 - **Hide Field Klasifikasi** — Field Kode Klasifikasi (KP.650) pada form pembuatan Surat Tugas (baik single maupun bulk) disembunyikan agar form terlihat lebih ringkas dan bersih.
 - **Hapus Pilihan Jam pada Surat Tugas** — Input "Mulai" dan "Selesai" di form Surat Tugas (single maupun kolektif) sekarang difokuskan pada Tanggal/Bulan/Tahun saja (tanpa jam). Cetakan PDF dari template sistem juga disesuaikan untuk tidak menampilkan tabel jam.
