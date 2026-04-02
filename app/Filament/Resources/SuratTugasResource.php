@@ -388,7 +388,7 @@ class SuratTugasResource extends Resource
 
                         // Map variables
                         $template->setValue('nomor_surat', $record->nomor_surat);
-                        $template->setValue('nama_pegawai', \Illuminate\Support\Str::title($record->user->name));
+                        $template->setValue('nama_pegawai', $record->user->profile->full_name ?? $record->user->name);
                         // Assumption: UserProfile stores NIP in 'nip' field? No, user model usually. 
                         // Checking UserProfile again, it has 'jabatan' but not explicitly NIP. 
                         // Assuming NIP might be in User or UserProfile (Check required). 
@@ -519,7 +519,7 @@ class SuratTugasResource extends Resource
 
                                 // Map all variables (same as single download)
                                 $template->setValue('nomor_surat', $record->nomor_surat);
-                                $template->setValue('nama_pegawai', \Illuminate\Support\Str::title($record->user->name));
+                                $template->setValue('nama_pegawai', $record->user->profile->full_name ?? $record->user->name);
                                 $template->setValue('nip_pegawai', '-');
                                 $template->setValue('jabatan_pegawai', $record->user->profile->jabatan ?? '-');
                                 $template->setValue('jabatan_tugas', $record->jabatan);

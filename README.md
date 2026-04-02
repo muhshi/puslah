@@ -51,6 +51,9 @@ php artisan serve
 
 ## Changelog
 
+### 2026-04-02
+- **Fix Case Nama Pegawai di Cetakan Surat Tugas** — Menyelaraskan format penulisan gelar pada nama pegawai di cetakan PDF/Word. Sebelumnya sistem kadang memaksakan *Title Case* (misal "SST" menjadi "Sst"). Sekarang nama yang tercetak di PDF dan Word dipastikan 100% sama dengan format database pengguna. Profil pegawai juga disinkronisasikan ulang agar gelar dapat muncul sesuai yang diset di database terbaru.
+
 ### 2026-03-11
 - **Auto-Approve Sertifikat saat Survey Berakhir** — Command otomatisasi sertifikat (`app:generate-certificates`) sekarang tidak lagi mengecek "waktu selesai" di masing-masing Surat Tugas, melainkan mengecek status survey-nya. Ketika masa survey berakhir (survey otomatis menjadi `inactive`), sistem akan secara massal dan otomatis melakukan *Approve* & menerbitkan sertifikat untuk seluruh petugas yang terdaftar di survey tersebut.
 - **Sort & Filter Survey di Surat Tugas Kolektif** — Dropdown pilihan survey pada form Kolektif (Bulk) sekarang diurutkan berdasarkan yang terbaru (tanggal dibuat), dan otomatis menyembunyikan survey yang seluruh petugasnya sudah dibuatkan Surat Tugas.
