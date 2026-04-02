@@ -19,6 +19,7 @@ class LaporanLemburResource extends Resource
 
     protected static ?string $navigationGroup = 'Manajemen Dokumen';
     protected static ?string $navigationLabel = 'Laporan Lembur';
+    protected static ?string $navigationIcon = 'heroicon-o-clock';
 
     public static function form(Form $form): Form
     {
