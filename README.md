@@ -52,6 +52,7 @@ php artisan serve
 ## Changelog
 
 ### 2026-04-02
+- **Fitur Baru: Laporan Lembur** — Penambahan modul baru untuk mengelola Laporan Lembur pegawai. Admin dapat mengunggah template Word (.docx) di Pengaturan Sistem. Pegawai dapat membuat laporan lembur dengan menginput mulai/selesai, uraian pekerjaan, dan mengunggah minimal 2 foto dokumentasi. Laporan kemudian dapat diunduh (ter-generate otomatis) beserta foto-fotonya ke dalam format Word/PDF sesuai template.
 - **Fix Case Nama Pegawai di Cetakan Surat Tugas** — Menyelaraskan format penulisan gelar pada nama pegawai di cetakan PDF/Word. Sebelumnya sistem kadang memaksakan *Title Case* (misal "SST" menjadi "Sst"). Sekarang nama yang tercetak di PDF dan Word dipastikan 100% sama dengan format database pengguna. Profil pegawai juga disinkronisasikan ulang agar gelar dapat muncul sesuai yang diset di database terbaru.
 
 ### 2026-03-11

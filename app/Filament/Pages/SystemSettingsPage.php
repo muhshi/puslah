@@ -56,6 +56,7 @@ class SystemSettingsPage extends Page implements HasForms
             'surat_tugas_template_path' => $s->surat_tugas_template_path,
             'laporan_dinas_template_path' => $s->laporan_dinas_template_path,
             'surat_pernyataan_template_path' => $s->surat_pernyataan_template_path,
+            'laporan_lembur_template_path' => $s->laporan_lembur_template_path,
             'logo_bps_path' => $s->logo_bps_path,
             'pdf_master_password' => $s->pdf_master_password,
         ]);
@@ -199,6 +200,18 @@ class SystemSettingsPage extends Page implements HasForms
                                 ->downloadable(),
                         ])->columns(1),
 
+                    Section::make('Template Laporan Lembur (.docx)')
+                        ->description('Upload file .docx untuk laporan lembur. Variabel: ${waktu}, ${nama_pegawai}, ${mulai}, ${selesai}, ${pekerjaan}, ${foto_1} s/d ${foto_4}')
+                        ->schema([
+                            FileUpload::make('laporan_lembur_template_path')
+                                ->label('File Template')
+                                ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
+                                ->directory('templates')
+                                ->visibility('public')
+                                ->maxSize(5120) // 5MB
+                                ->downloadable(),
+                        ])->columns(1),
+
                 ])->columns(1), // End Section Pejabat
 
             ])->columns(1),
@@ -228,6 +241,7 @@ class SystemSettingsPage extends Page implements HasForms
             'surat_tugas_template_path',
             'laporan_dinas_template_path',
             'surat_pernyataan_template_path',
+            'laporan_lembur_template_path',
             'cert_signer_signature_path',
             'logo_bps_path',
         ];
