@@ -43,11 +43,15 @@ class LaporanLemburResource extends Resource
                         Forms\Components\TimePicker::make('mulai')
                             ->label('Waktu Mulai')
                             ->seconds(false)
+                            ->native(false)
+                            ->displayFormat('H:i')
                             ->required()
                             ->default(now()),
                         Forms\Components\TimePicker::make('selesai')
                             ->label('Waktu Selesai')
                             ->seconds(false)
+                            ->native(false)
+                            ->displayFormat('H:i')
                             ->required()
                             ->default(now()->addHours(2)),
                     ])->columns(2),
