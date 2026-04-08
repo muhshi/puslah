@@ -144,62 +144,107 @@ class LaporanLemburResource extends Resource
                     ->icon('heroicon-o-document-arrow-down')
                     ->color('info')
                     ->action(function (LaporanLembur $record) {
-                        $settings = app(\App\Settings\SystemSettings::class);
-                        $templatePath = $settings->laporan_lembur_template_path;
-            
-                        if (!$templatePath || !file_exists(storage_path('app/public/' . $templatePath))) {
-                            \Filament\Notifications\Notification::make()
-                                ->title('Template Laporan Lembur belum diupload di Pengaturan Sistem')
-                                ->danger()
-                                ->send();
-                            return;
+                        $file = self::processWordDocument($record);
+                        if ($file) {
+                            return response()->download($file['path'])->deleteFileAfterSend();
                         }
-
-                        $template = new \PhpOffice\PhpWord\TemplateProcessor(storage_path('app/public/' . $templatePath));
-
-                        // Base Variables
-                        $waktuFormat = \Carbon\Carbon::parse($record->waktu)->locale('id')->translatedFormat('l, d F Y');
-                        $mulaiFormat = \Carbon\Carbon::parse($record->mulai)->format('H:i');
-                        $selesaiFormat = \Carbon\Carbon::parse($record->selesai)->format('H:i');
-                        
-                        $template->setValue('waktu', $waktuFormat);
-                        $template->setValue('nama_pegawai', $record->user->profile->full_name ?? $record->user->name);
-                        $template->setValue('mulai', $mulaiFormat);
-                        $template->setValue('selesai', $selesaiFormat);
-                        
-                        // Newlines for text
-                        // Use physical paragraphs (hard returns) instead of soft breaks <w:br/> to avoid justification stretching
-                        $pekerjaanFormatted = str_replace("\n", '</w:t></w:r></w:p><w:p><w:r><w:t>', htmlspecialchars($record->pekerjaan));
-                        $template->setValue('pekerjaan', $pekerjaanFormatted);
-                        
-                        // Pictures
-                        for ($i = 1; $i <= 4; $i++) {
-                            $fotoField = "foto_{$i}";
-                            if ($record->{$fotoField} && file_exists(storage_path('app/public/' . $record->{$fotoField}))) {
-                                $template->setImageValue($fotoField, [
-                                    'path' => storage_path('app/public/' . $record->{$fotoField}),
-                                    'width' => 250,
-                                    'height' => 250,
-                                    'ratio' => true
-                                ]);
-                            } else {
-                                $template->setValue($fotoField, '');
-                            }
-                        }
-
-                        $waktuFile = \Carbon\Carbon::parse($record->waktu)->format('Ymd');
-                        $namaFile = "Laporan_Lembur_" . str_replace(' ', '_', $record->user->name) . "_{$waktuFile}.docx";
-                        $tempPath = storage_path('app/temp_' . $namaFile);
-                        $template->saveAs($tempPath);
-                        
-                        return response()->download($tempPath)->deleteFileAfterSend();
                     }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('downloadBulk')
+                        ->label('Download Semua (ZIP)')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('success')
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $zipFileName = 'Laporan_Lembur_Bulk_' . now()->format('YmdHis') . '.zip';
+                            $zipPath = storage_path('app/' . $zipFileName);
+                            $zip = new \ZipArchive();
+
+                            if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Gagal membuat file ZIP')
+                                    ->danger()
+                                    ->send();
+                                return;
+                            }
+
+                            $tempFiles = [];
+                            foreach ($records as $record) {
+                                $file = self::processWordDocument($record, true);
+                                if ($file) {
+                                    $zip->addFile($file['path'], $file['name']);
+                                    $tempFiles[] = $file['path'];
+                                }
+                            }
+                            $zip->close();
+
+                            // Clean up temp files
+                            foreach ($tempFiles as $tempPath) {
+                                if (file_exists($tempPath)) {
+                                    unlink($tempPath);
+                                }
+                            }
+
+                            return response()->download($zipPath)->deleteFileAfterSend();
+                        }),
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    protected static function processWordDocument(LaporanLembur $record, $isBulk = false): ?array
+    {
+        $settings = app(\App\Settings\SystemSettings::class);
+        $templatePath = $settings->laporan_lembur_template_path;
+
+        if (!$templatePath || !file_exists(storage_path('app/public/' . $templatePath))) {
+            \Filament\Notifications\Notification::make()
+                ->title('Template Laporan Lembur belum diupload di Pengaturan Sistem')
+                ->danger()
+                ->send();
+            return null;
+        }
+
+        $template = new \PhpOffice\PhpWord\TemplateProcessor(storage_path('app/public/' . $templatePath));
+
+        // Base Variables
+        $waktuFormat = \Carbon\Carbon::parse($record->waktu)->locale('id')->translatedFormat('l, d F Y');
+        $mulaiFormat = \Carbon\Carbon::parse($record->mulai)->format('H:i');
+        $selesaiFormat = \Carbon\Carbon::parse($record->selesai)->format('H:i');
+        
+        $template->setValue('waktu', $waktuFormat);
+        $template->setValue('nama_pegawai', $record->user->profile->full_name ?? $record->user->name);
+        $template->setValue('mulai', $mulaiFormat);
+        $template->setValue('selesai', $selesaiFormat);
+        
+        // Newlines for text
+        // Use physical paragraphs (hard returns) instead of soft breaks <w:br/> to avoid justification stretching
+        $pekerjaanFormatted = str_replace("\n", '</w:t></w:r></w:p><w:p><w:r><w:t>', htmlspecialchars($record->pekerjaan));
+        $template->setValue('pekerjaan', $pekerjaanFormatted);
+        
+        // Pictures
+        for ($i = 1; $i <= 4; $i++) {
+            $fotoField = "foto_{$i}";
+            if ($record->{$fotoField} && file_exists(storage_path('app/public/' . $record->{$fotoField}))) {
+                $template->setImageValue($fotoField, [
+                    'path' => storage_path('app/public/' . $record->{$fotoField}),
+                    'width' => 250,
+                    'height' => 250,
+                    'ratio' => true
+                ]);
+            } else {
+                $template->setValue($fotoField, '');
+            }
+        }
+
+        $waktuFile = \Carbon\Carbon::parse($record->waktu)->format('Ymd');
+        $namaFile = "Laporan_Lembur_" . str_replace(' ', '_', $record->user->name) . "_{$waktuFile}.docx";
+        $prefix = $isBulk ? 'temp_bulk_lembur_' : 'temp_lembur_';
+        $tempPath = storage_path("app/{$prefix}" . $namaFile);
+        $template->saveAs($tempPath);
+        
+        return ['path' => $tempPath, 'name' => $namaFile];
     }
 
     public static function getEloquentQuery(): Builder

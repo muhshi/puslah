@@ -216,19 +216,58 @@ class LaporanPerjalananDinasResource extends Resource
                     ->label('Word')
                     ->icon('heroicon-o-document-text')
                     ->action(function (LaporanPerjalananDinas $record) {
-                        return self::generateWordDocument($record);
+                        $file = self::processWordDocument($record);
+                        if ($file) {
+                            return response()->download($file['path'])->deleteFileAfterSend();
+                        }
                     }),
 
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('downloadBulk')
+                        ->label('Download Semua (ZIP)')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('success')
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $zipFileName = 'Laporan_Dinas_Bulk_' . now()->format('YmdHis') . '.zip';
+                            $zipPath = storage_path('app/' . $zipFileName);
+                            $zip = new \ZipArchive();
+
+                            if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Gagal membuat file ZIP')
+                                    ->danger()
+                                    ->send();
+                                return;
+                            }
+
+                            $tempFiles = [];
+                            foreach ($records as $record) {
+                                $file = self::processWordDocument($record, true);
+                                if ($file) {
+                                    $zip->addFile($file['path'], $file['name']);
+                                    $tempFiles[] = $file['path'];
+                                }
+                            }
+                            $zip->close();
+
+                            // Clean up temp files
+                            foreach ($tempFiles as $tempPath) {
+                                if (file_exists($tempPath)) {
+                                    unlink($tempPath);
+                                }
+                            }
+
+                            return response()->download($zipPath)->deleteFileAfterSend();
+                        }),
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }
 
-    protected static function generateWordDocument(LaporanPerjalananDinas $record)
+    protected static function processWordDocument(LaporanPerjalananDinas $record, $isBulk = false): ?array
     {
         $settings = app(\App\Settings\SystemSettings::class);
         $templatePath = $settings->laporan_dinas_template_path;
@@ -345,10 +384,11 @@ class LaporanPerjalananDinasResource extends Resource
         $safeSurvey = preg_replace('/[^a-zA-Z0-9]/', '_', $namaSurvey);
         
         $fileName = "{$safeName}_{$safeSurvey}_{$tanggal}.docx";
-        $tempPath = storage_path('app/temp_laporan_' . $fileName);
+        $prefix = $isBulk ? 'temp_bulk_laporan_' : 'temp_laporan_';
+        $tempPath = storage_path("app/{$prefix}" . $fileName);
         $template->saveAs($tempPath);
 
-        return response()->download($tempPath)->deleteFileAfterSend();
+        return ['path' => $tempPath, 'name' => $fileName];
     }
 
     public static function getRelations(): array
