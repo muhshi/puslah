@@ -49,30 +49,24 @@ class UserResource extends Resource
                             ->dehydrated(fn($state) => filled($state))
                             ->required(fn(string $context): bool => $context === 'create'),
 
-                        Forms\Components\TextInput::make('profile.nip')
-                            ->label('NIP')
-                            ->maxLength(255)
-                            ->visible(function ($get) {
-                                $roles = $get('roles');
-                                if (is_array($roles)) {
-                                    return in_array('Organik', \Spatie\Permission\Models\Role::whereIn('id', $roles)->pluck('name')->toArray());
-                                }
-                                return false;
-                            })
-                            ->helperText('Khusus Pegawai Organik'),
+                        Forms\Components\Group::make()
+                            ->relationship('profile')
+                            ->schema([
+                                Forms\Components\TextInput::make('nip')
+                                    ->label('NIP')
+                                    ->maxLength(50)
+                                    ->helperText('Khusus Pegawai BPS'),
 
-                        Forms\Components\TextInput::make('profile.pangkat_golongan')
-                            ->label('Pangkat/Golongan')
-                            ->placeholder('Contoh: Penata Muda Tingkat 1 / IIIb')
-                            ->maxLength(255)
-                            ->visible(function ($get) {
-                                $roles = $get('roles');
-                                if (is_array($roles)) {
-                                    return in_array('Organik', \Spatie\Permission\Models\Role::whereIn('id', $roles)->pluck('name')->toArray());
-                                }
-                                return false;
-                            })
-                            ->helperText('Khusus Pegawai Organik'),
+                                Forms\Components\TextInput::make('jabatan')
+                                    ->label('Jabatan')
+                                    ->maxLength(100),
+
+                                Forms\Components\TextInput::make('pangkat_golongan')
+                                    ->label('Pangkat/Golongan')
+                                    ->placeholder('Contoh: Penata Muda Tingkat 1 / IIIb')
+                                    ->maxLength(100)
+                                    ->helperText('Khusus Pegawai BPS'),
+                            ])->columns(2)->columnSpanFull()
                     ])->columns(2)
             ]);
     }
