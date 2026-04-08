@@ -543,8 +543,7 @@
             <div class="stamp-field-group">
                 <label for="tanggalWaktu">Tanggal & Waktu</label>
                 <div style="display:flex; gap:0.5rem; align-items:end;">
-                    <input type="text" id="tanggalWaktu" placeholder="Mar 5, 2026 08:00:00" oninput="renderPreview()"
-                        style="flex:1;">
+                    <input type="datetime-local" step="1" id="tanggalWaktu" oninput="renderPreview()" style="flex:1;">
                     <button type="button" class="stamp-gps-btn" onclick="setCurrentTime()">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
                             stroke="currentColor" style="width:16px;height:16px;">
@@ -899,9 +898,8 @@
         // =============== TIME ===============
         function setCurrentTime() {
             const now = new Date();
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const d = `${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-            document.getElementById('tanggalWaktu').value = d;
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('tanggalWaktu').value = now.toISOString().slice(0, 19);
             renderPreview();
         }
 
@@ -927,7 +925,7 @@
             const lat = document.getElementById('latitude').value.trim();
             const lon = document.getElementById('longitude').value.trim();
             const elev = document.getElementById('elevasi').value.trim();
-            const waktu = document.getElementById('tanggalWaktu').value.trim();
+            let waktu = document.getElementById('tanggalWaktu').value.trim();
 
             if (judul) lines.push(judul);
 
@@ -938,7 +936,14 @@
             if (elev) coordParts.push(elev + 'm');
             if (coordParts.length > 0) lines.push(coordParts.join(', '));
 
-            if (waktu) lines.push(waktu);
+            if (waktu) {
+                const d = new Date(waktu);
+                if (!isNaN(d.getTime())) {
+                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    waktu = `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+                }
+                lines.push(waktu);
+            }
 
             if (lines.length === 0) {
                 canvas.style.display = 'block';

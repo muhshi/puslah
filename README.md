@@ -52,6 +52,7 @@ php artisan serve
 ## Changelog
 
 ### 2026-04-08
+- **Peningkatan Stempel Foto** — Mengubah format input tanggal & waktu pada fitur Stempel Foto menjadi date-time picker kalender bawaan browser (`datetime-local`) agar lebih mudah dipilih dan waktunya bisa diedit dengan lebih leluasa. Namun format cetakan huruf pada stempel gambar tetap dipertahankan seperti semula.
 - **Fitur Download Bulk (ZIP)** — Menambahkan fitur "Download Semua" pada menu Laporan Perjalanan Dinas dan Laporan Lembur. Kini Laporan yang dipilih dapat di-download serentak menjadi satu file `.zip`.
 - **Penggabungan Template Laporan Murni & Pernyataan** — Sesuai kebutuhan, form Sistem Pengaturan kini memadukan upload Template Laporan Perjalanan Dinas dan Surat Pernyataan menjadi satu file tunggal. Tombol download kedua laporan tersebut juga sudah disatukan otomatis.
 - **Perbaikan Form Users** — Memperbaiki bug pada menu *Manajemen Pengguna > User* di mana field NIP, Jabatan, dan Pangkat/Golongan yang diubah tidak tersimpan ke dalam tabel profil. Formulir sekarang sudah terhubung dengan relasi yang tepat sehingga profil pengguna akan otomatis terupdate.
