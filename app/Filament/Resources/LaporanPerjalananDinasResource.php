@@ -278,7 +278,11 @@ class LaporanPerjalananDinasResource extends Resource
         $cleanUraian = html_entity_decode($cleanUraian);
         $cleanUraian = trim($cleanUraian);
 
-        $template->setValue('uraian_kegiatan', $cleanUraian);
+        // Convert literal newlines to Word XML physical paragraphs (hard returns)
+        // This prevents the stretching issue caused by soft breaks in Justified paragraphs
+        $uraianWord = str_replace("\n", '</w:t></w:r></w:p><w:p><w:r><w:t>', htmlspecialchars($cleanUraian));
+
+        $template->setValue('uraian_kegiatan', $uraianWord);
 
         $template->setValue('nama_pejabat', $record->nama_pejabat ?? '-');
         $template->setValue('desa_pejabat', $record->desa_pejabat ?? '-');

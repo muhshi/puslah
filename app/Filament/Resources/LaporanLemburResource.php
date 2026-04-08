@@ -168,8 +168,8 @@ class LaporanLemburResource extends Resource
                         $template->setValue('selesai', $selesaiFormat);
                         
                         // Newlines for text
-                        // PhpWord needs line breaks replaced with <w:br/>
-                        $pekerjaanFormatted = str_replace("\n", '</w:t><w:br/><w:t>', htmlspecialchars($record->pekerjaan));
+                        // Use physical paragraphs (hard returns) instead of soft breaks <w:br/> to avoid justification stretching
+                        $pekerjaanFormatted = str_replace("\n", '</w:t></w:r></w:p><w:p><w:r><w:t>', htmlspecialchars($record->pekerjaan));
                         $template->setValue('pekerjaan', $pekerjaanFormatted);
                         
                         // Pictures
