@@ -52,8 +52,9 @@ php artisan serve
 ## Changelog
 
 ### 2026-04-08
+- **Penggabungan Template Laporan Murni & Pernyataan** — Sesuai kebutuhan, form Sistem Pengaturan kini memadukan upload Template Laporan Perjalanan Dinas dan Surat Pernyataan menjadi satu file tunggal. Tombol download kedua laporan tersebut juga sudah disatukan otomatis.
 - **Perbaikan Form Users** — Memperbaiki bug pada menu *Manajemen Pengguna > User* di mana field NIP, Jabatan, dan Pangkat/Golongan yang diubah tidak tersimpan ke dalam tabel profil. Formulir sekarang sudah terhubung dengan relasi yang tepat sehingga profil pengguna akan otomatis terupdate.
-- **Perbaikan Laporan Perjalanan Dinas** — Memperbaiki format case gelar pada nama pegawai agar tetap sesuai aslinya (tidak terpotong oleh format proper case). Memperbaiki state field survey yang kosong saat melakukan edit laporan. Serta mengubah format nama file word hasil download menjadi lebih rapi dan informatif (`NamaPegawai_NamaSurvey_Tanggal.docx` untuk laporan reguler, dan prefix `Pernyataan_` untuk surat pernyataan).
+- **Perbaikan Laporan Perjalanan Dinas** — Memperbaiki format case gelar pada nama pegawai agar tetap sesuai aslinya (tidak terpotong oleh format proper case). Memperbaiki state field survey yang kosong saat melakukan edit laporan. Serta mengubah format nama file word hasil download menjadi lebih rapi dan informatif (`NamaPegawai_NamaSurvey_Tanggal.docx`).
 
 ### 2026-04-02
 - **Fitur Baru: Laporan Lembur** — Penambahan modul baru untuk mengelola Laporan Lembur pegawai. Admin dapat mengunggah template Word (.docx) di Pengaturan Sistem. Pegawai dapat membuat laporan lembur dengan menginput mulai/selesai, uraian pekerjaan, dan mengunggah minimal 2 foto dokumentasi. Laporan kemudian dapat diunduh (ter-generate otomatis) beserta foto-fotonya ke dalam format Word/PDF sesuai template.

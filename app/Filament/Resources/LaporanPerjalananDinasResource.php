@@ -219,19 +219,6 @@ class LaporanPerjalananDinasResource extends Resource
                         return self::generateWordDocument($record);
                     }),
 
-                Tables\Actions\Action::make('downloadPernyataan')
-                    ->label('Surat Pernyataan')
-                    ->icon('heroicon-o-document-check')
-                    ->color('success')
-                    ->visible(function (LaporanPerjalananDinas $record) {
-                        // Only visible if user is Organik
-                        $user = $record->suratTugas->user;
-                        return $user->roles->pluck('name')->contains('Organik');
-                    })
-                    ->action(function (LaporanPerjalananDinas $record) {
-                        return self::generateSuratPernyataan($record);
-                    }),
-
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
@@ -257,8 +244,10 @@ class LaporanPerjalananDinasResource extends Resource
         $template = new TemplateProcessor(storage_path('app/public/' . $templatePath));
 
         $st = $record->suratTugas;
+        $user = $st->user;
+        $profile = $user->profile;
         
-        $nameParts = explode(',', $st->user->name);
+        $nameParts = explode(',', $user->name);
         $nameParts[0] = \Illuminate\Support\Str::title($nameParts[0]);
         $nama_pegawai = implode(',', $nameParts);
         
@@ -266,6 +255,13 @@ class LaporanPerjalananDinasResource extends Resource
         $template->setValue('nomor_surat_tugas', $record->nomor_surat_tugas);
         $template->setValue('tujuan', $record->tujuan);
         $template->setValue('tanggal_kunjungan', $record->tanggal_kunjungan->translatedFormat('d F Y'));
+        
+        // Surat Pernyataan Variables
+        $template->setValue('nip_pegawai', $profile->nip ?? '-');
+        $template->setValue('pangkat_golongan', $profile->pangkat_golongan ?? '-');
+        $template->setValue('jabatan', $profile->jabatan ?? '-');
+        $template->setValue('unit_kerja', $settings->default_office_name ?? 'BPS Kabupaten Demak');
+        $template->setValue('tanggal_pernyataan', $record->tanggal_kunjungan->translatedFormat('d F Y'));
 
         // Strip HTML tags from rich text editor
         // Strip HTML tags and handle newlines more intelligently
@@ -346,51 +342,6 @@ class LaporanPerjalananDinasResource extends Resource
         
         $fileName = "{$safeName}_{$safeSurvey}_{$tanggal}.docx";
         $tempPath = storage_path('app/temp_laporan_' . $fileName);
-        $template->saveAs($tempPath);
-
-        return response()->download($tempPath)->deleteFileAfterSend();
-    }
-
-    protected static function generateSuratPernyataan(LaporanPerjalananDinas $record)
-    {
-        $settings = app(\App\Settings\SystemSettings::class);
-        $templatePath = $settings->surat_pernyataan_template_path;
-
-        if (!$templatePath || !file_exists(storage_path('app/public/' . $templatePath))) {
-            \Filament\Notifications\Notification::make()
-                ->title('Template Surat Pernyataan belum diupload di Pengaturan Sistem')
-                ->danger()
-                ->send();
-            return;
-        }
-
-        $template = new TemplateProcessor(storage_path('app/public/' . $templatePath));
-
-        $user = $record->suratTugas->user;
-        $profile = $user->profile;
-
-        // Map data
-        $nameParts = explode(',', $user->name);
-        $nameParts[0] = \Illuminate\Support\Str::title($nameParts[0]);
-        $nama_pegawai = implode(',', $nameParts);
-        
-        $template->setValue('nama_pegawai', $nama_pegawai);
-        $template->setValue('nip_pegawai', $profile->nip ?? '-');
-        $template->setValue('pangkat_golongan', $profile->pangkat_golongan ?? '-');
-        $template->setValue('jabatan', $profile->jabatan ?? '-');
-        $template->setValue('unit_kerja', $settings->default_office_name ?? 'BPS Kabupaten Demak');
-        $template->setValue('tanggal_pernyataan', $record->tanggal_kunjungan->translatedFormat('d F Y'));
-
-        // Save temp
-        $namaPegawai = $user->name;
-        $namaSurvey = $record->suratTugas->survey ? $record->suratTugas->survey->name : 'Survey';
-        $tanggal = $record->tanggal_kunjungan->format('Y_m_d');
-        
-        $safeName = preg_replace('/[^a-zA-Z0-9]/', '_', $namaPegawai);
-        $safeSurvey = preg_replace('/[^a-zA-Z0-9]/', '_', $namaSurvey);
-        
-        $fileName = "Pernyataan_{$safeName}_{$safeSurvey}_{$tanggal}.docx";
-        $tempPath = storage_path('app/temp_pernyataan_' . $fileName);
         $template->saveAs($tempPath);
 
         return response()->download($tempPath)->deleteFileAfterSend();

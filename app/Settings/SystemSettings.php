@@ -21,7 +21,6 @@ class SystemSettings extends Settings
     public string $surat_prefix;      // Prefix Surat (ex: B)
     public ?string $surat_tugas_template_path; // Path to DOCX template
     public ?string $laporan_dinas_template_path; // Path to Laporan DOCX template
-    public ?string $surat_pernyataan_template_path; // Path to Surat Pernyataan DOCX template
     public ?string $laporan_lembur_template_path; // Path to Laporan Lembur DOCX template
     public ?string $cert_signer_signature_path;
     public string $cert_number_prefix;        // ex: 'BPS-DMK'
@@ -47,7 +46,6 @@ class SystemSettings extends Settings
             'surat_prefix' => 'B',
             'surat_tugas_template_path' => null,
             'laporan_dinas_template_path' => null,
-            'surat_pernyataan_template_path' => null,
             'laporan_lembur_template_path' => null,
             'cert_signer_signature_path' => null,
             'cert_number_prefix' => 'BPS-DMK',
