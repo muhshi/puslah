@@ -52,6 +52,7 @@ php artisan serve
 ## Changelog
 
 ### 2026-04-08
+- **Perbaikan Form Users** — Memperbaiki bug pada menu *Manajemen Pengguna > User* di mana field NIP, Jabatan, dan Pangkat/Golongan yang diubah tidak tersimpan ke dalam tabel profil. Formulir sekarang sudah terhubung dengan relasi yang tepat sehingga profil pengguna akan otomatis terupdate.
 - **Perbaikan Laporan Perjalanan Dinas** — Memperbaiki format case gelar pada nama pegawai agar tetap sesuai aslinya (tidak terpotong oleh format proper case). Memperbaiki state field survey yang kosong saat melakukan edit laporan. Serta mengubah format nama file word hasil download menjadi lebih rapi dan informatif (`NamaPegawai_NamaSurvey_Tanggal.docx` untuk laporan reguler, dan prefix `Pernyataan_` untuk surat pernyataan).
 
 ### 2026-04-02
