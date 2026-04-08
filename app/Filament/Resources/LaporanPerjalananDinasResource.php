@@ -32,6 +32,7 @@ class LaporanPerjalananDinasResource extends Resource
                         ->searchable()
                         ->preload()
                         ->live()
+                        ->formatStateUsing(fn (?LaporanPerjalananDinas $record) => $record?->suratTugas?->survey_id)
                         ->options(function () {
                             $isSuperAdmin = Auth::user()->roles[0]->name === 'super_admin';
 
@@ -256,7 +257,12 @@ class LaporanPerjalananDinasResource extends Resource
         $template = new TemplateProcessor(storage_path('app/public/' . $templatePath));
 
         $st = $record->suratTugas;
-        $template->setValue('nama_pegawai', \Illuminate\Support\Str::title($st->user->name));
+        
+        $nameParts = explode(',', $st->user->name);
+        $nameParts[0] = \Illuminate\Support\Str::title($nameParts[0]);
+        $nama_pegawai = implode(',', $nameParts);
+        
+        $template->setValue('nama_pegawai', $nama_pegawai);
         $template->setValue('nomor_surat_tugas', $record->nomor_surat_tugas);
         $template->setValue('tujuan', $record->tujuan);
         $template->setValue('tanggal_kunjungan', $record->tanggal_kunjungan->translatedFormat('d F Y'));
@@ -331,8 +337,14 @@ class LaporanPerjalananDinasResource extends Resource
         }
 
         // Save temp with safe filename
-        $safeFilename = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $record->nomor_surat_tugas);
-        $fileName = "Laporan_Dinas_{$safeFilename}.docx";
+        $namaPegawai = $st->user->name;
+        $namaSurvey = $st->survey ? $st->survey->name : 'Survey';
+        $tanggal = $record->tanggal_kunjungan->format('Y_m_d');
+        
+        $safeName = preg_replace('/[^a-zA-Z0-9]/', '_', $namaPegawai);
+        $safeSurvey = preg_replace('/[^a-zA-Z0-9]/', '_', $namaSurvey);
+        
+        $fileName = "{$safeName}_{$safeSurvey}_{$tanggal}.docx";
         $tempPath = storage_path('app/temp_laporan_' . $fileName);
         $template->saveAs($tempPath);
 
@@ -358,7 +370,11 @@ class LaporanPerjalananDinasResource extends Resource
         $profile = $user->profile;
 
         // Map data
-        $template->setValue('nama_pegawai', \Illuminate\Support\Str::title($user->name));
+        $nameParts = explode(',', $user->name);
+        $nameParts[0] = \Illuminate\Support\Str::title($nameParts[0]);
+        $nama_pegawai = implode(',', $nameParts);
+        
+        $template->setValue('nama_pegawai', $nama_pegawai);
         $template->setValue('nip_pegawai', $profile->nip ?? '-');
         $template->setValue('pangkat_golongan', $profile->pangkat_golongan ?? '-');
         $template->setValue('jabatan', $profile->jabatan ?? '-');
@@ -366,8 +382,14 @@ class LaporanPerjalananDinasResource extends Resource
         $template->setValue('tanggal_pernyataan', $record->tanggal_kunjungan->translatedFormat('d F Y'));
 
         // Save temp
-        $safeFilename = str_replace(['/', '\\'], '_', $record->nomor_surat_tugas);
-        $fileName = "Surat_Pernyataan_{$safeFilename}.docx";
+        $namaPegawai = $user->name;
+        $namaSurvey = $record->suratTugas->survey ? $record->suratTugas->survey->name : 'Survey';
+        $tanggal = $record->tanggal_kunjungan->format('Y_m_d');
+        
+        $safeName = preg_replace('/[^a-zA-Z0-9]/', '_', $namaPegawai);
+        $safeSurvey = preg_replace('/[^a-zA-Z0-9]/', '_', $namaSurvey);
+        
+        $fileName = "Pernyataan_{$safeName}_{$safeSurvey}_{$tanggal}.docx";
         $tempPath = storage_path('app/temp_pernyataan_' . $fileName);
         $template->saveAs($tempPath);
 
