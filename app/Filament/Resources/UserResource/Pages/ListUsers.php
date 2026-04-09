@@ -5,10 +5,25 @@ namespace App\Filament\Resources\UserResource\Pages;
 use App\Filament\Resources\UserResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Resources\Components\Tab;
+use Illuminate\Database\Eloquent\Builder;
 
 class ListUsers extends ListRecords
 {
     protected static string $resource = UserResource::class;
+
+    public function getTabs(): array
+    {
+        return [
+            'semua' => Tab::make('Semua'),
+            'mitra' => Tab::make('Mitra')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereHas('roles', fn ($q) => $q->where('name', 'Mitra'))),
+            'organik' => Tab::make('Pegawai (Organik)')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereHas('roles', fn ($q) => $q->where('name', 'Organik'))),
+            'ketua_tim' => Tab::make('Ketua Tim')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereHas('roles', fn ($q) => $q->where('name', 'Ketua Tim'))),
+        ];
+    }
 
     protected function getHeaderActions(): array
     {
