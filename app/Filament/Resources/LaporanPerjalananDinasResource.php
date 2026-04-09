@@ -277,7 +277,7 @@ class LaporanPerjalananDinasResource extends Resource
                 ->title('Template Laporan Dinas belum diupload di Pengaturan Sistem')
                 ->danger()
                 ->send();
-            return;
+            return null;
         }
 
         $template = new TemplateProcessor(storage_path('app/public/' . $templatePath));
