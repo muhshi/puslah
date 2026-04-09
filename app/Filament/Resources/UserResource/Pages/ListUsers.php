@@ -17,11 +17,11 @@ class ListUsers extends ListRecords
         return [
             'semua' => Tab::make('Semua'),
             'mitra' => Tab::make('Mitra')
-                ->modifyQueryUsing(fn (Builder $query) => $query->whereHas('roles', fn ($q) => $q->where('name', 'Mitra'))),
-            'organik' => Tab::make('Pegawai (Organik)')
-                ->modifyQueryUsing(fn (Builder $query) => $query->whereHas('roles', fn ($q) => $q->where('name', 'Organik'))),
+                ->modifyQueryUsing(fn(Builder $query) => $query->whereHas('roles', fn($q) => $q->where('name', 'Mitra'))),
+            'organik' => Tab::make('Pegawai')
+                ->modifyQueryUsing(fn(Builder $query) => $query->whereHas('roles', fn($q) => $q->where('name', 'Organik'))),
             'ketua_tim' => Tab::make('Ketua Tim')
-                ->modifyQueryUsing(fn (Builder $query) => $query->whereHas('roles', fn ($q) => $q->where('name', 'Ketua Tim'))),
+                ->modifyQueryUsing(fn(Builder $query) => $query->whereHas('roles', fn($q) => $q->where('name', 'Ketua Tim'))),
         ];
     }
 
