@@ -23,11 +23,25 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Filament\Resources\Components\Tab;
 
 class ParticipantsRelationManager extends RelationManager
 {
     protected static string $relationship = 'surveyUsers';
     protected static ?string $title = 'Peserta';
+
+    public function getTabs(): array
+    {
+        return [
+            'semua' => Tab::make('Semua'),
+            'mitra' => Tab::make('Mitra')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereHas('user.roles', fn ($q) => $q->where('name', 'Mitra'))),
+            'organik' => Tab::make('Pegawai (Organik)')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereHas('user.roles', fn ($q) => $q->where('name', 'Organik'))),
+            'ketua_tim' => Tab::make('Ketua Tim')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereHas('user.roles', fn ($q) => $q->where('name', 'Ketua Tim'))),
+        ];
+    }
 
     public function form(Form $form): Form
     {

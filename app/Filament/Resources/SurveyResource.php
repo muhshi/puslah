@@ -44,6 +44,7 @@ class SurveyResource extends Resource
                 Forms\Components\DatePicker::make('end_date')
                     ->label('Selesai'),
                 Forms\Components\Toggle::make('is_active')
+                    ->default(true)
                     ->required(),
             ]);
     }

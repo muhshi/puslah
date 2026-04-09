@@ -59,6 +59,7 @@ php artisan serve
 - **Perbaikan Laporan Perjalanan Dinas** — Memperbaiki format case gelar pada nama pegawai agar tetap sesuai aslinya (tidak terpotong oleh format proper case). Memperbaiki state field survey yang kosong saat melakukan edit laporan. Serta mengubah format nama file word hasil download menjadi lebih rapi dan informatif (`NamaPegawai_NamaSurvey_Tanggal.docx`). Perbaikan spasi justifikasi yang melar pada teks uraian kegiatan dengan menerapkan *hard return* paragraf secara sistem.
 
 ### 2026-04-09
+- **Penyempurnaan Form dan View Survey** — Form pembuatan Survey sekarang secara *default* langsung memiliki status Aktif / *is_active* bernilai true. Selain itu, pada bagian Peserta/Petugas Survey di halaman detail kini ditambahkan *Tab Filter* berbasis peran (Role) untuk memudahkan pencarian petugas. Tersedia tab untuk "Semua", "Mitra", "Pegawai (Organik)", dan "Ketua Tim".
 - **Bugfix Scheduler / Cronjob** — Memperbaiki *fatal syntax error* pada class `LaporanPerjalananDinasResource` yang secara diam-diam menyebabkan perintah `php artisan schedule:run` di cronjob server selalu gagal dan *crash*. Hal ini sempat mengakibatkan tugas penjadwalan otomatis seperti non-aktif survey dan generate sertifikat terhenti.
 
 ### 2026-04-02
