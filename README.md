@@ -51,6 +51,10 @@ php artisan serve
 
 ## Changelog
 
+### 2026-04-29
+- **Implementasi SIPETRA SSO (OAuth2)** — Menambahkan integrasi Single Sign-On menggunakan SIPETRA BPS Demak. Fitur ini mencakup Custom Socialite Provider, sinkronisasi profil otomatis (NIP & Jabatan), dan penambahan kolom SSO pada tabel user.
+- **Pembaruan UI Login** — Mengganti tombol login Google dengan tombol login SIPETRA SSO yang lebih premium di halaman login Filament. SSO Google sekarang disembunyikan dari antarmuka pengguna sesuai permintaan.
+
 ### 2026-04-08
 - **Peningkatan Stempel Foto** — Mengubah format input tanggal & waktu pada fitur Stempel Foto menjadi date-time picker kalender bawaan browser (`datetime-local`) agar lebih mudah dipilih dan waktunya bisa diedit dengan lebih leluasa. Namun format cetakan huruf pada stempel gambar tetap dipertahankan seperti semula.
 - **Fitur Download Bulk (ZIP)** — Menambahkan fitur "Download Semua" pada menu Laporan Perjalanan Dinas dan Laporan Lembur. Kini Laporan yang dipilih dapat di-download serentak menjadi satu file `.zip`.

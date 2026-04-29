@@ -104,6 +104,6 @@ class AdminPanelProvider extends PanelProvider
                     ]),
                 FilamentFullCalendarPlugin::make(),
             ])
-            ->renderHook('panels::auth.login.form.after', fn() => view('filament.auth.login-google'));
+            ->renderHook('panels::auth.login.form.after', fn() => view('auth.sso-button'));
     }
 }
