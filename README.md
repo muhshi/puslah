@@ -54,7 +54,7 @@ composer dev
 ## Changelog
 
 ### 2026-04-29
-- **Leaderboard Performa Bulanan** — Menambahkan halaman Leaderboard premium untuk menampilkan peringkat performa Pegawai (Organik) dan Mitra berdasarkan jumlah Surat Tugas yang diselesaikan setiap bulannya. Dilengkapi dengan antarmuka berbasis tab, kartu profil yang interaktif, dan animasi pencapaian yang modern.
+- **Leaderboard Performa Bulanan** — Menambahkan halaman Leaderboard premium untuk menampilkan peringkat performa Pegawai (Organik) dan Mitra berdasarkan jumlah Surat Tugas. Kini dilengkapi dengan **filter bulan dan tahun**, serta desain kartu yang telah diperbaiki agar lebih bersih dan profesional.
 - **Implementasi SIPETRA SSO (OAuth2)** — Menambahkan integrasi Single Sign-On menggunakan SIPETRA BPS Demak. Fitur ini mencakup Custom Socialite Provider, sinkronisasi profil otomatis (NIP & Jabatan), dan penambahan kolom SSO pada tabel user.
 - **Pembaruan UI Login** — Mengganti tombol login Google dengan tombol login SIPETRA SSO yang lebih premium di halaman login Filament. SSO Google sekarang disembunyikan dari antarmuka pengguna sesuai permintaan.
 
