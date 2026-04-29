@@ -5,12 +5,23 @@ namespace App\Filament\Pages;
 use App\Models\User;
 use Carbon\Carbon;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Contracts\HasForms;
+use Filament\Forms\Form;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Grid;
 use Filament\Pages\Page;
 use Illuminate\Support\Collection;
 
-class Leaderboard extends Page
+class Leaderboard extends Page implements HasForms
 {
     use HasPageShield;
+    use InteractsWithForms;
+
+    public ?array $filter = [
+        'month' => null,
+        'year' => null,
+    ];
 
     protected static ?string $navigationIcon = 'heroicon-o-trophy';
 
@@ -30,15 +41,58 @@ class Leaderboard extends Page
 
     public function mount(): void
     {
-        $this->currentMonthName = Carbon::now()->locale('id')->translatedFormat('F Y');
-        $this->pegawaiData = $this->getLeaderboardData('Organik');
-        $this->mitraData = $this->getLeaderboardData('Mitra');
+        $this->filter['month'] = now()->month;
+        $this->filter['year'] = now()->year;
+        $this->updateData();
     }
 
-    protected function getLeaderboardData(string $roleName): Collection
+    public function form(Form $form): Form
     {
-        $startOfMonth = Carbon::now()->startOfMonth();
-        $endOfMonth = Carbon::now()->endOfMonth();
+        return $form
+            ->schema([
+                Grid::make(2)->schema([
+                    Select::make('month')
+                        ->label('Pilih Bulan')
+                        ->options([
+                            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+                            5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+                            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
+                        ])
+                        ->native(false)
+                        ->required()
+                        ->live()
+                        ->afterStateUpdated(fn () => $this->updateData()),
+                    Select::make('year')
+                        ->label('Pilih Tahun')
+                        ->options(function () {
+                            $years = range(now()->year, 2024);
+                            return array_combine($years, $years);
+                        })
+                        ->native(false)
+                        ->required()
+                        ->live()
+                        ->afterStateUpdated(fn () => $this->updateData()),
+                ])
+            ])
+            ->statePath('filter');
+    }
+
+    public function updateData(): void
+    {
+        $month = $this->filter['month'];
+        $year = $this->filter['year'];
+        $date = Carbon::create($year, $month, 1);
+
+        $this->currentMonthName = $date->locale('id')->translatedFormat('F Y');
+        $this->pegawaiData = $this->getLeaderboardData('Organik', $month, $year);
+        $this->mitraData = $this->getLeaderboardData('Mitra', $month, $year);
+    }
+
+    protected function getLeaderboardData(string $roleName, int $month, int $year): Collection
+    {
+        $date = Carbon::create($year, $month, 1);
+        $startOfMonth = $date->copy()->startOfMonth();
+        $endOfMonth = $date->copy()->endOfMonth();
 
         return User::role($roleName)
             ->with(['profile'])
