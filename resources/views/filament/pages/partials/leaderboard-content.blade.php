@@ -7,16 +7,16 @@
 <div class="max-w-5xl mx-auto py-10 font-sans">
     
     <!-- Top 3 Podium Section -->
-    <div class="flex justify-center items-end gap-3 sm:gap-6 md:gap-8 mb-16 mt-24 text-center relative z-10 px-2 sm:px-4">
+    <div style="margin-top: 100px; margin-bottom: 60px; gap: 20px;" class="flex justify-center items-end text-center relative z-10 px-2 sm:px-4 flex-wrap sm:flex-nowrap">
         
         <!-- Rank 2 (Left) -->
         @if(isset($top3[1]))
-            <div class="w-40 sm:w-48 pt-0 pb-5 px-4 bg-white dark:bg-[#21262d] rounded-t-3xl rounded-b-xl order-1 h-[170px] shadow-lg border border-gray-100 dark:border-gray-800 relative flex flex-col justify-between">
+            <div style="width: 170px; height: 180px;" class="pt-0 pb-5 px-4 bg-white dark:bg-[#21262d] rounded-t-3xl rounded-b-xl order-2 sm:order-1 shadow-lg border border-gray-100 dark:border-gray-800 relative flex flex-col justify-between">
                 <div>
-                    <div style="width: 80px; height: 80px; margin-top: -40px;" class="rounded-full mx-auto mb-3 border-4 border-white dark:border-[#21262d] overflow-hidden bg-gray-200 shadow-md">
+                    <div style="width: 80px; height: 80px; margin-top: -40px; min-height: 80px;" class="rounded-full mx-auto mb-3 border-4 border-white dark:border-[#21262d] overflow-hidden bg-gray-200 shadow-md">
                         <img src="{{ asset('storage/' . $top3[1]->avatar) }}" class="w-full h-full object-cover">
                     </div>
-                    <h3 class="font-bold text-gray-900 dark:text-[#f0f6fc] text-sm sm:text-base line-clamp-1 w-full">{{ $top3[1]->name }}</h3>
+                    <h3 style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2;" class="font-bold text-gray-900 dark:text-[#f0f6fc] text-sm">{{ $top3[1]->name }}</h3>
                     <p class="text-xs text-gray-500 dark:text-[#8b949e] font-medium mt-1">{{ $top3[1]->count }} Tugas</p>
                 </div>
                 <div class="text-gray-400 dark:text-gray-500 font-black text-lg">
@@ -27,13 +27,13 @@
 
         <!-- Rank 1 (Center) -->
         @if(isset($top3[0]))
-            <div class="w-44 sm:w-52 pt-0 pb-6 px-4 bg-white dark:bg-[#21262d] rounded-t-3xl rounded-b-xl order-2 h-[210px] shadow-xl border-2 border-primary-500 dark:border-primary-500 relative flex flex-col justify-between z-20 ring-4 ring-primary-50 dark:ring-primary-900/20">
+            <div style="width: 200px; height: 220px;" class="pt-0 pb-6 px-4 bg-white dark:bg-[#21262d] rounded-t-3xl rounded-b-xl order-1 sm:order-2 shadow-xl border-2 border-primary-500 dark:border-primary-500 relative flex flex-col justify-between z-20 ring-4 ring-primary-50 dark:ring-primary-900/20">
                 <div class="absolute -top-16 left-1/2 -translate-x-1/2 text-4xl z-30 drop-shadow-md">👑</div>
                 <div>
-                    <div style="width: 96px; height: 96px; margin-top: -48px;" class="rounded-full mx-auto mb-3 border-4 border-primary-500 overflow-hidden bg-gray-200 shadow-lg">
+                    <div style="width: 100px; height: 100px; margin-top: -50px; min-height: 100px;" class="rounded-full mx-auto mb-3 border-4 border-primary-500 overflow-hidden bg-gray-200 shadow-lg">
                         <img src="{{ asset('storage/' . $top3[0]->avatar) }}" class="w-full h-full object-cover">
                     </div>
-                    <h3 class="font-bold text-gray-900 dark:text-[#f0f6fc] text-base sm:text-lg line-clamp-1 w-full">{{ $top3[0]->name }}</h3>
+                    <h3 style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2;" class="font-bold text-gray-900 dark:text-[#f0f6fc] text-base">{{ $top3[0]->name }}</h3>
                     <p class="text-sm text-gray-500 dark:text-[#8b949e] font-medium mt-1">{{ $top3[0]->count }} Tugas</p>
                 </div>
                 <div class="text-primary-600 dark:text-primary-400 font-black text-xl">
@@ -44,12 +44,12 @@
 
         <!-- Rank 3 (Right) -->
         @if(isset($top3[2]))
-            <div class="w-40 sm:w-48 pt-0 pb-5 px-4 bg-white dark:bg-[#21262d] rounded-t-3xl rounded-b-xl order-3 h-[150px] shadow-lg border border-gray-100 dark:border-gray-800 relative flex flex-col justify-between">
+            <div style="width: 170px; height: 160px;" class="pt-0 pb-5 px-4 bg-white dark:bg-[#21262d] rounded-t-3xl rounded-b-xl order-3 shadow-lg border border-gray-100 dark:border-gray-800 relative flex flex-col justify-between">
                 <div>
-                    <div style="width: 80px; height: 80px; margin-top: -40px;" class="rounded-full mx-auto mb-3 border-4 border-white dark:border-[#21262d] overflow-hidden bg-gray-200 shadow-md">
+                    <div style="width: 80px; height: 80px; margin-top: -40px; min-height: 80px;" class="rounded-full mx-auto mb-3 border-4 border-white dark:border-[#21262d] overflow-hidden bg-gray-200 shadow-md">
                         <img src="{{ asset('storage/' . $top3[2]->avatar) }}" class="w-full h-full object-cover">
                     </div>
-                    <h3 class="font-bold text-gray-900 dark:text-[#f0f6fc] text-sm sm:text-base line-clamp-1 w-full">{{ $top3[2]->name }}</h3>
+                    <h3 style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2;" class="font-bold text-gray-900 dark:text-[#f0f6fc] text-sm">{{ $top3[2]->name }}</h3>
                     <p class="text-xs text-gray-500 dark:text-[#8b949e] font-medium mt-1">{{ $top3[2]->count }} Tugas</p>
                 </div>
                 <div class="text-gray-400 dark:text-gray-500 font-black text-lg">
