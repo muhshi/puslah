@@ -47,6 +47,8 @@ php artisan db:seed
 
 # Jalankan
 php artisan serve
+# Atau gunakan shortcut (menjalankan server, queue, dan vite sekaligus)
+composer dev
 ```
 
 ## Changelog
