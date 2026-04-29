@@ -75,8 +75,8 @@ class Leaderboard extends Page implements HasForms
                             5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
                             9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
                         ])
+                        ->placeholder('Semua Bulan')
                         ->native(false)
-                        ->required()
                         ->live()
                         ->afterStateUpdated(fn () => $this->updateData()),
                     Select::make('year')
@@ -96,11 +96,15 @@ class Leaderboard extends Page implements HasForms
 
     public function updateData(): void
     {
-        $month = $this->filter['month'];
+        $month = $this->filter['month'] ?? null;
         $year = $this->filter['year'];
-        $date = Carbon::create($year, $month, 1);
 
-        $this->currentMonthName = $date->locale('id')->translatedFormat('F Y');
+        if ($month) {
+            $date = Carbon::create($year, $month, 1);
+            $this->currentMonthName = $date->locale('id')->translatedFormat('F Y');
+        } else {
+            $this->currentMonthName = 'Tahun ' . $year;
+        }
         
         $pegawaiQuery = $this->getBaseQuery('Organik', $month, $year);
         $this->totalPegawai = $pegawaiQuery->count();
@@ -111,16 +115,20 @@ class Leaderboard extends Page implements HasForms
         $this->mitraData = $this->formatData($mitraQuery->take($this->mitraLimit)->get());
     }
 
-    protected function getBaseQuery(string $roleName, int $month, int $year)
+    protected function getBaseQuery(string $roleName, ?int $month, int $year)
     {
-        $date = Carbon::create($year, $month, 1);
-        $startOfMonth = $date->copy()->startOfMonth();
-        $endOfMonth = $date->copy()->endOfMonth();
+        if ($month) {
+            $start = Carbon::create($year, $month, 1)->startOfMonth();
+            $end = Carbon::create($year, $month, 1)->endOfMonth();
+        } else {
+            $start = Carbon::create($year, 1, 1)->startOfYear();
+            $end = Carbon::create($year, 1, 1)->endOfYear();
+        }
 
         return User::role($roleName)
             ->with(['profile'])
-            ->withCount(['suratTugas' => function ($query) use ($startOfMonth, $endOfMonth) {
-                $query->whereBetween('tanggal', [$startOfMonth, $endOfMonth]);
+            ->withCount(['suratTugas' => function ($query) use ($start, $end) {
+                $query->whereBetween('tanggal', [$start, $end]);
             }])
             ->orderBy('surat_tugas_count', 'desc');
     }
