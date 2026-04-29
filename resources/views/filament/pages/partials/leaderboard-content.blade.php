@@ -13,7 +13,7 @@
         @if(isset($top3[1]))
             <div class="w-40 sm:w-48 pt-0 pb-5 px-4 bg-white dark:bg-[#21262d] rounded-t-3xl rounded-b-xl order-1 h-[170px] shadow-lg border border-gray-100 dark:border-gray-800 relative flex flex-col justify-between">
                 <div>
-                    <div class="w-20 h-20 rounded-full mx-auto -mt-10 mb-3 border-4 border-white dark:border-[#21262d] overflow-hidden bg-gray-200 shadow-md">
+                    <div style="width: 80px; height: 80px; margin-top: -40px;" class="rounded-full mx-auto mb-3 border-4 border-white dark:border-[#21262d] overflow-hidden bg-gray-200 shadow-md">
                         <img src="{{ asset('storage/' . $top3[1]->avatar) }}" class="w-full h-full object-cover">
                     </div>
                     <h3 class="font-bold text-gray-900 dark:text-[#f0f6fc] text-sm sm:text-base line-clamp-1 w-full">{{ $top3[1]->name }}</h3>
@@ -30,7 +30,7 @@
             <div class="w-44 sm:w-52 pt-0 pb-6 px-4 bg-white dark:bg-[#21262d] rounded-t-3xl rounded-b-xl order-2 h-[210px] shadow-xl border-2 border-primary-500 dark:border-primary-500 relative flex flex-col justify-between z-20 ring-4 ring-primary-50 dark:ring-primary-900/20">
                 <div class="absolute -top-16 left-1/2 -translate-x-1/2 text-4xl z-30 drop-shadow-md">👑</div>
                 <div>
-                    <div class="w-24 h-24 rounded-full mx-auto -mt-12 mb-3 border-4 border-primary-500 overflow-hidden bg-gray-200 shadow-lg">
+                    <div style="width: 96px; height: 96px; margin-top: -48px;" class="rounded-full mx-auto mb-3 border-4 border-primary-500 overflow-hidden bg-gray-200 shadow-lg">
                         <img src="{{ asset('storage/' . $top3[0]->avatar) }}" class="w-full h-full object-cover">
                     </div>
                     <h3 class="font-bold text-gray-900 dark:text-[#f0f6fc] text-base sm:text-lg line-clamp-1 w-full">{{ $top3[0]->name }}</h3>
@@ -46,7 +46,7 @@
         @if(isset($top3[2]))
             <div class="w-40 sm:w-48 pt-0 pb-5 px-4 bg-white dark:bg-[#21262d] rounded-t-3xl rounded-b-xl order-3 h-[150px] shadow-lg border border-gray-100 dark:border-gray-800 relative flex flex-col justify-between">
                 <div>
-                    <div class="w-20 h-20 rounded-full mx-auto -mt-10 mb-3 border-4 border-white dark:border-[#21262d] overflow-hidden bg-gray-200 shadow-md">
+                    <div style="width: 80px; height: 80px; margin-top: -40px;" class="rounded-full mx-auto mb-3 border-4 border-white dark:border-[#21262d] overflow-hidden bg-gray-200 shadow-md">
                         <img src="{{ asset('storage/' . $top3[2]->avatar) }}" class="w-full h-full object-cover">
                     </div>
                     <h3 class="font-bold text-gray-900 dark:text-[#f0f6fc] text-sm sm:text-base line-clamp-1 w-full">{{ $top3[2]->name }}</h3>
