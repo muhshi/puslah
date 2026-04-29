@@ -7,7 +7,7 @@
 <div class="max-w-5xl mx-auto py-10 font-sans">
     
     <!-- Top 3 Podium Section -->
-    <div class="flex justify-center items-end gap-5 mb-16 mt-20 text-center relative z-10 px-4">
+    <div class="flex justify-center items-end gap-3 sm:gap-6 md:gap-8 mb-16 mt-24 text-center relative z-10 px-2 sm:px-4">
         
         <!-- Rank 2 (Left) -->
         @if(isset($top3[1]))
@@ -76,7 +76,7 @@
                         <td class="py-3 px-5 text-center font-black text-gray-400 dark:text-gray-500 text-lg">{{ $index + 4 }}</td>
                         <td class="py-3 px-5">
                             <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 shrink-0 border-2 border-gray-100 dark:border-gray-600 shadow-sm">
+                                <div style="width: 44px; height: 44px; min-width: 44px;" class="rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 shrink-0 border border-gray-200 dark:border-gray-600 shadow-sm">
                                     <img src="{{ asset('storage/' . $item->avatar) }}" class="w-full h-full object-cover">
                                 </div>
                                 <div class="min-w-0">
