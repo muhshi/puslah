@@ -128,11 +128,17 @@ class Leaderboard extends Page implements HasForms
     protected function formatData($users): Collection
     {
         return $users->map(function ($user) {
+            $avatar = $user->profile?->avatar_path;
+            if (!$avatar) {
+                $gender = $user->profile?->gender ?? 'L';
+                $avatar = $gender === 'P' ? 'avatars/default_female.png' : 'avatars/default_male.png';
+            }
+
             return (object) [
                 'id' => $user->id,
                 'name' => $user->name,
                 'jabatan' => $user->jabatan ?? $user->profile?->jabatan ?? 'Pegawai',
-                'avatar' => $user->profile?->avatar_path,
+                'avatar' => $avatar,
                 'count' => $user->surat_tugas_count,
                 'initials' => collect(explode(' ', $user->name))
                     ->map(fn ($n) => mb_substr($n, 0, 1))

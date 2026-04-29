@@ -15,7 +15,7 @@
 
         <!-- Main Header -->
         <div class="text-center py-4 relative">
-            <h2 class="text-3xl font-black tracking-tight text-gray-950 dark:text-white md:text-4xl">
+            <h2 class="text-3xl font-black tracking-tight text-gray-950 dark:text-white md:text-4xl flex items-center justify-center gap-3">
                 🏆 Leaderboard Tugas
             </h2>
             <p class="text-lg font-medium text-gray-500 dark:text-gray-400 mt-2">
@@ -44,50 +44,25 @@
                 </div>
             </div>
 
-            <!-- Content -->
-            @php
-                $maxCount = max($pegawaiData->max('count'), $mitraData->max('count'), 1);
-            @endphp
-
+            <!-- Pegawai Content -->
             <div x-show="activeTab === 'pegawai'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0">
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    @forelse($pegawaiData as $index => $item)
-                        @include('filament.pages.leaderboard-card', ['item' => $item, 'index' => $index, 'maxCount' => $maxCount])
-                    @empty
-                        <div class="col-span-full text-center py-12 text-gray-500 dark:text-gray-400 italic bg-white dark:bg-gray-800/50 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
-                            Belum ada data tugas untuk periode ini.
-                        </div>
-                    @endforelse
-                </div>
-                
-                @if($pegawaiLimit < $totalPegawai)
-                    <div class="mt-8 flex justify-center">
-                        <button wire:click="loadMorePegawai" type="button" class="px-6 py-2.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2">
-                            <span>Tampilkan Selanjutnya</span>
-                            <x-heroicon-m-chevron-down class="w-4 h-4" />
-                        </button>
+                @if($pegawaiData->isEmpty())
+                    <div class="text-center py-12 text-gray-500 dark:text-gray-400 italic bg-white dark:bg-gray-800/50 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
+                        Belum ada data tugas untuk periode ini.
                     </div>
+                @else
+                    @include('filament.pages.partials.leaderboard-content', ['data' => $pegawaiData, 'limit' => $pegawaiLimit, 'total' => $totalPegawai, 'type' => 'Pegawai'])
                 @endif
             </div>
 
+            <!-- Mitra Content -->
             <div x-show="activeTab === 'mitra'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" style="display: none;">
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    @forelse($mitraData as $index => $item)
-                        @include('filament.pages.leaderboard-card', ['item' => $item, 'index' => $index, 'maxCount' => $maxCount])
-                    @empty
-                        <div class="col-span-full text-center py-12 text-gray-500 dark:text-gray-400 italic bg-white dark:bg-gray-800/50 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
-                            Belum ada data tugas untuk periode ini.
-                        </div>
-                    @endforelse
-                </div>
-                
-                @if($mitraLimit < $totalMitra)
-                    <div class="mt-8 flex justify-center">
-                        <button wire:click="loadMoreMitra" type="button" class="px-6 py-2.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2">
-                            <span>Tampilkan Selanjutnya</span>
-                            <x-heroicon-m-chevron-down class="w-4 h-4" />
-                        </button>
+                @if($mitraData->isEmpty())
+                    <div class="text-center py-12 text-gray-500 dark:text-gray-400 italic bg-white dark:bg-gray-800/50 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
+                        Belum ada data tugas untuk periode ini.
                     </div>
+                @else
+                    @include('filament.pages.partials.leaderboard-content', ['data' => $mitraData, 'limit' => $mitraLimit, 'total' => $totalMitra, 'type' => 'Mitra'])
                 @endif
             </div>
         </div>
