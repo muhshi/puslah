@@ -32,13 +32,13 @@ class Leaderboard extends Page implements HasForms
 
     protected static string $view = 'filament.pages.leaderboard';
 
-    protected static ?string $navigationGroup = 'Laporan';
+    protected static ?string $navigationGroup = null;
 
     protected static ?string $navigationLabel = 'Leaderboard';
 
     protected static ?string $title = 'Leaderboard Tugas';
 
-    protected static ?int $navigationSort = 10;
+    protected static ?int $navigationSort = 2;
 
     public Collection $pegawaiData;
     public Collection $mitraData;
