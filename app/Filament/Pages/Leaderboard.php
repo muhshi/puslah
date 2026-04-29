@@ -23,6 +23,11 @@ class Leaderboard extends Page implements HasForms
         'year' => null,
     ];
 
+    public int $pegawaiLimit = 12;
+    public int $mitraLimit = 12;
+    public int $totalPegawai = 0;
+    public int $totalMitra = 0;
+
     protected static ?string $navigationIcon = 'heroicon-o-trophy';
 
     protected static string $view = 'filament.pages.leaderboard';
@@ -43,6 +48,18 @@ class Leaderboard extends Page implements HasForms
     {
         $this->filter['month'] = now()->month;
         $this->filter['year'] = now()->year;
+        $this->updateData();
+    }
+
+    public function loadMorePegawai(): void
+    {
+        $this->pegawaiLimit += 12;
+        $this->updateData();
+    }
+
+    public function loadMoreMitra(): void
+    {
+        $this->mitraLimit += 12;
         $this->updateData();
     }
 
@@ -84,11 +101,17 @@ class Leaderboard extends Page implements HasForms
         $date = Carbon::create($year, $month, 1);
 
         $this->currentMonthName = $date->locale('id')->translatedFormat('F Y');
-        $this->pegawaiData = $this->getLeaderboardData('Organik', $month, $year);
-        $this->mitraData = $this->getLeaderboardData('Mitra', $month, $year);
+        
+        $pegawaiQuery = $this->getBaseQuery('Organik', $month, $year);
+        $this->totalPegawai = $pegawaiQuery->count();
+        $this->pegawaiData = $this->formatData($pegawaiQuery->take($this->pegawaiLimit)->get());
+
+        $mitraQuery = $this->getBaseQuery('Mitra', $month, $year);
+        $this->totalMitra = $mitraQuery->count();
+        $this->mitraData = $this->formatData($mitraQuery->take($this->mitraLimit)->get());
     }
 
-    protected function getLeaderboardData(string $roleName, int $month, int $year): Collection
+    protected function getBaseQuery(string $roleName, int $month, int $year)
     {
         $date = Carbon::create($year, $month, 1);
         $startOfMonth = $date->copy()->startOfMonth();
@@ -99,21 +122,23 @@ class Leaderboard extends Page implements HasForms
             ->withCount(['suratTugas' => function ($query) use ($startOfMonth, $endOfMonth) {
                 $query->whereBetween('tanggal', [$startOfMonth, $endOfMonth]);
             }])
-            ->orderBy('surat_tugas_count', 'desc')
-            ->take(12) // Show top 12
-            ->get()
-            ->map(function ($user) {
-                return (object) [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'jabatan' => $user->jabatan ?? $user->profile?->jabatan ?? 'Pegawai',
-                    'avatar' => $user->profile?->avatar_path,
-                    'count' => $user->surat_tugas_count,
-                    'initials' => collect(explode(' ', $user->name))
-                        ->map(fn ($n) => mb_substr($n, 0, 1))
-                        ->take(2)
-                        ->join(''),
-                ];
-            });
+            ->orderBy('surat_tugas_count', 'desc');
+    }
+
+    protected function formatData($users): Collection
+    {
+        return $users->map(function ($user) {
+            return (object) [
+                'id' => $user->id,
+                'name' => $user->name,
+                'jabatan' => $user->jabatan ?? $user->profile?->jabatan ?? 'Pegawai',
+                'avatar' => $user->profile?->avatar_path,
+                'count' => $user->surat_tugas_count,
+                'initials' => collect(explode(' ', $user->name))
+                    ->map(fn ($n) => mb_substr($n, 0, 1))
+                    ->take(2)
+                    ->join(''),
+            ];
+        });
     }
 }

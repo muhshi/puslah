@@ -54,11 +54,20 @@
                     @forelse($pegawaiData as $index => $item)
                         @include('filament.pages.leaderboard-card', ['item' => $item, 'index' => $index, 'maxCount' => $maxCount])
                     @empty
-                        <div class="col-span-full text-center py-12 text-gray-500 dark:text-gray-400 italic bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
+                        <div class="col-span-full text-center py-12 text-gray-500 dark:text-gray-400 italic bg-white dark:bg-gray-800/50 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
                             Belum ada data tugas untuk periode ini.
                         </div>
                     @endforelse
                 </div>
+                
+                @if($pegawaiLimit < $totalPegawai)
+                    <div class="mt-8 flex justify-center">
+                        <button wire:click="loadMorePegawai" type="button" class="px-6 py-2.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2">
+                            <span>Tampilkan Selanjutnya</span>
+                            <x-heroicon-m-chevron-down class="w-4 h-4" />
+                        </button>
+                    </div>
+                @endif
             </div>
 
             <div x-show="activeTab === 'mitra'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" style="display: none;">
@@ -66,11 +75,20 @@
                     @forelse($mitraData as $index => $item)
                         @include('filament.pages.leaderboard-card', ['item' => $item, 'index' => $index, 'maxCount' => $maxCount])
                     @empty
-                        <div class="col-span-full text-center py-12 text-gray-500 dark:text-gray-400 italic bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
+                        <div class="col-span-full text-center py-12 text-gray-500 dark:text-gray-400 italic bg-white dark:bg-gray-800/50 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
                             Belum ada data tugas untuk periode ini.
                         </div>
                     @endforelse
                 </div>
+                
+                @if($mitraLimit < $totalMitra)
+                    <div class="mt-8 flex justify-center">
+                        <button wire:click="loadMoreMitra" type="button" class="px-6 py-2.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2">
+                            <span>Tampilkan Selanjutnya</span>
+                            <x-heroicon-m-chevron-down class="w-4 h-4" />
+                        </button>
+                    </div>
+                @endif
             </div>
         </div>
     </div>
