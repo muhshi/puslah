@@ -46,7 +46,7 @@ php artisan migrate
 php artisan db:seed
 
 # Jalankan
-php artisan serve
+php artisan serve --port=8080
 # Atau gunakan shortcut (menjalankan server, queue, dan vite sekaligus)
 composer dev
 ```
