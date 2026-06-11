@@ -47,14 +47,14 @@ class ListSuratTugas extends ListRecords
                     \Filament\Forms\Components\Group::make()->schema([
                         \Filament\Forms\Components\DatePicker::make('tanggal')
                             ->label('Tanggal Surat')
-                            ->default(now())
+                            ->default(now()->format('Y-m-d'))
                             ->required(),
                         \Filament\Forms\Components\DatePicker::make('waktu_mulai')
                             ->label('Mulai')
-                            ->default(now()),
+                            ->default(now()->format('Y-m-d')),
                         \Filament\Forms\Components\DatePicker::make('waktu_selesai')
                             ->label('Selesai')
-                            ->default(now()),
+                            ->default(now()->format('Y-m-d')),
                     ])->columns(3),
                     \Filament\Forms\Components\Textarea::make('keperluan')
                         ->label('Keperluan')
