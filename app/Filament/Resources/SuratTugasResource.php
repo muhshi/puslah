@@ -505,63 +505,14 @@ class SuratTugasResource extends Resource
                                 return;
                             }
 
-                            // Create ZIP
-                            $zipFileName = 'Surat_Tugas_Bulk_' . now()->format('YmdHis') . '.zip';
-                            $zipPath = storage_path('app/' . $zipFileName);
-                            $zip = new \ZipArchive();
+                            // Dispatch Job
+                            \App\Jobs\GenerateBulkSuratTugasZip::dispatch($records->pluck('id')->toArray(), 'word', auth()->id());
 
-                            if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
-                                \Filament\Notifications\Notification::make()
-                                    ->title('Gagal membuat file ZIP')
-                                    ->danger()
-                                    ->send();
-                                return;
-                            }
-
-                            foreach ($records as $record) {
-                                $template = new TemplateProcessor(storage_path('app/public/' . $templatePath));
-
-                                // Map all variables (same as single download)
-                                $template->setValue('nomor_surat', $record->nomor_surat);
-                                $template->setValue('nama_pegawai', $record->user->profile->full_name ?? $record->user->name);
-                                $template->setValue('nip_pegawai', '-');
-                                $template->setValue('jabatan_pegawai', $record->user->profile->jabatan ?? '-');
-                                $template->setValue('jabatan_tugas', $record->jabatan);
-                                $template->setValue('keperluan', $record->keperluan);
-                                $template->setValue('dasar_surat', $record->survey?->dasar_surat ?? '-');
-                                $template->setValue('tempat_tugas', $record->tempat_tugas ?? '-');
-                                $template->setValue('tanggal_surat', $record->tanggal->translatedFormat('d F Y'));
-
-                                $periodeTugas = self::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
-                                $template->setValue('periode_tugas', $periodeTugas);
-
-                                $template->setValue('nama_kepala', $record->signer_name);
-                                $template->setValue('nip_kepala', $record->signer_nip);
-                                $template->setValue('jabatan_kepala', $record->signer_title);
-                                $template->setValue('kota_penetapan', $record->signer_city);
-
-                                // Save to temp
-                                $safeFilename = str_replace(['/', '\\'], '_', $record->nomor_surat);
-                                $fileName = "Surat_Tugas_{$safeFilename}.docx";
-                                $tempPath = storage_path('app/temp_bulk_' . $fileName);
-                                $template->saveAs($tempPath);
-
-                                // Add to ZIP
-                                $zip->addFile($tempPath, $fileName);
-                            }
-
-                            $zip->close();
-
-                            // Clean up temp files
-                            foreach ($records as $record) {
-                                $safeFilename = str_replace(['/', '\\'], '_', $record->nomor_surat);
-                                $tempPath = storage_path('app/temp_bulk_Surat_Tugas_' . $safeFilename . '.docx');
-                                if (file_exists($tempPath)) {
-                                    unlink($tempPath);
-                                }
-                            }
-
-                            return response()->download($zipPath)->deleteFileAfterSend();
+                            \Filament\Notifications\Notification::make()
+                                ->title('Proses Download Dimulai')
+                                ->body('File sedang dikompresi di latar belakang. Anda akan menerima notifikasi di Ikon Lonceng jika file ZIP sudah siap didownload.')
+                                ->success()
+                                ->send();
                         }),
                     Tables\Actions\BulkAction::make('downloadPdfBulk')
                         ->label('Download PDF (ZIP)')
@@ -583,83 +534,13 @@ class SuratTugasResource extends Resource
                         })
                         ->requiresConfirmation()
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
-                            // Load Logo Base64
-                            $logoBase64 = \Illuminate\Support\Facades\Cache::remember('logo_bps_static_base64', 86400, function () {
-                                $logoPath = public_path('images/logo_bps.png');
-                                if (file_exists($logoPath)) {
-                                    return 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
-                                }
-                                return null;
-                            });
+                            \App\Jobs\GenerateBulkSuratTugasZip::dispatch($records->pluck('id')->toArray(), 'pdf', auth()->id());
 
-                            // Create ZIP
-                            $zipFileName = 'Surat_Tugas_PDF_' . now()->format('YmdHis') . '.zip';
-                            $zipPath = storage_path('app/' . $zipFileName);
-                            $zip = new \ZipArchive();
-
-                            if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
-                                \Filament\Notifications\Notification::make()
-                                    ->title('Gagal membuat file ZIP')
-                                    ->danger()
-                                    ->send();
-                                return;
-                            }
-
-                            $tempFiles = [];
-                            foreach ($records as $record) {
-                                // Ensure Hash exists
-                                if (!$record->hash) {
-                                    $record->update(['hash' => \Illuminate\Support\Str::random(32)]);
-                                }
-
-                                // Generate QR (ONLY IF APPROVED)
-                                $qrBase64 = null;
-                                if ($record->status === 'approved') {
-                                    $verifyUrl = route('surat-tugas.verify', $record->hash);
-                                    $qrSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(100)->margin(0)->generate($verifyUrl);
-                                    $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
-                                }
-
-                                $periode = self::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
-
-                                // Generate PDF
-                                $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('surat-tugas.pdf_table_layout', [
-                                    'surat' => $record,
-                                    'logoBase64' => $logoBase64,
-                                    'qrBase64' => $qrBase64,
-                                    'periode' => $periode,
-                                    'is_preview' => false,
-                                ])->setPaper('a4', 'portrait');
-
-                                // Set Encryption if Master Password is set
-                                $settings = app(SystemSettings::class);
-                                if (!empty($settings->pdf_master_password)) {
-                                    $pdf->setEncryption('', $settings->pdf_master_password, ['print']);
-                                }
-
-                                // Save to temp
-                                $surveyName = $record->survey ? str_replace(['/', '\\', ' '], ['_', '_', '_'], $record->survey->name) : 'NoSurvey';
-                                $userName = str_replace(['/', '\\', ' '], ['_', '_', '_'], $record->user->name);
-                                $nomorSurat = str_replace(['/', '\\'], '_', $record->nomor_surat);
-                                $fileName = "{$nomorSurat}-{$surveyName}-{$userName}.pdf";
-                                $tempPath = storage_path('app/temp_pdf_' . $fileName);
-                                file_put_contents($tempPath, $pdf->output());
-                                $tempFiles[] = $tempPath;
-
-                                // Add to ZIP
-                                $zip->addFile($tempPath, $fileName);
-                            }
-
-                            $zip->close();
-
-                            // Clean up temp files
-                            foreach ($tempFiles as $tempPath) {
-                                if (file_exists($tempPath)) {
-                                    unlink($tempPath);
-                                }
-                            }
-
-                            return response()->download($zipPath)->deleteFileAfterSend();
+                            \Filament\Notifications\Notification::make()
+                                ->title('Proses Download Dimulai')
+                                ->body('File PDF sedang di-generate dan dikompresi di latar belakang. Anda akan menerima notifikasi di Ikon Lonceng jika file ZIP sudah siap didownload.')
+                                ->success()
+                                ->send();
                         }),
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
