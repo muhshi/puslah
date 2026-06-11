@@ -276,7 +276,11 @@ class SuratTugasResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('survey_id')
+                    ->label('Filter berdasarkan Survey')
+                    ->relationship('survey', 'name')
+                    ->searchable()
+                    ->preload(),
             ])
             ->actions([
                 Tables\Actions\Action::make('preview')
