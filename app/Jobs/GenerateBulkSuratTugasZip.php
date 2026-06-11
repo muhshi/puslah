@@ -172,44 +172,49 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
         $masterPassword = $settings->pdf_master_password;
 
         foreach ($records as $record) {
-            if (!$record->hash) {
-                $record->update(['hash' => \Illuminate\Support\Str::random(32)]);
+            try {
+                if (!$record->hash) {
+                    $record->update(['hash' => \Illuminate\Support\Str::random(32)]);
+                }
+
+                $qrBase64 = null;
+                if ($record->status === 'approved') {
+                    $verifyUrl = route('surat-tugas.verify', $record->hash);
+                    $qrSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(100)->margin(0)->generate($verifyUrl);
+                    $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
+                }
+
+                $periode = \App\Filament\Resources\SuratTugasResource::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
+
+                $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('surat-tugas.pdf_table_layout', [
+                    'surat' => $record,
+                    'logoBase64' => $logoBase64,
+                    'qrBase64' => $qrBase64,
+                    'periode' => $periode,
+                    'is_preview' => false,
+                ])->setPaper('a4', 'portrait');
+
+                if (!empty($masterPassword)) {
+                    $pdf->setEncryption('', $masterPassword, ['print']);
+                }
+
+                $surveyName = $record->survey ? str_replace(['/', '\\', ' '], ['_', '_', '_'], $record->survey->name) : 'NoSurvey';
+                $userName = str_replace(['/', '\\', ' '], ['_', '_', '_'], $record->user->name);
+                $nomorSurat = str_replace(['/', '\\'], '_', $record->nomor_surat);
+                
+                $fileName = "{$nomorSurat}-{$surveyName}-{$userName}.pdf";
+                $tempPath = storage_path('app/temp_bulk_pdf_' . uniqid() . '.pdf');
+                
+                file_put_contents($tempPath, $pdf->output());
+                $tempFiles[] = $tempPath;
+                $zip->addFile($tempPath, $fileName);
+                
+                // Clean up heavy DomPDF objects
+                unset($pdf);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning("Skipped PDF for SuratTugas #{$record->id} ({$record->nomor_surat}): " . $e->getMessage());
+                continue;
             }
-
-            $qrBase64 = null;
-            if ($record->status === 'approved') {
-                $verifyUrl = route('surat-tugas.verify', $record->hash);
-                $qrSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(100)->margin(0)->generate($verifyUrl);
-                $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
-            }
-
-            $periode = \App\Filament\Resources\SuratTugasResource::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
-
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('surat-tugas.pdf_table_layout', [
-                'surat' => $record,
-                'logoBase64' => $logoBase64,
-                'qrBase64' => $qrBase64,
-                'periode' => $periode,
-                'is_preview' => false,
-            ])->setPaper('a4', 'portrait');
-
-            if (!empty($masterPassword)) {
-                $pdf->setEncryption('', $masterPassword, ['print']);
-            }
-
-            $surveyName = $record->survey ? str_replace(['/', '\\', ' '], ['_', '_', '_'], $record->survey->name) : 'NoSurvey';
-            $userName = str_replace(['/', '\\', ' '], ['_', '_', '_'], $record->user->name);
-            $nomorSurat = str_replace(['/', '\\'], '_', $record->nomor_surat);
-            
-            $fileName = "{$nomorSurat}-{$surveyName}-{$userName}.pdf";
-            $tempPath = storage_path('app/temp_bulk_pdf_' . uniqid() . '.pdf');
-            
-            file_put_contents($tempPath, $pdf->output());
-            $tempFiles[] = $tempPath;
-            $zip->addFile($tempPath, $fileName);
-            
-            // Clean up heavy DomPDF objects
-            unset($pdf);
         }
     }
 
