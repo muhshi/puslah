@@ -128,46 +128,28 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
             }
         }
 
-        // Send Success Notification with Download Button
+        // Send Success Notification
         $user = User::find($this->userId);
         if ($user) {
             try {
-                \Illuminate\Support\Facades\Log::info("Mengirim notifikasi ke user #{$this->userId}...");
+                \Illuminate\Support\Facades\Log::info("Mengirim notifikasi ke user #{$this->userId} pada DB: " . \Illuminate\Support\Facades\DB::connection()->getDatabaseName());
                 
-                \Illuminate\Support\Facades\DB::table('notifications')->insert([
-                    'id' => \Illuminate\Support\Str::uuid()->toString(),
-                    'type' => 'Filament\\Notifications\\DatabaseNotification',
-                    'notifiable_type' => 'App\\Models\\User',
-                    'notifiable_id' => $this->userId,
-                    'data' => json_encode([
-                        'title' => 'File Surat Tugas Siap!',
-                        'body' => 'Proses pembuatan ' . $totalProcessed . ' file ' . strtoupper($this->type) . ' telah selesai.',
-                        'status' => 'success',
-                        'icon' => 'heroicon-o-check-circle',
-                        'iconColor' => 'success',
-                        'actions' => [
-                            [
-                                'name' => 'download',
-                                'label' => 'Download File',
-                                'url' => $outputUrl,
-                                'shouldOpenUrlInNewTab' => true,
-                                'isOutlined' => false,
-                                'isDisabled' => false,
-                                'button' => true,
-                                'color' => 'primary',
-                            ],
-                        ],
-                        'format' => 'filament',
-                    ]),
-                    'read_at' => null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                \Filament\Notifications\Notification::make()
+                    ->title('File Surat Tugas Siap!')
+                    ->body('Proses pembuatan ' . $totalProcessed . ' file ' . strtoupper($this->type) . ' telah selesai.')
+                    ->success()
+                    ->actions([
+                        Action::make('download')
+                            ->label('Download File')
+                            ->button()
+                            ->url($outputUrl)
+                            ->openUrlInNewTab(),
+                    ])
+                    ->sendToDatabase($user);
                     
-                \Illuminate\Support\Facades\Log::info("Notifikasi berhasil disimpan ke database untuk user #{$this->userId}.");
+                \Illuminate\Support\Facades\Log::info("Notifikasi Filament berhasil dikirim ke user #{$this->userId}.");
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::error("Gagal kirim notifikasi: " . $e->getMessage());
-                \Illuminate\Support\Facades\Log::error($e->getTraceAsString());
             }
         } else {
             \Illuminate\Support\Facades\Log::warning("User #{$this->userId} tidak ditemukan untuk notifikasi.");
