@@ -54,11 +54,25 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
             foreach ($rows as $row) {
                 try {
                     $email = strtolower(trim($row['email'] ?? $row['email_petugas'] ?? ''));
-                    $jabatan = trim($row['jabatan'] ?? $row['jabatan_tugas'] ?? '-');
-                    $tempatTugas = trim($row['tempat_tugas'] ?? '');
+                    $jabatan = trim($row['jabatan'] ?? $row['jabatan_tugas'] ?? '');
+                    $tempatTugas = trim($row['tempat_tugas'] ?? $row['kecamatan_tugas'] ?? '');
 
-                    if (empty($email)) {
-                        $this->failed++;
+                    if (empty($email) || empty($jabatan) || empty($tempatTugas)) {
+                        $this->skipped++;
+                        continue;
+                    }
+
+                    // Cek apakah ada kata "mundur" di kolom mana saja (misal di Kolom H / Keterangan)
+                    $isMundur = false;
+                    foreach ($row as $val) {
+                        if (is_string($val) && stripos($val, 'mundur') !== false) {
+                            $isMundur = true;
+                            break;
+                        }
+                    }
+
+                    if ($isMundur) {
+                        $this->skipped++;
                         continue;
                     }
 
