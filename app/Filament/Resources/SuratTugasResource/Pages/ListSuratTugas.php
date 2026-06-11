@@ -34,14 +34,28 @@ class ListSuratTugas extends ListRecords
                                 $survey = \App\Models\Survey::find($state);
                                 if ($survey) {
                                     $set('keperluan', "{$survey->name}");
+                                    if ($survey->start_date) {
+                                        $set('waktu_mulai', \Carbon\Carbon::parse($survey->start_date)->format('Y-m-d'));
+                                    }
+                                    if ($survey->end_date) {
+                                        $set('waktu_selesai', \Carbon\Carbon::parse($survey->end_date)->format('Y-m-d'));
+                                    }
                                 }
                             }
                         })
                         ->required(),
-                    \Filament\Forms\Components\DatePicker::make('tanggal')
-                        ->label('Tanggal Surat')
-                        ->default(now())
-                        ->required(),
+                    \Filament\Forms\Components\Group::make()->schema([
+                        \Filament\Forms\Components\DatePicker::make('tanggal')
+                            ->label('Tanggal Surat')
+                            ->default(now())
+                            ->required(),
+                        \Filament\Forms\Components\DatePicker::make('waktu_mulai')
+                            ->label('Mulai')
+                            ->default(now()),
+                        \Filament\Forms\Components\DatePicker::make('waktu_selesai')
+                            ->label('Selesai')
+                            ->default(now()),
+                    ])->columns(3),
                     \Filament\Forms\Components\Textarea::make('keperluan')
                         ->label('Keperluan')
                         ->required(),
@@ -57,6 +71,8 @@ class ListSuratTugas extends ListRecords
                     $import = new \App\Imports\SuratTugasImport(
                         $data['survey_id'],
                         $data['tanggal'],
+                        $data['waktu_mulai'],
+                        $data['waktu_selesai'],
                         $data['keperluan']
                     );
                     \Maatwebsite\Excel\Facades\Excel::import($import, $filePath);

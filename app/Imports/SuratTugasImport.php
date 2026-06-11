@@ -26,17 +26,15 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
     protected $settings;
     protected $year;
 
-    public function __construct($surveyId, $tanggal, $keperluan, $kodeKlasifikasi = 'KP.650')
+    public function __construct($surveyId, $tanggal, $waktuMulai, $waktuSelesai, $keperluan, $kodeKlasifikasi = 'KP.650')
     {
         $this->surveyId = $surveyId;
         $this->tanggal = $tanggal;
+        $this->waktuMulai = $waktuMulai;
+        $this->waktuSelesai = $waktuSelesai;
         $this->keperluan = $keperluan;
         $this->kodeKlasifikasi = $kodeKlasifikasi;
         
-        $survey = \App\Models\Survey::find($surveyId);
-        $this->waktuMulai = $survey ? $survey->start_date : now()->format('Y-m-d');
-        $this->waktuSelesai = $survey ? $survey->end_date : now()->format('Y-m-d');
-
         $this->settings = app(SystemSettings::class);
         $this->year = \Carbon\Carbon::parse($tanggal)->year;
     }
