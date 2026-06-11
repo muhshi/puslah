@@ -54,7 +54,7 @@ composer dev
 ## Changelog
 
 ### 2026-06-11
-- **Bulk Import Surat Tugas via Excel** — Menambahkan fitur baru untuk melakukan pembuatan Surat Tugas secara massal menggunakan file Excel (.xlsx). Fitur ini memadukan form UI (untuk memilih Survey, Tanggal, dan Keperluan) dengan template Excel (berisi Email, Jabatan, dan Tempat Tugas) agar pembuatan Surat Tugas untuk ratusan pegawai bisa dilakukan dengan sangat cepat dan akurat.
+- **Bulk Import Surat Tugas via Excel** — Menambahkan fitur baru untuk melakukan pembuatan Surat Tugas secara massal menggunakan file Excel (.xlsx). Fitur ini memadukan form UI (untuk memilih Survey, Tanggal, dan Keperluan) dengan template Excel (berisi Email, Jabatan, dan Tempat Tugas) agar pembuatan Surat Tugas untuk ratusan pegawai bisa dilakukan dengan sangat cepat dan akurat. Tanggal mulai dan selesai tugas akan ditarik secara otomatis dari data Survey yang dipilih. Jika email belum terdaftar, sistem juga akan otomatis membuatkan user tersebut.
 
 ### 2026-04-29
 - **Leaderboard Performa Bulanan** — Menambahkan halaman Leaderboard premium untuk menampilkan peringkat performa Pegawai (Organik) dan Mitra berdasarkan jumlah Surat Tugas. Kini dilengkapi dengan **filter bulan dan tahun**, serta desain kartu yang telah diperbaiki agar lebih bersih dan profesional.
