@@ -42,10 +42,9 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
     {
         // Override strict PHP limits (FrankenPHP/Docker usually caps at 30s and 128MB)
         set_time_limit(0);
-        ini_set('memory_limit', '1024M'); // Allow up to 1GB for heavy PDF generation
+        ini_set('memory_limit', '1024M'); // Keep safety net
 
-        $records = SuratTugas::whereIn('id', $this->recordIds)->with(['survey', 'user.profile'])->get();
-        if ($records->isEmpty()) {
+        if (empty($this->recordIds)) {
             return;
         }
 
@@ -63,11 +62,25 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
         }
 
         $tempFiles = [];
+        $totalProcessed = 0;
 
-        if ($this->type === 'pdf') {
-            $this->processPdf($records, $zip, $tempFiles);
-        } else {
-            $this->processWord($records, $zip, $tempFiles);
+        // Process in chunks of 50 to prevent RAM exhaustion
+        $chunks = array_chunk($this->recordIds, 50);
+
+        foreach ($chunks as $chunkIds) {
+            $records = SuratTugas::whereIn('id', $chunkIds)->with(['survey', 'user.profile'])->get();
+            
+            if ($this->type === 'pdf') {
+                $this->processPdf($records, $zip, $tempFiles);
+            } else {
+                $this->processWord($records, $zip, $tempFiles);
+            }
+
+            $totalProcessed += $records->count();
+
+            // Clear memory after each chunk
+            unset($records);
+            gc_collect_cycles();
         }
 
         $zip->close();
@@ -84,7 +97,7 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
         if ($user) {
             Notification::make()
                 ->title('File ZIP Surat Tugas Siap!')
-                ->body('Proses kompresi ' . $records->count() . ' file ' . strtoupper($this->type) . ' telah selesai.')
+                ->body('Proses kompresi ' . $totalProcessed . ' file ' . strtoupper($this->type) . ' telah selesai.')
                 ->success()
                 ->actions([
                     Action::make('download')
@@ -135,6 +148,8 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
             $template->saveAs($tempPath);
             $tempFiles[] = $tempPath;
             $zip->addFile($tempPath, $fileName);
+            
+            unset($template);
         }
     }
 
@@ -187,6 +202,9 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
             file_put_contents($tempPath, $pdf->output());
             $tempFiles[] = $tempPath;
             $zip->addFile($tempPath, $fileName);
+            
+            // Clean up heavy DomPDF objects
+            unset($pdf);
         }
     }
 
