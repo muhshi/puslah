@@ -35,6 +35,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->databaseNotifications()
             ->authGuard('web')
             ->registration()
             ->userMenuItems([
