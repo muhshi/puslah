@@ -65,8 +65,32 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
                     $user = User::where('email', $email)->first();
 
                     if (!$user) {
-                        $this->skipped++;
-                        continue;
+                        $nama = trim($row['nama_petugas'] ?? '');
+                        if (empty($nama)) {
+                            // Cannot auto-create without a name
+                            $this->failed++;
+                            continue;
+                        }
+
+                        $user = User::create([
+                            'name' => ucwords(strtolower($nama)),
+                            'email' => $email,
+                            'password' => \Illuminate\Support\Facades\Hash::make('Mitra3321'),
+                        ]);
+                        
+                        $user->assignRole('Mitra');
+                    }
+
+                    // Ensure the user is a participant of the survey
+                    $isParticipant = \App\Models\SurveyUser::where('user_id', $user->id)
+                        ->where('survey_id', $this->surveyId)
+                        ->exists();
+
+                    if (!$isParticipant) {
+                        \App\Models\SurveyUser::create([
+                            'user_id' => $user->id,
+                            'survey_id' => $this->surveyId,
+                        ]);
                     }
 
                     // Check if already has surat tugas for this survey
