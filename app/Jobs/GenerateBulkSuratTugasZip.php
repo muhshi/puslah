@@ -100,7 +100,8 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
             if (count($tempFiles) > 0) {
                 $listFilePath = storage_path('app/pdf_list_' . uniqid() . '.txt');
                 $listContent = implode("\n", array_map(function($path) {
-                    return escapeshellarg($path);
+                    // Ghostscript requires double quotes for paths with spaces, single quotes are treated as literals!
+                    return '"' . $path . '"';
                 }, $tempFiles));
                 file_put_contents($listFilePath, $listContent);
 
