@@ -22,6 +22,9 @@ COPY . /app
 # Composer (buat install deps dari dalam container)
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+# Copy custom PHP configuration (memory_limit, max_execution_time)
+COPY docker/php.ini /usr/local/etc/php/conf.d/99-custom.ini
+
 # Copy konfigurasi Caddy/FrankenPHP
 COPY Caddyfile /etc/caddy/Caddyfile
 
