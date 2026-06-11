@@ -100,18 +100,29 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
         // Send Success Notification with Download Button
         $user = User::find($this->userId);
         if ($user) {
-            Notification::make()
-                ->title('File ZIP Surat Tugas Siap!')
-                ->body('Proses kompresi ' . $totalProcessed . ' file ' . strtoupper($this->type) . ' telah selesai.')
-                ->success()
-                ->actions([
-                    Action::make('download')
-                        ->label('Download ZIP')
-                        ->button()
-                        ->url($zipUrl)
-                        ->openUrlInNewTab(),
-                ])
-                ->sendToDatabase($user);
+            try {
+                \Illuminate\Support\Facades\Log::info("Mengirim notifikasi ke user #{$this->userId}...");
+                
+                Notification::make()
+                    ->title('File ZIP Surat Tugas Siap!')
+                    ->body('Proses kompresi ' . $totalProcessed . ' file ' . strtoupper($this->type) . ' telah selesai.')
+                    ->success()
+                    ->actions([
+                        Action::make('download')
+                            ->label('Download ZIP')
+                            ->button()
+                            ->url($zipUrl)
+                            ->openUrlInNewTab(),
+                    ])
+                    ->sendToDatabase($user);
+                    
+                \Illuminate\Support\Facades\Log::info("Notifikasi berhasil dikirim ke user #{$this->userId}.");
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error("Gagal kirim notifikasi: " . $e->getMessage());
+                \Illuminate\Support\Facades\Log::error($e->getTraceAsString());
+            }
+        } else {
+            \Illuminate\Support\Facades\Log::warning("User #{$this->userId} tidak ditemukan untuk notifikasi.");
         }
     }
 
