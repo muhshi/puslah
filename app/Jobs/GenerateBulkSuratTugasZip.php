@@ -98,25 +98,24 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
         } else {
             // MERGE PDFs using Ghostscript
             if (count($tempFiles) > 0) {
-                $listFilePath = storage_path('app/pdf_list_' . uniqid() . '.txt');
-                $listContent = implode("\n", array_map(function($path) {
-                    // Ghostscript requires double quotes for paths with spaces, single quotes are treated as literals!
-                    return '"' . $path . '"';
-                }, $tempFiles));
-                file_put_contents($listFilePath, $listContent);
-
+                // Build gs command with individual file arguments (avoids @file quoting issues)
+                $fileArgs = implode(' ', array_map('escapeshellarg', $tempFiles));
                 $outputPdfEscaped = escapeshellarg($outputPath);
-                $listFileEscaped = escapeshellarg($listFilePath);
                 
-                // Use ghostscript to merge PDFs
-                $command = "gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -dAutoRotatePages=/None -sOutputFile={$outputPdfEscaped} @{$listFileEscaped} 2>&1";
+                // Build Ghostscript merge command
+                $gsFlags = '-dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -dAutoRotatePages=/None';
+                
+                // Apply PDF encryption on the final merged file if master password is set
+                $settings = app(SystemSettings::class);
+                if (!empty($settings->pdf_master_password)) {
+                    $ownerPass = escapeshellarg($settings->pdf_master_password);
+                    $gsFlags .= " -sOwnerPassword={$ownerPass} -dEncryptionR=3 -dPermissions=-3904";
+                }
+                
+                $command = "gs {$gsFlags} -sOutputFile={$outputPdfEscaped} {$fileArgs} 2>&1";
                 $output = shell_exec($command);
                 
-                \Illuminate\Support\Facades\Log::info("Ghostscript merge complete untuk {$outputFileName}");
-                
-                if (file_exists($listFilePath)) {
-                    unlink($listFilePath);
-                }
+                \Illuminate\Support\Facades\Log::info("Ghostscript merge complete untuk {$outputFileName}. Output: " . ($output ?: 'OK'));
             } else {
                 \Illuminate\Support\Facades\Log::warning("Tidak ada file PDF yang dihasilkan untuk dimerge.");
             }
@@ -209,10 +208,6 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
             }
             return null;
         });
-
-        $settings = app(SystemSettings::class);
-        $masterPassword = $settings->pdf_master_password;
-
         foreach ($records as $record) {
             try {
                 if (!$record->hash) {
@@ -236,9 +231,9 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
                     'is_preview' => false,
                 ])->setPaper('a4', 'portrait');
 
-                if (!empty($masterPassword)) {
-                    $pdf->setEncryption('', $masterPassword, ['print']);
-                }
+                // NOTE: Encryption is NOT applied here for bulk merge.
+                // Ghostscript cannot read encrypted PDFs, so encryption is applied
+                // on the final merged PDF via Ghostscript's -sOwnerPassword flag.
 
                 $surveyName = $record->survey ? str_replace(['/', '\\', ' '], ['_', '_', '_'], $record->survey->name) : 'NoSurvey';
                 $userName = str_replace(['/', '\\', ' '], ['_', '_', '_'], $record->user->name);
