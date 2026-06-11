@@ -21,6 +21,19 @@ services:
       - default
       - mysql-stack_mysql_network
 
+  puslah-worker:
+    container_name: puslah-worker
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: php artisan queue:work --sleep=3 --tries=3 --timeout=600
+    volumes:
+      - .:/app
+    networks:
+      - default
+      - mysql-stack_mysql_network
+
 networks:
   default: {}
   mysql-stack_mysql_network:
