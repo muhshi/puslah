@@ -99,6 +99,8 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
 
             // 3. Identify and Create Missing Users
             $usersToProcess = []; // To store final User objects
+            $defaultPassword = \Illuminate\Support\Facades\Hash::make('Mitra3321'); // Hashed once!
+
             foreach ($validRows as $key => $vRow) {
                 $email = $vRow['email'];
                 if (!$usersByEmail->has($email)) {
@@ -108,11 +110,11 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
                         continue;
                     }
 
-                    // Create new user (doing this in loop but it's only for MISSING users, usually few)
+                    // Create new user
                     $newUser = User::create([
                         'name' => ucwords(strtolower($vRow['nama'])),
                         'email' => $email,
-                        'password' => \Illuminate\Support\Facades\Hash::make('Mitra3321'),
+                        'password' => $defaultPassword,
                     ]);
                     $newUser->assignRole('Mitra');
                     $usersByEmail->put($email, $newUser);
