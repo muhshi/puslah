@@ -9,6 +9,7 @@ set -e  # Berhenti jika ada error
 APP_DIR=~/apps/puslah
 CONTAINER_NAME=puslah-franken
 WORKER_NAME=puslah-worker
+SCHEDULER_NAME=puslah-scheduler
 BRANCH=main
 
 echo ""
@@ -34,12 +35,12 @@ echo "🔨 [2/8] Rebuild Docker image..."
 docker compose build
 echo "   ✅ Image berhasil di-build."
 
-# 4. Restart semua container (web + worker)
+# 4. Restart semua container (web + worker + scheduler)
 echo ""
-echo "🔄 [3/8] Restart container (web + worker)..."
+echo "🔄 [3/8] Restart container (web + worker + scheduler)..."
 docker compose down
 docker compose up -d
-echo "   ✅ Container web dan worker berhasil dinyalakan."
+echo "   ✅ Container web, worker, dan scheduler berhasil dinyalakan."
 
 # 5. Jalankan migrasi (tanpa --fresh, hanya yang baru)
 echo ""
@@ -56,11 +57,12 @@ docker exec "$CONTAINER_NAME" php artisan view:cache
 docker exec "$CONTAINER_NAME" php artisan event:cache
 echo "   ✅ Cache berhasil di-generate."
 
-# 7. Restart queue worker agar memuat kode baru
+# 7. Restart queue worker & scheduler agar memuat kode baru
 echo ""
-echo "👷 [6/8] Restart Queue Worker..."
+echo "👷 [6/8] Restart Queue Worker & Scheduler..."
 docker restart "$WORKER_NAME"
-echo "   ✅ Worker di-restart dengan kode terbaru."
+docker restart "$SCHEDULER_NAME"
+echo "   ✅ Worker & Scheduler di-restart dengan kode terbaru."
 
 # 8. Bersihkan image Docker yang tidak terpakai
 echo ""
