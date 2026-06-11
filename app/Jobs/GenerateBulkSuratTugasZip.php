@@ -51,14 +51,19 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
         // Ensure exports directory exists
         Storage::disk('public')->makeDirectory('exports');
         
-        $zipFileName = 'Surat_Tugas_' . strtoupper($this->type) . '_Bulk_' . now()->format('YmdHis') . '.zip';
-        $zipPath = Storage::disk('public')->path('exports/' . $zipFileName);
-        $zipUrl = asset('storage/exports/' . $zipFileName);
+        $isPdf = ($this->type === 'pdf');
+        $outputExt = $isPdf ? 'pdf' : 'zip';
+        $outputFileName = 'Surat_Tugas_' . strtoupper($this->type) . '_Bulk_' . now()->format('YmdHis') . '.' . $outputExt;
+        $outputPath = Storage::disk('public')->path('exports/' . $outputFileName);
+        $outputUrl = asset('storage/exports/' . $outputFileName);
 
-        $zip = new \ZipArchive();
-        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
-            $this->notifyUser('Gagal', 'Sistem gagal membuat file ZIP.', 'danger');
-            return;
+        $zip = null;
+        if (!$isPdf) {
+            $zip = new \ZipArchive();
+            if ($zip->open($outputPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+                $this->notifyUser('Gagal', 'Sistem gagal membuat file ZIP.', 'danger');
+                return;
+            }
         }
 
         $tempFiles = [];
@@ -68,27 +73,53 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
         $chunks = array_chunk($this->recordIds, 50);
         $totalRecords = count($this->recordIds);
 
-        \Illuminate\Support\Facades\Log::info("Mulai memproses Bulk " . strtoupper($this->type) . " ZIP untuk {$totalRecords} data...");
+        \Illuminate\Support\Facades\Log::info("Mulai memproses Bulk " . strtoupper($this->type) . " untuk {$totalRecords} data...");
 
         foreach ($chunks as $chunkIds) {
             $records = SuratTugas::whereIn('id', $chunkIds)->with(['survey', 'user.profile'])->get();
             
-            if ($this->type === 'pdf') {
-                $this->processPdf($records, $zip, $tempFiles);
+            if ($isPdf) {
+                $this->processPdf($records, $tempFiles);
             } else {
                 $this->processWord($records, $zip, $tempFiles);
             }
 
             $totalProcessed += $records->count();
             
-            \Illuminate\Support\Facades\Log::info("Progres ZIP: {$totalProcessed} / {$totalRecords} selesai.");
+            \Illuminate\Support\Facades\Log::info("Progres Bulk: {$totalProcessed} / {$totalRecords} selesai.");
 
             // Clear memory after each chunk
             unset($records);
             gc_collect_cycles();
         }
 
-        $zip->close();
+        if (!$isPdf) {
+            $zip->close();
+        } else {
+            // MERGE PDFs using Ghostscript
+            if (count($tempFiles) > 0) {
+                $listFilePath = storage_path('app/pdf_list_' . uniqid() . '.txt');
+                $listContent = implode("\n", array_map(function($path) {
+                    return escapeshellarg($path);
+                }, $tempFiles));
+                file_put_contents($listFilePath, $listContent);
+
+                $outputPdfEscaped = escapeshellarg($outputPath);
+                $listFileEscaped = escapeshellarg($listFilePath);
+                
+                // Use ghostscript to merge PDFs
+                $command = "gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -dAutoRotatePages=/None -sOutputFile={$outputPdfEscaped} @{$listFileEscaped} 2>&1";
+                $output = shell_exec($command);
+                
+                \Illuminate\Support\Facades\Log::info("Ghostscript merge complete untuk {$outputFileName}");
+                
+                if (file_exists($listFilePath)) {
+                    unlink($listFilePath);
+                }
+            } else {
+                \Illuminate\Support\Facades\Log::warning("Tidak ada file PDF yang dihasilkan untuk dimerge.");
+            }
+        }
 
         // Clean up temp files
         foreach ($tempFiles as $tempPath) {
@@ -109,16 +140,16 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
                     'notifiable_type' => 'App\\Models\\User',
                     'notifiable_id' => $this->userId,
                     'data' => json_encode([
-                        'title' => 'File ZIP Surat Tugas Siap!',
-                        'body' => 'Proses kompresi ' . $totalProcessed . ' file ' . strtoupper($this->type) . ' telah selesai.',
+                        'title' => 'File Surat Tugas Siap!',
+                        'body' => 'Proses pembuatan ' . $totalProcessed . ' file ' . strtoupper($this->type) . ' telah selesai.',
                         'status' => 'success',
                         'icon' => 'heroicon-o-check-circle',
                         'iconColor' => 'success',
                         'actions' => [
                             [
                                 'name' => 'download',
-                                'label' => 'Download ZIP',
-                                'url' => $zipUrl,
+                                'label' => 'Download File',
+                                'url' => $outputUrl,
                                 'shouldOpenUrlInNewTab' => true,
                                 'isOutlined' => false,
                                 'isDisabled' => false,
@@ -186,7 +217,7 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
         }
     }
 
-    protected function processPdf($records, &$zip, &$tempFiles)
+    protected function processPdf($records, &$tempFiles)
     {
         $logoBase64 = \Illuminate\Support\Facades\Cache::remember('logo_bps_static_base64', 86400, function () {
             $logoPath = public_path('images/logo_bps.png');
@@ -235,7 +266,6 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
                 
                 file_put_contents($tempPath, $pdf->output());
                 $tempFiles[] = $tempPath;
-                $zip->addFile($tempPath, $fileName);
                 
                 // Clean up heavy DomPDF objects
                 unset($pdf);
