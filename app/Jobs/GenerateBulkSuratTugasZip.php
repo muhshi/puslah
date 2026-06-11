@@ -103,20 +103,37 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
             try {
                 \Illuminate\Support\Facades\Log::info("Mengirim notifikasi ke user #{$this->userId}...");
                 
-                Notification::make()
-                    ->title('File ZIP Surat Tugas Siap!')
-                    ->body('Proses kompresi ' . $totalProcessed . ' file ' . strtoupper($this->type) . ' telah selesai.')
-                    ->success()
-                    ->actions([
-                        Action::make('download')
-                            ->label('Download ZIP')
-                            ->button()
-                            ->url($zipUrl)
-                            ->openUrlInNewTab(),
-                    ])
-                    ->sendToDatabase($user);
+                \Illuminate\Support\Facades\DB::table('notifications')->insert([
+                    'id' => \Illuminate\Support\Str::uuid()->toString(),
+                    'type' => 'Filament\\Notifications\\DatabaseNotification',
+                    'notifiable_type' => 'App\\Models\\User',
+                    'notifiable_id' => $this->userId,
+                    'data' => json_encode([
+                        'title' => 'File ZIP Surat Tugas Siap!',
+                        'body' => 'Proses kompresi ' . $totalProcessed . ' file ' . strtoupper($this->type) . ' telah selesai.',
+                        'status' => 'success',
+                        'icon' => 'heroicon-o-check-circle',
+                        'iconColor' => 'success',
+                        'actions' => [
+                            [
+                                'name' => 'download',
+                                'label' => 'Download ZIP',
+                                'url' => $zipUrl,
+                                'shouldOpenUrlInNewTab' => true,
+                                'isOutlined' => false,
+                                'isDisabled' => false,
+                                'button' => true,
+                                'color' => 'primary',
+                            ],
+                        ],
+                        'format' => 'filament',
+                    ]),
+                    'read_at' => null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
                     
-                \Illuminate\Support\Facades\Log::info("Notifikasi berhasil dikirim ke user #{$this->userId}.");
+                \Illuminate\Support\Facades\Log::info("Notifikasi berhasil disimpan ke database untuk user #{$this->userId}.");
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::error("Gagal kirim notifikasi: " . $e->getMessage());
                 \Illuminate\Support\Facades\Log::error($e->getTraceAsString());
