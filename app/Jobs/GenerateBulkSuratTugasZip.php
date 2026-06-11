@@ -40,6 +40,10 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
      */
     public function handle(): void
     {
+        // Override strict PHP limits (FrankenPHP/Docker usually caps at 30s and 128MB)
+        set_time_limit(0);
+        ini_set('memory_limit', '1024M'); // Allow up to 1GB for heavy PDF generation
+
         $records = SuratTugas::whereIn('id', $this->recordIds)->with(['survey', 'user.profile'])->get();
         if ($records->isEmpty()) {
             return;
