@@ -515,7 +515,7 @@ class SuratTugasResource extends Resource
                                 ->send();
                         }),
                     Tables\Actions\BulkAction::make('downloadPdfBulk')
-                        ->label('Download PDF (ZIP)')
+                        ->label('Download PDF (Gabungan)')
                         ->icon('heroicon-o-document-arrow-down')
                         ->color('danger')
                         ->modalHeading(function (\Illuminate\Database\Eloquent\Collection $records) {
@@ -530,7 +530,7 @@ class SuratTugasResource extends Resource
                             if ($pendingCount > 0) {
                                 return "Ada {$pendingCount} surat tugas yang belum di-approve. PDF yang belum approved tidak akan memiliki QR Code. Tetap download?";
                             }
-                            return "Download {$records->count()} surat tugas sebagai PDF dalam file ZIP?";
+                            return "Download {$records->count()} surat tugas sebagai satu file PDF gabungan?";
                         })
                         ->requiresConfirmation()
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
@@ -538,7 +538,7 @@ class SuratTugasResource extends Resource
 
                             \Filament\Notifications\Notification::make()
                                 ->title('Proses Download Dimulai')
-                                ->body('File PDF sedang di-generate dan dikompresi di latar belakang. Anda akan menerima notifikasi di Ikon Lonceng jika file ZIP sudah siap didownload.')
+                                ->body('File PDF sedang di-generate dan digabungkan di latar belakang. Anda akan menerima notifikasi di Ikon Lonceng jika file PDF sudah siap didownload.')
                                 ->success()
                                 ->send();
                         }),
