@@ -66,6 +66,9 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
 
         // Process in chunks of 50 to prevent RAM exhaustion
         $chunks = array_chunk($this->recordIds, 50);
+        $totalRecords = count($this->recordIds);
+
+        \Illuminate\Support\Facades\Log::info("Mulai memproses Bulk " . strtoupper($this->type) . " ZIP untuk {$totalRecords} data...");
 
         foreach ($chunks as $chunkIds) {
             $records = SuratTugas::whereIn('id', $chunkIds)->with(['survey', 'user.profile'])->get();
@@ -77,6 +80,8 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
             }
 
             $totalProcessed += $records->count();
+            
+            \Illuminate\Support\Facades\Log::info("Progres ZIP: {$totalProcessed} / {$totalRecords} selesai.");
 
             // Clear memory after each chunk
             unset($records);
