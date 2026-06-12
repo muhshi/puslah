@@ -4,6 +4,7 @@ namespace App\Filament\Resources\SuratTugasResource\Pages;
 
 use App\Filament\Resources\SuratTugasResource;
 use App\Models\SuratTugas;
+use App\Models\Survey;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
@@ -22,7 +23,7 @@ class ListSuratTugas extends ListRecords
                     \Filament\Forms\Components\Select::make('survey_id')
                         ->label('Pilih Survey')
                         ->options(function () {
-                            return \App\Models\Survey::where('is_active', true)
+                            return Survey::where('is_active', true)
                                 ->orderByDesc('created_at')
                                 ->pluck('name', 'id');
                         })
@@ -31,7 +32,7 @@ class ListSuratTugas extends ListRecords
                         ->live()
                         ->afterStateUpdated(function (\Filament\Forms\Set $set, $state) {
                             if ($state) {
-                                $survey = \App\Models\Survey::find($state);
+                                $survey = Survey::find($state);
                                 if ($survey) {
                                     $set('keperluan', "{$survey->name}");
                                     if ($survey->start_date) {
@@ -52,7 +53,7 @@ class ListSuratTugas extends ListRecords
                             ->afterStateUpdated(function (\Filament\Forms\Set $set, $state) {
                                 if ($state) {
                                     $year = \Carbon\Carbon::parse($state)->year;
-                                    $nextNumber = \App\Models\SuratTugas::getNextNomorUrut($year);
+                                    $nextNumber = SuratTugas::getNextNomorUrut($year);
                                     $set('nomor_urut_mulai', $nextNumber);
                                 }
                             })
@@ -72,7 +73,7 @@ class ListSuratTugas extends ListRecords
                         ->numeric()
                         ->required()
                         ->minValue(1)
-                        ->default(fn() => \App\Models\SuratTugas::getNextNomorUrut(now()->year)),
+                        ->default(fn() => SuratTugas::getNextNomorUrut(now()->year)),
                     \Filament\Forms\Components\FileUpload::make('file_excel')
                         ->label('File Excel (.xlsx)')
                         ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv'])
@@ -92,7 +93,7 @@ class ListSuratTugas extends ListRecords
                         $data['nomor_urut_mulai'] ?? null
                     );
                     \Maatwebsite\Excel\Facades\Excel::import($import, $filePath);
-                    
+
                     \Filament\Notifications\Notification::make()
                         ->title('Import Selesai')
                         ->body("Berhasil: {$import->success}, Dilewati: {$import->skipped}, Gagal: {$import->failed}")
