@@ -22,11 +22,12 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
     protected $waktuSelesai;
     protected $keperluan;
     protected $kodeKlasifikasi;
+    protected $nomorUrutMulai;
     
     protected $settings;
     protected $year;
 
-    public function __construct($surveyId, $tanggal, $waktuMulai, $waktuSelesai, $keperluan, $kodeKlasifikasi = 'KP.650')
+    public function __construct($surveyId, $tanggal, $waktuMulai, $waktuSelesai, $keperluan, $kodeKlasifikasi = 'KP.650', $nomorUrutMulai = null)
     {
         $this->surveyId = $surveyId;
         $this->tanggal = $tanggal;
@@ -34,6 +35,7 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
         $this->waktuSelesai = $waktuSelesai;
         $this->keperluan = $keperluan;
         $this->kodeKlasifikasi = $kodeKlasifikasi;
+        $this->nomorUrutMulai = $nomorUrutMulai;
         
         $this->settings = app(SystemSettings::class);
         $this->year = \Carbon\Carbon::parse($tanggal)->year;
@@ -43,7 +45,12 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
     {
         // Pre-fetch used and blocked numbers for the year to avoid collision
         $usedNumbers = SuratTugas::getOccupiedNumbers($this->year);
-        $currentUrut = SuratTugas::getNextNomorUrut($this->year) - 1;
+        
+        if ($this->nomorUrutMulai !== null) {
+            $currentUrut = (int) $this->nomorUrutMulai - 1;
+        } else {
+            $currentUrut = SuratTugas::getNextNomorUrut($this->year) - 1;
+        }
 
         $prefix = $this->settings->surat_prefix ?? 'B';
         $office = $this->settings->office_code ?? '33210';

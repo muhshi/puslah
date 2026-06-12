@@ -48,6 +48,14 @@ class ListSuratTugas extends ListRecords
                         \Filament\Forms\Components\DatePicker::make('tanggal')
                             ->label('Tanggal Surat')
                             ->default(now()->format('Y-m-d'))
+                            ->live()
+                            ->afterStateUpdated(function (\Filament\Forms\Set $set, $state) {
+                                if ($state) {
+                                    $year = \Carbon\Carbon::parse($state)->year;
+                                    $nextNumber = \App\Models\SuratTugas::getNextNomorUrut($year);
+                                    $set('nomor_urut_mulai', $nextNumber);
+                                }
+                            })
                             ->required(),
                         \Filament\Forms\Components\DatePicker::make('waktu_mulai')
                             ->label('Mulai')
@@ -59,6 +67,12 @@ class ListSuratTugas extends ListRecords
                     \Filament\Forms\Components\Textarea::make('keperluan')
                         ->label('Keperluan')
                         ->required(),
+                    \Filament\Forms\Components\TextInput::make('nomor_urut_mulai')
+                        ->label('Nomor Urut Mulai')
+                        ->numeric()
+                        ->required()
+                        ->minValue(1)
+                        ->default(fn() => \App\Models\SuratTugas::getNextNomorUrut(now()->year)),
                     \Filament\Forms\Components\FileUpload::make('file_excel')
                         ->label('File Excel (.xlsx)')
                         ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv'])
@@ -73,7 +87,9 @@ class ListSuratTugas extends ListRecords
                         $data['tanggal'],
                         $data['waktu_mulai'],
                         $data['waktu_selesai'],
-                        $data['keperluan']
+                        $data['keperluan'],
+                        'KP.650',
+                        $data['nomor_urut_mulai'] ?? null
                     );
                     \Maatwebsite\Excel\Facades\Excel::import($import, $filePath);
                     

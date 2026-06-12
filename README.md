@@ -53,6 +53,9 @@ composer dev
 
 ## Changelog
 
+### 2026-06-12
+- **Custom Nomor Urut Mulai di Import Excel** — Menambahkan opsi "Nomor Urut Mulai" pada fitur Import Excel Surat Tugas. Admin sekarang dapat menentukan secara manual dari nomor berapa surat tugas akan di-generate saat melakukan import dari Excel, mirip dengan fitur di Bulk Create. Hal ini sangat berguna untuk mengisi gap nomor yang kosong.
+
 ### 2026-06-11
 - **Bulk Import Surat Tugas via Excel** — Menambahkan fitur baru untuk melakukan pembuatan Surat Tugas secara massal menggunakan file Excel (.xlsx). Fitur ini memadukan form UI (untuk memilih Survey, Tanggal, dan Keperluan) dengan template Excel (berisi Email, Jabatan, dan Tempat Tugas) agar pembuatan Surat Tugas untuk ratusan pegawai bisa dilakukan dengan sangat cepat dan akurat. Tanggal mulai dan selesai tugas akan ditarik secara otomatis dari data Survey yang dipilih. Jika email belum terdaftar, sistem juga akan otomatis membuatkan user tersebut.
 
