@@ -54,7 +54,7 @@ composer dev
 ## Changelog
 
 ### 2026-06-15
-- **Multiple Surat Tugas per Survey** — Menambahkan opsi "Multiple Surat Tugas" (default: false) pada form Survey. Jika diaktifkan, batasan unik (satu pegawai hanya boleh memiliki satu Surat Tugas untuk survey yang sama) akan dilepas, sehingga satu pegawai dapat dibuatkan beberapa Surat Tugas untuk survey tersebut, misalnya untuk kegiatan Sensus dengan tanggal yang berbeda-beda.
+- **Multiple Surat Tugas per Survey & Validasi Tanggal Overlap** — Menambahkan opsi "Multiple Surat Tugas" (default: false) pada form Survey. Jika diaktifkan, batasan unik (satu pegawai hanya boleh memiliki satu Surat Tugas untuk survey yang sama) akan dilepas, sehingga satu pegawai dapat dibuatkan beberapa Surat Tugas untuk survey tersebut, misalnya untuk kegiatan Sensus dengan tanggal yang berbeda-beda. Namun demikian, sistem tetap menerapkan **proteksi overlap**: satu pegawai tidak bisa ditugaskan di survey yang sama dengan rentang tanggal yang saling tumpang tindih.
 
 ### 2026-06-12
 - **Custom Nomor Urut Mulai di Import Excel** — Menambahkan opsi "Nomor Urut Mulai" pada fitur Import Excel Surat Tugas. Admin sekarang dapat menentukan secara manual dari nomor berapa surat tugas akan di-generate saat melakukan import dari Excel, mirip dengan fitur di Bulk Create. Hal ini sangat berguna untuk mengisi gap nomor yang kosong.

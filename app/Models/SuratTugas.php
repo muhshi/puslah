@@ -190,4 +190,30 @@ class SuratTugas extends Model
 
         return $missingByMonth;
     }
+
+    /**
+     * Check if a given date range overlaps with existing surat tugas for a user in a specific survey.
+     * Optionally exclude a specific surat_tugas_id (useful for updates).
+     */
+    public static function hasOverlap(int $userId, ?int $surveyId, $waktuMulai, $waktuSelesai, ?int $excludeId = null): bool
+    {
+        if (!$waktuMulai || !$waktuSelesai || !$surveyId) {
+            return false;
+        }
+
+        $mulai = \Carbon\Carbon::parse($waktuMulai)->startOfDay();
+        $selesai = \Carbon\Carbon::parse($waktuSelesai)->endOfDay();
+
+        return self::where('user_id', $userId)
+            ->where('survey_id', $surveyId)
+            ->when($excludeId, function ($query) use ($excludeId) {
+                $query->where('id', '!=', $excludeId);
+            })
+            ->where(function ($query) use ($mulai, $selesai) {
+                // Overlap condition: start <= new_end AND end >= new_start
+                $query->where('waktu_mulai', '<=', $selesai)
+                      ->where('waktu_selesai', '>=', $mulai);
+            })
+            ->exists();
+    }
 }

@@ -310,52 +310,56 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                         $prefix = $settings->surat_prefix ?? 'B';
                         $office = $settings->office_code ?? '33210';
                         $klasifikasi = $data['kode_klasifikasi'] ?? 'KP.650';
-                        $urut = str_pad($record->nomor_urut, 4, '0', STR_PAD_LEFT);
-                        $nomorSurat = "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$record->year}";
-
-                        // Check if nomor_surat already exists
-                        if (SuratTugas::where('nomor_surat', $nomorSurat)->exists()) {
-                            Notification::make()
-                                ->title('Nomor surat sudah dipakai!')
-                                ->body("Nomor {$nomorSurat} sudah ada di database.")
-                                ->danger()
-                                ->send();
-                            return;
-                        }
-
+                        
                         try {
-                            SuratTugas::create([
-                                'user_id' => $data['user_id'],
-                                'survey_id' => $data['survey_id'] ?? null,
-                                'nomor_surat' => $nomorSurat,
-                                'nomor_urut' => $record->nomor_urut,
-                                'kode_klasifikasi' => $klasifikasi,
-                                'jabatan' => $data['jabatan'],
-                                'keperluan' => $data['keperluan'],
-                                'tempat_tugas' => $data['tempat_tugas'] ?? null,
-                                'tanggal' => $data['tanggal'],
-                                'waktu_mulai' => $data['waktu_mulai'],
-                                'waktu_selesai' => $data['waktu_selesai'],
-                                'signer_city' => $settings->cert_city,
-                                'signer_name' => $settings->cert_signer_name,
-                                'signer_nip' => $settings->cert_signer_nip,
-                                'signer_title' => $settings->cert_signer_title,
-                                'signer_signature_path' => $settings->cert_signer_signature_path,
-                                'created_by' => auth()->id(),
-                            ]);
+                            \Illuminate\Support\Facades\DB::transaction(function () use ($record, $data, $settings, $prefix, $office, $klasifikasi) {
+                                if (\App\Models\SuratTugas::hasOverlap($data['user_id'], $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null)) {
+                                    throw new \Exception("Overlap: Pegawai ini sudah memiliki Surat Tugas di rentang tanggal tersebut untuk survey yang sama.");
+                                }
 
-                            // Release the blocked number
-                            $record->delete();
+                                $urut = str_pad($record->nomor_urut, 4, '0', STR_PAD_LEFT);
+                                $nomorSurat = "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$record->year}";
+
+                                // Check if nomor_surat already exists
+                                if (SuratTugas::where('nomor_surat', $nomorSurat)->exists()) {
+                                    throw new \Exception("Nomor surat {$nomorSurat} sudah ada di database.");
+                                }
+
+                                SuratTugas::create([
+                                    'user_id' => $data['user_id'],
+                                    'survey_id' => $data['survey_id'] ?? null,
+                                    'nomor_surat' => $nomorSurat,
+                                    'nomor_urut' => $record->nomor_urut,
+                                    'kode_klasifikasi' => $klasifikasi,
+                                    'jabatan' => $data['jabatan'],
+                                    'keperluan' => $data['keperluan'],
+                                    'tempat_tugas' => $data['tempat_tugas'] ?? null,
+                                    'tanggal' => $data['tanggal'],
+                                    'waktu_mulai' => $data['waktu_mulai'],
+                                    'waktu_selesai' => $data['waktu_selesai'],
+                                    'signer_city' => $settings->cert_city,
+                                    'signer_name' => $settings->cert_signer_name,
+                                    'signer_nip' => $settings->cert_signer_nip,
+                                    'signer_title' => $settings->cert_signer_title,
+                                    'signer_signature_path' => $settings->cert_signer_signature_path,
+                                    'created_by' => auth()->id(),
+                                ]);
+
+                                // Release the blocked number
+                                $record->delete();
+                            });
 
                             Notification::make()
                                 ->title('Surat Tugas berhasil dibuat!')
-                                ->body("Nomor {$nomorSurat} sudah dibuat dan nomor blokir otomatis di-release.")
+                                ->body("Nomor {$record->nomor_urut} sudah dibuat dan nomor blokir otomatis di-release.")
                                 ->success()
                                 ->send();
                         } catch (\Exception $e) {
+                            $msg = $e->getMessage();
+                            $body = str_starts_with($msg, 'Overlap:') ? substr($msg, 9) : $msg;
                             Notification::make()
                                 ->title('Gagal membuat surat tugas')
-                                ->body('Terjadi kesalahan: ' . $e->getMessage())
+                                ->body($body)
                                 ->danger()
                                 ->send();
                         }
@@ -554,6 +558,11 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                             try {
                                 \Illuminate\Support\Facades\DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $records, &$successCount) {
                                     foreach ($userIds as $index => $userId) {
+                                        if (\App\Models\SuratTugas::hasOverlap($userId, $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null)) {
+                                            $user = \App\Models\User::find($userId);
+                                            throw new \Exception("Overlap: Pegawai " . ($user->name ?? $userId) . " sudah memiliki Surat Tugas di rentang tanggal tersebut.");
+                                        }
+
                                         $record = $records[$index];
                                         
                                         $urut = str_pad($record->nomor_urut, 4, '0', STR_PAD_LEFT);

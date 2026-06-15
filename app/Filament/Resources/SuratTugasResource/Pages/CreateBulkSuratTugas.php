@@ -51,12 +51,12 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                 return \App\Models\Survey::where('is_active', true)
                                     ->where(function ($query) {
                                         $query->where('is_multiple', true)
-                                              ->orWhereHas('participants', function ($q) {
-                                                  // Hanya survey yang punya user tanpa surat tugas untuk survey tersebut
-                                                  $q->whereDoesntHave('suratTugas', function ($q_st) {
-                                                      $q_st->whereColumn('surat_tugas.survey_id', 'surveys.id');
-                                                  });
-                                              });
+                                            ->orWhereHas('participants', function ($q) {
+                                                // Hanya survey yang punya user tanpa surat tugas untuk survey tersebut
+                                                $q->whereDoesntHave('suratTugas', function ($q_st) {
+                                                    $q_st->whereColumn('surat_tugas.survey_id', 'surveys.id');
+                                                });
+                                            });
                                     })
                                     ->orderByDesc('created_at')
                                     ->pluck('name', 'id');
@@ -86,7 +86,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                     // Checker for empty users (those who don't have surat tugas yet)
                                     $queryMitra = \App\Models\SurveyUser::where('survey_id', $state)
                                         ->whereHas('user.roles', fn($q) => $q->where('name', 'Mitra'));
-                                    
+
                                     $queryOrganik = \App\Models\SurveyUser::where('survey_id', $state)
                                         ->whereHas('user.roles', fn($q) => $q->where('name', 'Organik'));
 
@@ -124,7 +124,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                     ->whereHas('user.roles', function ($q) {
                                         $q->where('name', 'Mitra');
                                     });
-                                
+
                                 if ($survey && !$survey->is_multiple) {
                                     $query->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
                                         $q->where('survey_id', $surveyId);
@@ -156,7 +156,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                     ->whereHas('user.roles', function ($q) {
                                         $q->where('name', 'Organik');
                                     });
-                                    
+
                                 if ($survey && !$survey->is_multiple) {
                                     $query->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
                                         $q->where('survey_id', $surveyId);
@@ -353,6 +353,12 @@ class CreateBulkSuratTugas extends Page implements HasForms
         try {
             DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $year, &$currentUrut, $usedNumbers, $sumberJabatan, $jabatanManual) {
                 foreach ($userIds as $userId) {
+                    if (SuratTugas::hasOverlap($userId, $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null)) {
+                        $user = User::find($userId);
+                        $userName = $user ? $user->name : 'Pegawai';
+                        throw new \Exception("Overlap: Pegawai {$userName} sudah memiliki Surat Tugas di rentang tanggal tersebut untuk survey ini.");
+                    }
+
                     $currentUrut++;
                     // Skip over already-used nomor_urut
                     while (isset($usedNumbers[$currentUrut])) {
@@ -397,9 +403,14 @@ class CreateBulkSuratTugas extends Page implements HasForms
 
             $this->redirect(SuratTugasResource::getUrl('index'));
         } catch (\Exception $e) {
+            $msg = $e->getMessage();
+            $body = str_starts_with($msg, 'Overlap:')
+                ? substr($msg, 9)
+                : 'Terjadi kesalahan: Nomor surat duplikat atau data tidak valid. Silakan cek nomor urut dan coba lagi.';
+
             Notification::make()
                 ->title('Gagal membuat surat tugas')
-                ->body('Terjadi kesalahan: Nomor surat duplikat atau data tidak valid. Silakan cek nomor urut dan coba lagi.')
+                ->body($body)
                 ->danger()
                 ->send();
         }
