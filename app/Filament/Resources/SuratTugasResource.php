@@ -61,11 +61,13 @@ class SuratTugasResource extends Resource
                                     }
 
                                     // Checker for empty users
-                                    $hasParticipants = \App\Models\SurveyUser::where('survey_id', $state)
-                                        ->whereDoesntHave('user.suratTugas', function ($q) use ($state) {
-                                        $q->where('survey_id', $state);
-                                    })
-                                        ->exists();
+                                    $query = \App\Models\SurveyUser::where('survey_id', $state);
+                                    if (!$survey->is_multiple) {
+                                        $query->whereDoesntHave('user.suratTugas', function ($q) use ($state) {
+                                            $q->where('survey_id', $state);
+                                        });
+                                    }
+                                    $hasParticipants = $query->exists();
 
                                     if (!$hasParticipants) {
                                         \Filament\Notifications\Notification::make()
@@ -84,11 +86,16 @@ class SuratTugasResource extends Resource
 
                                 // If survey selected, filter by survey participants only
                                 if ($surveyId) {
-                                    return \App\Models\SurveyUser::where('survey_id', $surveyId)
-                                        ->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
+                                    $survey = \App\Models\Survey::find($surveyId);
+                                    $query = \App\Models\SurveyUser::where('survey_id', $surveyId);
+                                    
+                                    if ($survey && !$survey->is_multiple) {
+                                        $query->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
                                             $q->where('survey_id', $surveyId);
-                                        })
-                                        ->with('user.profile')
+                                        });
+                                    }
+
+                                    return $query->with('user.profile')
                                         ->get()
                                         ->mapWithKeys(function ($su) {
                                             $jabatan = $su->user->profile->jabatan ?? '-';

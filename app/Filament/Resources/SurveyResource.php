@@ -46,6 +46,11 @@ class SurveyResource extends Resource
                 Forms\Components\Toggle::make('is_active')
                     ->default(true)
                     ->required(),
+                Forms\Components\Toggle::make('is_multiple')
+                    ->label('Multiple Surat Tugas')
+                    ->helperText('Jika diaktifkan, satu pegawai bisa dibuatkan beberapa surat tugas pada survey ini')
+                    ->default(false)
+                    ->required(),
             ]);
     }
 
@@ -114,6 +119,9 @@ class SurveyResource extends Resource
                         Forms\Components\Toggle::make('is_active')
                             ->label('Aktif')
                             ->default(fn(Survey $record) => $record->is_active),
+                        Forms\Components\Toggle::make('is_multiple')
+                            ->label('Multiple Surat Tugas')
+                            ->default(fn(Survey $record) => $record->is_multiple),
                         Forms\Components\Toggle::make('copy_participants')
                             ->label('Copy Petugas/Peserta')
                             ->helperText('Centang untuk meng-copy semua petugas yang sudah di-assign ke survey asli')

@@ -49,11 +49,14 @@ class CreateBulkSuratTugas extends Page implements HasForms
                             ->label('Survey')
                             ->options(function () {
                                 return \App\Models\Survey::where('is_active', true)
-                                    ->whereHas('participants', function ($q) {
-                                        // Hanya survey yang punya user tanpa surat tugas untuk survey tersebut
-                                        $q->whereDoesntHave('suratTugas', function ($q_st) {
-                                            $q_st->whereColumn('surat_tugas.survey_id', 'surveys.id');
-                                        });
+                                    ->where(function ($query) {
+                                        $query->where('is_multiple', true)
+                                              ->orWhereHas('participants', function ($q) {
+                                                  // Hanya survey yang punya user tanpa surat tugas untuk survey tersebut
+                                                  $q->whereDoesntHave('suratTugas', function ($q_st) {
+                                                      $q_st->whereColumn('surat_tugas.survey_id', 'surveys.id');
+                                                  });
+                                              });
                                     })
                                     ->orderByDesc('created_at')
                                     ->pluck('name', 'id');
@@ -81,15 +84,19 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                     }
 
                                     // Checker for empty users (those who don't have surat tugas yet)
-                                    $hasMitra = \App\Models\SurveyUser::where('survey_id', $state)
-                                        ->whereHas('user.roles', fn($q) => $q->where('name', 'Mitra'))
-                                        ->whereDoesntHave('user.suratTugas', fn($q) => $q->where('survey_id', $state))
-                                        ->exists();
+                                    $queryMitra = \App\Models\SurveyUser::where('survey_id', $state)
+                                        ->whereHas('user.roles', fn($q) => $q->where('name', 'Mitra'));
+                                    
+                                    $queryOrganik = \App\Models\SurveyUser::where('survey_id', $state)
+                                        ->whereHas('user.roles', fn($q) => $q->where('name', 'Organik'));
 
-                                    $hasOrganik = \App\Models\SurveyUser::where('survey_id', $state)
-                                        ->whereHas('user.roles', fn($q) => $q->where('name', 'Organik'))
-                                        ->whereDoesntHave('user.suratTugas', fn($q) => $q->where('survey_id', $state))
-                                        ->exists();
+                                    if (!$survey->is_multiple) {
+                                        $queryMitra->whereDoesntHave('user.suratTugas', fn($q) => $q->where('survey_id', $state));
+                                        $queryOrganik->whereDoesntHave('user.suratTugas', fn($q) => $q->where('survey_id', $state));
+                                    }
+
+                                    $hasMitra = $queryMitra->exists();
+                                    $hasOrganik = $queryOrganik->exists();
 
                                     if (!$hasMitra && !$hasOrganik) {
                                         \Filament\Notifications\Notification::make()
@@ -112,14 +119,19 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                 if (!$surveyId)
                                     return [];
 
-                                return \App\Models\SurveyUser::where('survey_id', $surveyId)
+                                $survey = \App\Models\Survey::find($surveyId);
+                                $query = \App\Models\SurveyUser::where('survey_id', $surveyId)
                                     ->whereHas('user.roles', function ($q) {
                                         $q->where('name', 'Mitra');
-                                    })
-                                    ->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
+                                    });
+                                
+                                if ($survey && !$survey->is_multiple) {
+                                    $query->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
                                         $q->where('survey_id', $surveyId);
-                                    })
-                                    ->with('user.profile')
+                                    });
+                                }
+
+                                return $query->with('user.profile')
                                     ->get()
                                     ->mapWithKeys(function ($su) {
                                         $jabatan = $su->user->profile->jabatan ?? '-';
@@ -139,14 +151,19 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                 if (!$surveyId)
                                     return [];
 
-                                return \App\Models\SurveyUser::where('survey_id', $surveyId)
+                                $survey = \App\Models\Survey::find($surveyId);
+                                $query = \App\Models\SurveyUser::where('survey_id', $surveyId)
                                     ->whereHas('user.roles', function ($q) {
                                         $q->where('name', 'Organik');
-                                    })
-                                    ->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
+                                    });
+                                    
+                                if ($survey && !$survey->is_multiple) {
+                                    $query->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
                                         $q->where('survey_id', $surveyId);
-                                    })
-                                    ->with('user.profile')
+                                    });
+                                }
+
+                                return $query->with('user.profile')
                                     ->get()
                                     ->mapWithKeys(function ($su) {
                                         $jabatan = $su->user->profile->jabatan ?? '-';

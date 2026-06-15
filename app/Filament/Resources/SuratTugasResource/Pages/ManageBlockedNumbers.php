@@ -424,14 +424,19 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                                             if (!$surveyId)
                                                 return [];
 
-                                            return \App\Models\SurveyUser::where('survey_id', $surveyId)
+                                            $survey = \App\Models\Survey::find($surveyId);
+                                            $query = \App\Models\SurveyUser::where('survey_id', $surveyId)
                                                 ->whereHas('user.roles', function ($q) {
                                                     $q->where('name', 'Mitra');
-                                                })
-                                                ->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
+                                                });
+                                                
+                                            if ($survey && !$survey->is_multiple) {
+                                                $query->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
                                                     $q->where('survey_id', $surveyId);
-                                                })
-                                                ->with('user.profile')
+                                                });
+                                            }
+
+                                            return $query->with('user.profile')
                                                 ->get()
                                                 ->mapWithKeys(function ($su) {
                                                     $jabatan = $su->user->profile->jabatan ?? '-';
@@ -451,14 +456,19 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                                             if (!$surveyId)
                                                 return [];
 
-                                            return \App\Models\SurveyUser::where('survey_id', $surveyId)
+                                            $survey = \App\Models\Survey::find($surveyId);
+                                            $query = \App\Models\SurveyUser::where('survey_id', $surveyId)
                                                 ->whereHas('user.roles', function ($q) {
                                                     $q->where('name', 'Organik');
-                                                })
-                                                ->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
+                                                });
+                                                
+                                            if ($survey && !$survey->is_multiple) {
+                                                $query->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
                                                     $q->where('survey_id', $surveyId);
-                                                })
-                                                ->with('user.profile')
+                                                });
+                                            }
+
+                                            return $query->with('user.profile')
                                                 ->get()
                                                 ->mapWithKeys(function ($su) {
                                                     $jabatan = $su->user->profile->jabatan ?? '-';

@@ -19,12 +19,14 @@ class Survey extends Model
         'start_date',
         'end_date',
         'is_active',
+        'is_multiple',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
         'is_active' => 'boolean',
+        'is_multiple' => 'boolean',
     ];
 
     public function participants(): BelongsToMany
