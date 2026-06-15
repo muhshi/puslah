@@ -5,6 +5,8 @@ namespace App\Filament\Resources\SuratTugasResource\Pages;
 use App\Filament\Resources\SuratTugasResource;
 use App\Models\BlockedSuratTugasNumber;
 use App\Models\SuratTugas;
+use App\Models\Survey;
+use App\Models\SurveyUser;
 use App\Models\User;
 use App\Models\UserProfile;
 use App\Settings\SystemSettings;
@@ -221,14 +223,14 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
 
                             Forms\Components\Select::make('survey_id')
                                 ->label('Survey (Opsional)')
-                                ->options(\App\Models\Survey::where('is_active', true)->pluck('name', 'id'))
+                                ->options(Survey::where('is_active', true)->pluck('name', 'id'))
                                 ->searchable()
                                 ->preload()
                                 ->live()
                                 ->afterStateUpdated(function (Forms\Set $set, $state) {
                                     $set('user_id', null);
                                     if ($state) {
-                                        $survey = \App\Models\Survey::find($state);
+                                        $survey = Survey::find($state);
                                         if ($survey) {
                                             $set('keperluan', $survey->name);
                                             if ($survey->start_date) {
@@ -246,7 +248,7 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                                 ->options(function (Forms\Get $get) {
                                     $surveyId = $get('survey_id');
                                     if ($surveyId) {
-                                        return \App\Models\SurveyUser::where('survey_id', $surveyId)
+                                        return SurveyUser::where('survey_id', $surveyId)
                                             ->with('user.profile')
                                             ->get()
                                             ->mapWithKeys(function ($su) {
@@ -310,10 +312,10 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                         $prefix = $settings->surat_prefix ?? 'B';
                         $office = $settings->office_code ?? '33210';
                         $klasifikasi = $data['kode_klasifikasi'] ?? 'KP.650';
-                        
+
                         try {
                             \Illuminate\Support\Facades\DB::transaction(function () use ($record, $data, $settings, $prefix, $office, $klasifikasi) {
-                                if (\App\Models\SuratTugas::hasOverlap($data['user_id'], $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null)) {
+                                if (SuratTugas::hasOverlap($data['user_id'], $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null)) {
                                     throw new \Exception("Overlap: Pegawai ini sudah memiliki Surat Tugas di rentang tanggal tersebut untuk survey yang sama.");
                                 }
 
@@ -385,7 +387,7 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                         ->label('Buat ST Kolektif')
                         ->icon('heroicon-o-document-plus')
                         ->color('success')
-                        ->modalHeading(fn (\Illuminate\Database\Eloquent\Collection $records) => 'Buat Surat Tugas Kolektif — ' . $records->count() . ' Nomor Terpilih')
+                        ->modalHeading(fn(\Illuminate\Database\Eloquent\Collection $records) => 'Buat Surat Tugas Kolektif — ' . $records->count() . ' Nomor Terpilih')
                         ->modalDescription('Pastikan jumlah pegawai yang dipilih tidak melebihi jumlah nomor yang Anda block. Sisa nomor block yang tidak terpakai akan tetap diblock.')
                         ->modalSubmitActionLabel('Buat Surat Tugas')
                         ->form([
@@ -394,7 +396,7 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                                 ->schema([
                                     Forms\Components\Select::make('survey_id')
                                         ->label('Survey')
-                                        ->options(\App\Models\Survey::where('is_active', true)->pluck('name', 'id'))
+                                        ->options(Survey::where('is_active', true)->pluck('name', 'id'))
                                         ->searchable()
                                         ->preload()
                                         ->live()
@@ -403,7 +405,7 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                                             $set('pegawai_bps_user_ids', []);
 
                                             if ($state) {
-                                                $survey = \App\Models\Survey::find($state);
+                                                $survey = Survey::find($state);
                                                 if ($survey) {
                                                     $set('keperluan', $survey->name);
                                                     if ($survey->start_date) {
@@ -428,12 +430,12 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                                             if (!$surveyId)
                                                 return [];
 
-                                            $survey = \App\Models\Survey::find($surveyId);
-                                            $query = \App\Models\SurveyUser::where('survey_id', $surveyId)
+                                            $survey = Survey::find($surveyId);
+                                            $query = SurveyUser::where('survey_id', $surveyId)
                                                 ->whereHas('user.roles', function ($q) {
                                                     $q->where('name', 'Mitra');
                                                 });
-                                                
+
                                             if ($survey && !$survey->is_multiple) {
                                                 $query->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
                                                     $q->where('survey_id', $surveyId);
@@ -460,12 +462,12 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                                             if (!$surveyId)
                                                 return [];
 
-                                            $survey = \App\Models\Survey::find($surveyId);
-                                            $query = \App\Models\SurveyUser::where('survey_id', $surveyId)
+                                            $survey = Survey::find($surveyId);
+                                            $query = SurveyUser::where('survey_id', $surveyId)
                                                 ->whereHas('user.roles', function ($q) {
                                                     $q->where('name', 'Organik');
                                                 });
-                                                
+
                                             if ($survey && !$survey->is_multiple) {
                                                 $query->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
                                                     $q->where('survey_id', $surveyId);
@@ -558,13 +560,13 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                             try {
                                 \Illuminate\Support\Facades\DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $records, &$successCount) {
                                     foreach ($userIds as $index => $userId) {
-                                        if (\App\Models\SuratTugas::hasOverlap($userId, $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null)) {
-                                            $user = \App\Models\User::find($userId);
+                                        if (SuratTugas::hasOverlap($userId, $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null)) {
+                                            $user = User::find($userId);
                                             throw new \Exception("Overlap: Pegawai " . ($user->name ?? $userId) . " sudah memiliki Surat Tugas di rentang tanggal tersebut.");
                                         }
 
                                         $record = $records[$index];
-                                        
+
                                         $urut = str_pad($record->nomor_urut, 4, '0', STR_PAD_LEFT);
                                         $nomorSurat = "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$record->year}";
 
