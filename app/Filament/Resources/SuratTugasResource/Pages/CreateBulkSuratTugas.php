@@ -314,6 +314,37 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                     }),
                             ])->columns(1),
                     ]),
+
+                Forms\Components\Section::make('Informasi SPPD')
+                    ->description('Jika diaktifkan, semua pegawai yang dipilih akan dibuatkan dokumen SPPD dengan konfigurasi yang sama.')
+                    ->schema([
+                        Forms\Components\Toggle::make('is_sppd')
+                            ->label('Buatkan SPPD untuk Semua Pegawai Terpilih?')
+                            ->default(false)
+                            ->live(),
+
+                        Forms\Components\Group::make()->schema([
+                            Forms\Components\Select::make('tingkat_perjalanan_dinas')
+                                ->label('Tingkat Perjalanan Dinas')
+                                ->options([
+                                    'A' => 'Tingkat A',
+                                    'B' => 'Tingkat B',
+                                    'C' => 'Tingkat C',
+                                ])
+                                ->default('C'),
+
+                            Forms\Components\TextInput::make('alat_angkutan')
+                                ->label('Alat Angkutan')
+                                ->default('Kendaraan Pribadi')
+                                ->maxLength(255),
+
+                            Forms\Components\TextInput::make('mak')
+                                ->label('Pembebanan Anggaran (MAK)')
+                                ->default('054.01.GG.2902.006.005.A.524113')
+                                ->maxLength(255)
+                                ->columnSpanFull(),
+                        ])->columns(2)->visible(fn (Forms\Get $get) => $get('is_sppd')),
+                    ]),
             ])
             ->statePath('data');
     }
@@ -350,8 +381,15 @@ class CreateBulkSuratTugas extends Page implements HasForms
         $sumberJabatan = $data['sumber_jabatan'] ?? 'database';
         $jabatanManual = $data['jabatan'] ?? '-';
 
+        $isSppd = $data['is_sppd'] ?? false;
+        $tingkatPerjalanan = $data['tingkat_perjalanan_dinas'] ?? 'C';
+        $alatAngkutan = $data['alat_angkutan'] ?? 'Kendaraan Pribadi';
+        $mak = $data['mak'] ?? '054.01.GG.2902.006.005.A.524113';
+
+        $nextSppdUrut = SuratTugas::getNextNomorUrutSppd($year) - 1;
+
         try {
-            DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $year, &$currentUrut, $usedNumbers, $sumberJabatan, $jabatanManual) {
+            DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $year, &$currentUrut, &$nextSppdUrut, $usedNumbers, $sumberJabatan, $jabatanManual, $isSppd, $tingkatPerjalanan, $alatAngkutan, $mak) {
                 foreach ($userIds as $userId) {
                     if (SuratTugas::hasOverlap($userId, $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null)) {
                         $user = User::find($userId);
@@ -374,7 +412,19 @@ class CreateBulkSuratTugas extends Page implements HasForms
                         $jabatanPegawai = $profile && !empty($profile->jabatan) ? $profile->jabatan : '-';
                     }
 
-                    SuratTugas::create([
+                    $nomorSppd = null;
+                    $nomorUrutSppdFinal = null;
+                    $klasifikasiSppd = null;
+
+                    if ($isSppd) {
+                        $nextSppdUrut++;
+                        $nomorUrutSppdFinal = $nextSppdUrut;
+                        $urutSppdPad = str_pad($nomorUrutSppdFinal, 4, '0', STR_PAD_LEFT);
+                        $klasifikasiSppd = 'KP.650';
+                        $nomorSppd = "{$prefix}-{$urutSppdPad}/{$office}/{$klasifikasiSppd}/{$year}";
+                    }
+
+                    $suratTugas = SuratTugas::create([
                         'user_id' => $userId,
                         'survey_id' => $data['survey_id'],
                         'nomor_surat' => $nomorSurat,
@@ -393,6 +443,20 @@ class CreateBulkSuratTugas extends Page implements HasForms
                         'signer_signature_path' => $settings->cert_signer_signature_path,
                         'created_by' => auth()->id(),
                     ]);
+
+                    if ($isSppd) {
+                        $suratTugas->sppd()->create([
+                            'nomor_sppd' => $nomorSppd,
+                            'nomor_urut_sppd' => $nomorUrutSppdFinal,
+                            'kode_klasifikasi_sppd' => $klasifikasiSppd,
+                            'tingkat_perjalanan_dinas' => $tingkatPerjalanan,
+                            'alat_angkutan' => $alatAngkutan,
+                            'mak' => $mak,
+                            'ppk_name' => $settings->ppk_name,
+                            'ppk_nip' => $settings->ppk_nip,
+                            'ppk_title' => $settings->ppk_title,
+                        ]);
+                    }
                 }
             });
 

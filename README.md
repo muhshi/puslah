@@ -53,6 +53,14 @@ composer dev
 
 ## Changelog
 
+### 2026-06-17
+- **Modul SPPD Terintegrasi Surat Tugas** — Menambahkan kapabilitas pembuatan dokumen Surat Perjalanan Dinas (SPPD) yang menyatu langsung dengan pembuatan Surat Tugas.
+  - Penomoran SPPD berjalan secara terpisah dari nomor urut Surat Tugas (menghindari lompatan/kerusakan penomoran Surat Tugas utama).
+  - Data SPPD sekarang disimpan pada tabel terpisah (`sppds`) untuk manajemen data yang lebih rapi (terelasi 1-to-1 dengan Surat Tugas).
+  - Terdapat toggle "Memerlukan SPPD" di single dan bulk create, field pendukung seperti MAK, Tingkat Perjalanan, dan Alat Angkutan.
+  - Template dan konfigurasi Pejabat Pembuat Komitmen (PPK) dapat diubah melalui menu Pengaturan Sistem secara dinamis.
+  - Mendukung penentuan SPPD yang spesifik via file Excel pada fitur import (berbasis kolom `perlu_sppd`).
+  
 ### 2026-06-15
 - **Multiple Surat Tugas per Survey & Validasi Tanggal Overlap** — Menambahkan opsi "Multiple Surat Tugas" (default: false) pada form Survey. Jika diaktifkan, batasan unik (satu pegawai hanya boleh memiliki satu Surat Tugas untuk survey yang sama) akan dilepas, sehingga satu pegawai dapat dibuatkan beberapa Surat Tugas untuk survey tersebut, misalnya untuk kegiatan Sensus dengan tanggal yang berbeda-beda. Namun demikian, sistem tetap menerapkan **proteksi overlap**: satu pegawai tidak bisa ditugaskan di survey yang sama dengan rentang tanggal yang saling tumpang tindih.
 

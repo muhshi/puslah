@@ -41,6 +41,11 @@ class SuratTugas extends Model
         'waktu_selesai' => 'datetime',
     ];
 
+    public function sppd(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Sppd::class);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -126,6 +131,20 @@ class SuratTugas extends Model
         $next = max($maxUsed, $maxBlocked) + 1;
 
         return $next;
+    }
+
+    /**
+     * Get next available nomor_urut_sppd for a given year.
+     * SPPD has a separate numbering sequence from Surat Tugas.
+     */
+    public static function getNextNomorUrutSppd(int $year): int
+    {
+        // Query directly via Sppd model or joined, but it's cleaner to query Sppd table
+        $maxUsed = Sppd::whereHas('suratTugas', function($q) use ($year) {
+            $q->whereYear('tanggal', $year);
+        })->max('nomor_urut_sppd') ?? 0;
+        
+        return $maxUsed + 1;
     }
 
     /**

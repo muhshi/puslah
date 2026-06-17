@@ -86,11 +86,22 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
                     continue;
                 }
 
+                // SPPD support
+                $perluSppdRaw = strtolower(trim($row['perlu_sppd'] ?? ''));
+                $perluSppd = in_array($perluSppdRaw, ['ya', 'yes', 'true', '1']);
+                $mak = trim($row['mak'] ?? '054.01.GG.2902.006.005.A.524113');
+                $alatAngkutan = trim($row['alat_angkutan'] ?? 'Kendaraan Pribadi');
+                $tingkatPerjalanan = trim($row['tingkat_perjalanan'] ?? 'C');
+
                 $validRows[] = [
                     'email' => $email,
                     'nama' => $nama,
                     'jabatan' => $jabatan,
                     'tempat_tugas' => $tempatTugas,
+                    'perlu_sppd' => $perluSppd,
+                    'mak' => $mak,
+                    'alat_angkutan' => $alatAngkutan,
+                    'tingkat_perjalanan' => $tingkatPerjalanan,
                 ];
                 $emailsToFetch[] = $email;
             }
@@ -152,6 +163,8 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
             $suratTugasInserts = [];
             $now = now()->toDateTimeString();
 
+            $nextSppdUrut = SuratTugas::getNextNomorUrutSppd($this->year) - 1;
+
             foreach ($validRows as $vRow) {
                 $email = $vRow['email'];
                 $user = $usersToProcess[$email] ?? null;
@@ -188,7 +201,19 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
                 $urut = str_pad($currentUrut, 4, '0', STR_PAD_LEFT);
                 $nomorSurat = "{$prefix}-{$urut}/{$office}/{$this->kodeKlasifikasi}/{$this->year}";
 
-                $suratTugasInserts[] = [
+                $nomorSppd = null;
+                $nomorUrutSppdFinal = null;
+                $klasifikasiSppd = null;
+
+                if ($vRow['perlu_sppd']) {
+                    $nextSppdUrut++;
+                    $nomorUrutSppdFinal = $nextSppdUrut;
+                    $urutSppdPad = str_pad($nomorUrutSppdFinal, 4, '0', STR_PAD_LEFT);
+                    $klasifikasiSppd = 'KP.650';
+                    $nomorSppd = "{$prefix}-{$urutSppdPad}/{$office}/{$klasifikasiSppd}/{$this->year}";
+                }
+
+                $suratTugasData = [
                     'user_id' => $user->id,
                     'survey_id' => $this->surveyId,
                     'nomor_surat' => $nomorSurat,
@@ -210,6 +235,28 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
                     'updated_at' => $now,
                 ];
 
+                $sppdData = null;
+                if ($vRow['perlu_sppd']) {
+                    $sppdData = [
+                        'nomor_sppd' => $nomorSppd,
+                        'nomor_urut_sppd' => $nomorUrutSppdFinal,
+                        'kode_klasifikasi_sppd' => $klasifikasiSppd,
+                        'tingkat_perjalanan_dinas' => $vRow['tingkat_perjalanan'],
+                        'alat_angkutan' => $vRow['alat_angkutan'],
+                        'mak' => $vRow['mak'],
+                        'ppk_name' => $this->settings->ppk_name,
+                        'ppk_nip' => $this->settings->ppk_nip,
+                        'ppk_title' => $this->settings->ppk_title,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+
+                $suratTugasInserts[] = [
+                    'surat_tugas' => $suratTugasData,
+                    'sppd' => $sppdData
+                ];
+
                 // Mark this user as having Surat Tugas to prevent duplicates from within the Excel file itself
                 $existingSuratTugas[$user->id] = true;
                 $this->success++;
@@ -224,8 +271,12 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
             }
 
             if (!empty($suratTugasInserts)) {
-                foreach (array_chunk($suratTugasInserts, 500) as $chunk) {
-                    SuratTugas::insert($chunk);
+                foreach ($suratTugasInserts as $insert) {
+                    $st = SuratTugas::create($insert['surat_tugas']);
+                    if ($insert['sppd']) {
+                        $insert['sppd']['surat_tugas_id'] = $st->id;
+                        \App\Models\Sppd::create($insert['sppd']);
+                    }
                 }
             }
         });

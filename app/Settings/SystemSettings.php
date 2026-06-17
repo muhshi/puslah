@@ -27,6 +27,12 @@ class SystemSettings extends Settings
     public array $cert_number_seq_by_year;    // ex: ['2025'=>123]
     public ?string $logo_bps_path;
     public ?string $pdf_master_password;
+    
+    // SPPD Settings
+    public ?string $sppd_template_path;
+    public string $ppk_name;
+    public string $ppk_nip;
+    public string $ppk_title;
 
     public static function defaults(): array
     {
@@ -52,6 +58,10 @@ class SystemSettings extends Settings
             'cert_number_seq_by_year' => [],
             'logo_bps_path' => null,
             'pdf_master_password' => null,
+            'sppd_template_path' => null,
+            'ppk_name' => '-',
+            'ppk_nip' => '-',
+            'ppk_title' => 'Pejabat Pembuat Komitmen',
         ];
     }
 

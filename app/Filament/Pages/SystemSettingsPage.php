@@ -58,6 +58,10 @@ class SystemSettingsPage extends Page implements HasForms
             'laporan_lembur_template_path' => $s->laporan_lembur_template_path,
             'logo_bps_path' => $s->logo_bps_path,
             'pdf_master_password' => $s->pdf_master_password,
+            'sppd_template_path' => $s->sppd_template_path,
+            'ppk_name' => $s->ppk_name ?? '-',
+            'ppk_nip' => $s->ppk_nip ?? '-',
+            'ppk_title' => $s->ppk_title ?? 'Pejabat Pembuat Komitmen',
         ]);
     }
 
@@ -201,6 +205,24 @@ class SystemSettingsPage extends Page implements HasForms
 
                 ])->columns(1), // End Section Pejabat
 
+                Section::make('Pejabat Pembuat Komitmen (SPPD)')->schema([
+                    TextInput::make('ppk_name')->label('Nama PPK')->required(),
+                    TextInput::make('ppk_nip')->label('NIP PPK')->required(),
+                    Textarea::make('ppk_title')->label('Jabatan PPK')->required()->rows(2),
+
+                    Section::make('Template SPPD (.docx)')
+                        ->description('Upload file .docx untuk SPPD. Variabel: ${nomor_sppd}, ${nama_ppk}, ${nip_ppk}, ${nama_pegawai}, ${nip_pegawai}, ${pangkat_golongan}, ${jabatan_pegawai}, ${tingkat_perjalanan}, ${maksud_perjalanan}, ${alat_angkutan}, ${tempat_berangkat}, ${tempat_tujuan}, ${lama_perjalanan}, ${tanggal_berangkat}, ${tanggal_kembali}, ${mak}, ${nomor_surat_tugas}, ${tanggal_surat}')
+                        ->schema([
+                            FileUpload::make('sppd_template_path')
+                                ->label('File Template SPPD')
+                                ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
+                                ->directory('templates')
+                                ->visibility('public')
+                                ->maxSize(5120) // 5MB
+                                ->downloadable(),
+                        ])->columns(1),
+                ])->columns(1), // End Section PPK
+
             ])->columns(1),
 
         ])
@@ -230,6 +252,7 @@ class SystemSettingsPage extends Page implements HasForms
             'laporan_lembur_template_path',
             'cert_signer_signature_path',
             'logo_bps_path',
+            'sppd_template_path',
         ];
 
         foreach ($state as $key => $value) {

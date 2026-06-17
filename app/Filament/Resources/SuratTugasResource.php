@@ -184,8 +184,13 @@ class SuratTugasResource extends Resource
                                     $year = \Carbon\Carbon::parse($state)->year;
                                     $next = SuratTugas::getNextNomorUrut($year);
                                     $set('nomor_urut', $next);
+
+                                    // For SPPD
+                                    $nextSppd = SuratTugas::getNextNomorUrutSppd($year);
+                                    $set('nomor_urut_sppd', $nextSppd);
                                 }
                                 self::updateNomorSurat($get, $set);
+                                self::updateNomorSppd($get, $set);
                             }),
                         Forms\Components\DatePicker::make('waktu_mulai')
                             ->label('Mulai')
@@ -205,6 +210,67 @@ class SuratTugasResource extends Resource
                         ->maxLength(255)
                         ->columnSpanFull(),
                 ])->columns(2),
+
+                Section::make('Informasi SPPD')->schema([
+                    Forms\Components\Toggle::make('is_sppd')
+                        ->label('Memerlukan SPPD?')
+                        ->default(false)
+                        ->dehydrated(false) // Don't save this field automatically
+                        ->live(),
+
+                    Forms\Components\Group::make()->schema([
+                        Forms\Components\TextInput::make('nomor_sppd')
+                            ->required()
+                            ->maxLength(255)
+                            ->unique(ignoreRecord: true)
+                            ->default(function () {
+                                $settings = app(SystemSettings::class);
+                                $prefix = $settings->surat_prefix ?? 'B';
+                                $office = $settings->office_code ?? '33210';
+                                $year = now()->year;
+                                $nextUrut = SuratTugas::getNextNomorUrutSppd($year);
+                                $urut = str_pad($nextUrut, 4, '0', STR_PAD_LEFT);
+                                $klasifikasi = 'KP.650';
+
+                                return "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$year}";
+                            })
+                            ->helperText('Otomatis di-generate saat disimpan.'),
+
+                        Forms\Components\Hidden::make('kode_klasifikasi_sppd')
+                            ->default('KP.650'),
+                            
+                        Forms\Components\TextInput::make('nomor_urut_sppd')
+                            ->label('No. Urut SPPD')
+                            ->numeric()
+                            ->default(function () {
+                                return SuratTugas::getNextNomorUrutSppd(now()->year);
+                            })
+                            ->live()
+                            ->afterStateUpdated(function (Get $get, Set $set) {
+                                self::updateNomorSppd($get, $set);
+                            }),
+
+                        Forms\Components\Select::make('tingkat_perjalanan_dinas')
+                            ->label('Tingkat Perjalanan Dinas')
+                            ->options([
+                                'A' => 'Tingkat A',
+                                'B' => 'Tingkat B',
+                                'C' => 'Tingkat C',
+                            ])
+                            ->default('C'),
+
+                        Forms\Components\TextInput::make('alat_angkutan')
+                            ->label('Alat Angkutan')
+                            ->default('Kendaraan Pribadi')
+                            ->maxLength(255),
+
+                        Forms\Components\TextInput::make('mak')
+                            ->label('Pembebanan Anggaran (MAK)')
+                            ->default('054.01.GG.2902.006.005.A.524113')
+                            ->maxLength(255)
+                            ->columnSpanFull(),
+                    ])->columns(2)->visible(fn (Get $get) => $get('is_sppd')),
+                ]),
 
                 Section::make('Pejabat Penandatangan (Snapshot)')
                     ->description('Data ini tersimpan di surat dan tidak akan berubah meski pengaturan sistem diganti.')
@@ -432,6 +498,92 @@ class SuratTugasResource extends Resource
                         $template->saveAs($tempPath);
                         return response()->download($tempPath)->deleteFileAfterSend();
                     }),
+                Tables\Actions\Action::make('generate_sppd')
+                    ->label('Buat SPPD')
+                    ->icon('heroicon-o-plus-circle')
+                    ->color('primary')
+                    ->visible(fn(SuratTugas $record) => !$record->sppd()->exists() && auth()->user()->hasAnyRole(['super_admin', 'Kasubag', 'Kepala', 'Operator']))
+                    ->requiresConfirmation()
+                    ->action(function (SuratTugas $record) {
+                        $year = \Carbon\Carbon::parse($record->tanggal)->year;
+                        $nextSppdUrut = SuratTugas::getNextNomorUrutSppd($year);
+                        $settings = app(SystemSettings::class);
+                        $prefix = $settings->surat_prefix ?? 'B';
+                        $office = $settings->office_code ?? '33210';
+                        $urutSppdPad = str_pad($nextSppdUrut, 4, '0', STR_PAD_LEFT);
+                        $klasifikasi = 'KP.650';
+                        $nomorSppd = "{$prefix}-{$urutSppdPad}/{$office}/{$klasifikasi}/{$year}";
+
+                        $record->sppd()->create([
+                            'nomor_sppd' => $nomorSppd,
+                            'nomor_urut_sppd' => $nextSppdUrut,
+                            'kode_klasifikasi_sppd' => $klasifikasi,
+                            'tingkat_perjalanan_dinas' => 'C',
+                            'alat_angkutan' => 'Kendaraan Pribadi',
+                            'mak' => '054.01.GG.2902.006.005.A.524113',
+                            'ppk_name' => $settings->ppk_name,
+                            'ppk_nip' => $settings->ppk_nip,
+                            'ppk_title' => $settings->ppk_title,
+                        ]);
+                        \Filament\Notifications\Notification::make()->title('SPPD Berhasil Dibuat')->success()->send();
+                    }),
+                Tables\Actions\Action::make('word_sppd')
+                    ->label('Cetak SPPD')
+                    ->icon('heroicon-o-document-text')
+                    ->color('success')
+                    ->visible(fn(SuratTugas $record) => $record->sppd()->exists())
+                    ->action(function (SuratTugas $record) {
+                        $settings = app(SystemSettings::class);
+                        $templatePath = $settings->sppd_template_path;
+            
+                        if (!$templatePath || !file_exists(storage_path('app/public/' . $templatePath))) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Template SPPD belum diupload di Pengaturan Sistem')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        $template = new TemplateProcessor(storage_path('app/public/' . $templatePath));
+                        $sppd = $record->sppd;
+
+                        $template->setValue('nomor_sppd', $sppd->nomor_sppd);
+                        $ppkName = $sppd->ppk_name ?? $settings->ppk_name;
+                        $ppkNip = $sppd->ppk_nip ?? $settings->ppk_nip;
+                        
+                        $template->setValue('nama_ppk', $ppkName);
+                        $template->setValue('nip_ppk', $ppkNip);
+                        
+                        $template->setValue('nama_pegawai', $record->user->profile->full_name ?? $record->user->name);
+                        $template->setValue('nip_pegawai', '-'); 
+                        $template->setValue('pangkat_golongan', $record->user->profile->pangkat_golongan ?? '-');
+                        $template->setValue('jabatan_pegawai', $record->user->profile->jabatan ?? '-');
+                        
+                        $template->setValue('tingkat_perjalanan', $sppd->tingkat_perjalanan_dinas ?? '-');
+                        $template->setValue('maksud_perjalanan', $record->keperluan);
+                        $template->setValue('alat_angkutan', $sppd->alat_angkutan ?? '-');
+                        $template->setValue('tempat_berangkat', $record->signer_city ?? $settings->cert_city); 
+                        $template->setValue('tempat_tujuan', $record->tempat_tugas ?? '-');
+                        
+                        $start = \Carbon\Carbon::parse($record->waktu_mulai);
+                        $end = \Carbon\Carbon::parse($record->waktu_selesai);
+                        $lama = $start->diffInDays($end) + 1; 
+                        $terbilang = [1=>'satu', 2=>'dua', 3=>'tiga', 4=>'empat', 5=>'lima', 6=>'enam', 7=>'tujuh', 8=>'delapan', 9=>'sembilan', 10=>'sepuluh', 11=>'sebelas', 12=>'dua belas', 13=>'tiga belas', 14=>'empat belas', 15=>'lima belas', 30=>'tiga puluh', 31=>'tiga puluh satu'];
+                        $lamaText = $terbilang[$lama] ?? $lama;
+                        
+                        $template->setValue('lama_perjalanan', $lama . ' (' . $lamaText . ') hari');
+                        $template->setValue('tanggal_berangkat', $start->translatedFormat('d F Y'));
+                        $template->setValue('tanggal_kembali', $end->translatedFormat('d F Y'));
+                        $template->setValue('mak', $sppd->mak ?? '-');
+                        $template->setValue('nomor_surat_tugas', $record->nomor_surat);
+                        $template->setValue('tanggal_surat', \Carbon\Carbon::parse($record->tanggal)->translatedFormat('d F Y'));
+
+                        $safeFilename = str_replace(['/', '\\'], '_', $sppd->nomor_sppd);
+                        $fileName = "SPPD_{$safeFilename}.docx";
+                        $tempPath = storage_path('app/temp_' . $fileName);
+                        $template->saveAs($tempPath);
+                        return response()->download($tempPath)->deleteFileAfterSend();
+                    }),
                 Tables\Actions\EditAction::make(),
             ])
             ->headerActions([
@@ -468,6 +620,47 @@ class SuratTugasResource extends Resource
                             \Filament\Notifications\Notification::make()
                                 ->title('Berhasil!')
                                 ->body("{$count} surat tugas telah di-approve.")
+                                ->success()
+                                ->send();
+                        }),
+                    Tables\Actions\BulkAction::make('generateSppdBulk')
+                        ->label('Buat SPPD')
+                        ->icon('heroicon-o-document-plus')
+                        ->color('primary')
+                        ->visible(fn() => auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag', 'Operator']))
+                        ->requiresConfirmation()
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $settings = app(SystemSettings::class);
+                            $count = 0;
+                            
+                            foreach ($records as $record) {
+                                if (!$record->sppd()->exists()) {
+                                    $year = \Carbon\Carbon::parse($record->tanggal)->year;
+                                    $nextSppdUrut = SuratTugas::getNextNomorUrutSppd($year);
+                                    $prefix = $settings->surat_prefix ?? 'B';
+                                    $office = $settings->office_code ?? '33210';
+                                    $urutSppdPad = str_pad($nextSppdUrut, 4, '0', STR_PAD_LEFT);
+                                    $klasifikasi = 'KP.650';
+                                    $nomorSppd = "{$prefix}-{$urutSppdPad}/{$office}/{$klasifikasi}/{$year}";
+
+                                    $record->sppd()->create([
+                                        'nomor_sppd' => $nomorSppd,
+                                        'nomor_urut_sppd' => $nextSppdUrut,
+                                        'kode_klasifikasi_sppd' => $klasifikasi,
+                                        'tingkat_perjalanan_dinas' => 'C',
+                                        'alat_angkutan' => 'Kendaraan Pribadi',
+                                        'mak' => '054.01.GG.2902.006.005.A.524113',
+                                        'ppk_name' => $settings->ppk_name,
+                                        'ppk_nip' => $settings->ppk_nip,
+                                        'ppk_title' => $settings->ppk_title,
+                                    ]);
+                                    $count++;
+                                }
+                            }
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Berhasil!')
+                                ->body("{$count} SPPD baru telah di-generate.")
                                 ->success()
                                 ->send();
                         }),
@@ -639,5 +832,22 @@ class SuratTugasResource extends Resource
 
         // Case 4: Different year
         return $startDate->translatedFormat('d F Y') . ' - ' . $endDate->translatedFormat('d F Y');
+    }
+
+    protected static function updateNomorSppd(Get $get, Set $set): void
+    {
+        $settings = app(SystemSettings::class);
+        $prefix = $settings->surat_prefix ?? 'B';
+        $office = $settings->office_code ?? '33210';
+
+        $urut = str_pad($get('nomor_urut_sppd') ?? 0, 4, '0', STR_PAD_LEFT);
+        $klasifikasi = $get('kode_klasifikasi_sppd') ?? 'KP.650';
+
+        // Use tanggal year if available, else current year
+        $tanggal = $get('tanggal');
+        $year = $tanggal ? \Carbon\Carbon::parse($tanggal)->year : now()->year;
+
+        $nomor = "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$year}";
+        $set('nomor_sppd', $nomor);
     }
 }
