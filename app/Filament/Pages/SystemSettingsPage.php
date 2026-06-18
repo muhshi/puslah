@@ -135,6 +135,23 @@ class SystemSettingsPage extends Page implements HasForms
                         ->helperText('Jika diisi, PDF Surat Tugas akan bersifat Read-Only (tidak bisa diedit/copy). Admin memerlukan password ini untuk membuka akses edit.'),
                 ])->columns(1),
 
+                Section::make('Pejabat Pembuat Komitmen (SPPD)')->schema([
+                    TextInput::make('ppk_name')->label('Nama PPK')->required(),
+                    TextInput::make('ppk_nip')->label('NIP PPK')->required(),
+                    Textarea::make('ppk_title')->label('Jabatan PPK')->required()->rows(2),
+
+                    Section::make('Template SPPD (.docx)')
+                        ->description('Upload file .docx untuk SPPD. Variabel: ${nomor_sppd}, ${nama_ppk}, ${nip_ppk}, ${nama_pegawai}, ${nip_pegawai}, ${pangkat_golongan}, ${jabatan_pegawai}, ${tingkat_perjalanan}, ${maksud_perjalanan}, ${alat_angkutan}, ${tempat_berangkat}, ${tempat_tujuan}, ${lama_perjalanan}, ${tanggal_berangkat}, ${tanggal_kembali}, ${mak}, ${nomor_surat_tugas}, ${tanggal_surat}')
+                        ->schema([
+                            FileUpload::make('sppd_template_path')
+                                ->label('File Template SPPD')
+                                ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
+                                ->directory('templates')
+                                ->visibility('public')
+                                ->maxSize(5120) // 5MB
+                                ->downloadable(),
+                        ])->columns(1),
+                ])->columns(1), // End Section PPK
 
             ])->columns(1),
 
@@ -204,24 +221,6 @@ class SystemSettingsPage extends Page implements HasForms
                         ])->columns(1),
 
                 ])->columns(1), // End Section Pejabat
-
-                Section::make('Pejabat Pembuat Komitmen (SPPD)')->schema([
-                    TextInput::make('ppk_name')->label('Nama PPK')->required(),
-                    TextInput::make('ppk_nip')->label('NIP PPK')->required(),
-                    Textarea::make('ppk_title')->label('Jabatan PPK')->required()->rows(2),
-
-                    Section::make('Template SPPD (.docx)')
-                        ->description('Upload file .docx untuk SPPD. Variabel: ${nomor_sppd}, ${nama_ppk}, ${nip_ppk}, ${nama_pegawai}, ${nip_pegawai}, ${pangkat_golongan}, ${jabatan_pegawai}, ${tingkat_perjalanan}, ${maksud_perjalanan}, ${alat_angkutan}, ${tempat_berangkat}, ${tempat_tujuan}, ${lama_perjalanan}, ${tanggal_berangkat}, ${tanggal_kembali}, ${mak}, ${nomor_surat_tugas}, ${tanggal_surat}')
-                        ->schema([
-                            FileUpload::make('sppd_template_path')
-                                ->label('File Template SPPD')
-                                ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.wordprocessingml.document'])
-                                ->directory('templates')
-                                ->visibility('public')
-                                ->maxSize(5120) // 5MB
-                                ->downloadable(),
-                        ])->columns(1),
-                ])->columns(1), // End Section PPK
 
             ])->columns(1),
 

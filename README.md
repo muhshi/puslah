@@ -53,6 +53,9 @@ composer dev
 
 ## Changelog
 
+### 2026-06-18
+- **Pembaruan Layout Pengaturan Sistem** — Memindahkan letak form pengaturan Pejabat Pembuat Komitmen (SPPD) menjadi di bawah bagian Proteksi Dokumen PDF pada halaman Pengaturan Sistem untuk memperbaiki alur antarmuka pengguna.
+
 ### 2026-06-17
 - **Modul SPPD Terintegrasi Surat Tugas** — Menambahkan kapabilitas pembuatan dokumen Surat Perjalanan Dinas (SPPD) yang menyatu langsung dengan pembuatan Surat Tugas.
   - Penomoran SPPD berjalan secara terpisah dari nomor urut Surat Tugas (menghindari lompatan/kerusakan penomoran Surat Tugas utama).
