@@ -439,61 +439,7 @@ class SuratTugasResource extends Resource
                         $fileName = "{$nomorSurat}-{$surveyName}-{$userName}.pdf";
                         return response()->streamDownload(fn() => print ($pdf->output()), $fileName);
                     }),
-                Tables\Actions\Action::make('word')
-                    ->label('Word')
-                    ->icon('heroicon-o-document-text')
-                    ->color('success')
-                    ->visible(true) // Hidden as per request
-                    ->action(function (SuratTugas $record) {
-                        $settings = app(SystemSettings::class);
-                        $templatePath = $settings->surat_tugas_template_path; // Stored in storage/app/public/templates
-            
-                        if (!$templatePath || !file_exists(storage_path('app/public/' . $templatePath))) {
-                            \Filament\Notifications\Notification::make()
-                                ->title('Template belum diupload di Pengaturan Sistem')
-                                ->danger()
-                                ->send();
-                            return;
-                        }
 
-                        // Initialize TemplateProcessor
-                        $template = new TemplateProcessor(storage_path('app/public/' . $templatePath));
-
-                        // Map variables
-                        $template->setValue('nomor_surat', $record->nomor_surat);
-                        $template->setValue('nama_pegawai', $record->user->profile->full_name ?? $record->user->name);
-                        // Assumption: UserProfile stores NIP in 'nip' field? No, user model usually. 
-                        // Checking UserProfile again, it has 'jabatan' but not explicitly NIP. 
-                        // Assuming NIP might be in User or UserProfile (Check required). 
-                        // For now using '-' or placeholder if not found. Only Jabatan was added.
-                        // Wait, user_profiles table schema: user_id, full_name, phone, employment_status, jabatan.
-                        // I'll stick to what I have:
-                        $template->setValue('nip_pegawai', '-'); // TODO: Add NIP to UserProfile if needed
-                        $template->setValue('jabatan_pegawai', $record->user->profile->jabatan ?? '-');
-
-                        $template->setValue('jabatan_tugas', $record->jabatan);
-                        $template->setValue('keperluan', $record->keperluan);
-                        $template->setValue('dasar_surat', $record->survey?->dasar_surat ?? '-');
-                        $template->setValue('tempat_tugas', $record->tempat_tugas ?? '-');
-                        $template->setValue('tanggal_surat', \Carbon\Carbon::parse($record->tanggal)->translatedFormat('d F Y'));
-
-                        // Smart date range formatter
-                        $periodeTugas = self::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
-                        $template->setValue('periode_tugas', $periodeTugas);
-
-                        // Signer Snapshot
-                        $template->setValue('nama_kepala', $record->signer_name);
-                        $template->setValue('nip_kepala', $record->signer_nip);
-                        $template->setValue('jabatan_kepala', $record->signer_title);
-                        $template->setValue('kota_penetapan', $record->signer_city);
-
-                        // Save to temp file
-                        $safeFilename = str_replace(['/', '\\'], '_', $record->nomor_surat);
-                        $fileName = "Surat_Tugas_{$safeFilename}.docx";
-                        $tempPath = storage_path('app/temp_' . $fileName);
-                        $template->saveAs($tempPath);
-                        return response()->download($tempPath)->deleteFileAfterSend();
-                    }),
                 Tables\Actions\Action::make('generate_sppd')
                     ->label('Buat SPPD')
                     ->icon('heroicon-o-plus-circle')
@@ -703,6 +649,18 @@ class SuratTugasResource extends Resource
                                     return SuratTugas::getNextNomorUrutSppd(now()->year);
                                 })
                                 ->helperText('Nomor urut akan di-increment otomatis untuk setiap SPPD dari angka ini.'),
+                            Forms\Components\TextInput::make('format_nomor_sppd')
+                                ->label('Format Nomor SPPD')
+                                ->required()
+                                ->default(function () {
+                                    $settings = app(SystemSettings::class);
+                                    $prefix = $settings->surat_prefix ?? 'B';
+                                    $office = $settings->office_code ?? '33210';
+                                    $klasifikasi = 'KP.650';
+                                    $year = now()->year;
+                                    return "{$prefix}-{urut}/{$office}/{$klasifikasi}/{$year}";
+                                })
+                                ->helperText('Gunakan {urut} di mana nomor urut akan disisipkan (contoh: B-{urut}/3321/SE2026/KP.650/2026)'),
                             Forms\Components\Select::make('tingkat_perjalanan_dinas')
                                 ->label('Tingkat Perjalanan Dinas')
                                 ->options([
@@ -743,16 +701,13 @@ class SuratTugasResource extends Resource
                                 if (!$record->sppd()->exists()) {
                                     $year = \Carbon\Carbon::parse($record->tanggal)->year;
                                     $nextSppdUrut++;
-                                    $prefix = $settings->surat_prefix ?? 'B';
-                                    $office = $settings->office_code ?? '33210';
                                     $urutSppdPad = str_pad($nextSppdUrut, 4, '0', STR_PAD_LEFT);
-                                    $klasifikasi = 'KP.650';
-                                    $nomorSppd = "{$prefix}-{$urutSppdPad}/{$office}/{$klasifikasi}/{$year}";
+                                    $nomorSppd = str_replace('{urut}', $urutSppdPad, $data['format_nomor_sppd']);
 
                                     $record->sppd()->create([
                                         'nomor_sppd' => $nomorSppd,
                                         'nomor_urut_sppd' => $nextSppdUrut,
-                                        'kode_klasifikasi_sppd' => $klasifikasi,
+                                        'kode_klasifikasi_sppd' => 'KP.650',
                                         'tingkat_perjalanan_dinas' => $data['tingkat_perjalanan_dinas'],
                                         'alat_angkutan' => $data['alat_angkutan'],
                                         'mak' => $data['mak'],

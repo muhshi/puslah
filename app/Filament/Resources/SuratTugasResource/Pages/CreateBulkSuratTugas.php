@@ -234,12 +234,29 @@ class CreateBulkSuratTugas extends Page implements HasForms
                             ->description('Tentukan nomor urut awal untuk surat tugas yang akan dibuat.')
                             ->schema([
                                 Forms\Components\TextInput::make('nomor_urut_mulai')
-                                    ->label('Nomor Urut Mulai')
+                                    ->label('Nomor Urut Mulai (Surat Tugas)')
                                     ->numeric()
                                     ->required()
                                     ->minValue(1)
                                     ->live(debounce: 500)
-                                    ->helperText(function (Forms\Get $get) {
+                                    ->default(fn(Forms\Get $get) => SuratTugas::getNextNomorUrut($get('tanggal') ? \Carbon\Carbon::parse($get('tanggal'))->year : now()->year))
+                                    ->helperText('Nomor urut akan di-increment otomatis untuk setiap pegawai.'),
+
+                                Forms\Components\TextInput::make('format_nomor_surat')
+                                    ->label('Format Penomoran Surat Tugas')
+                                    ->required()
+                                    ->default(function () {
+                                        $settings = app(\App\Settings\SystemSettings::class);
+                                        $prefix = $settings->surat_prefix ?? 'B';
+                                        $office = $settings->office_code ?? '33210';
+                                        $year = now()->year;
+                                        return "{$prefix}-{urut}/{$office}/{klasifikasi}/{$year}";
+                                    })
+                                    ->helperText('Gunakan {urut} dan {klasifikasi} sebagai placeholder (contoh: B-{urut}/33210/{klasifikasi}/2026)'),
+
+                                Forms\Components\Placeholder::make('range_info')
+                                    ->label('Preview Range Nomor')
+                                    ->content(function (Forms\Get $get) {
                                         $mitraCount = count($get('mitra_user_ids') ?? []);
                                         $pegawaiCount = count($get('pegawai_bps_user_ids') ?? []);
                                         $totalPegawai = $mitraCount + $pegawaiCount;
@@ -324,6 +341,18 @@ class CreateBulkSuratTugas extends Page implements HasForms
                             ->live(),
 
                         Forms\Components\Group::make()->schema([
+                            Forms\Components\TextInput::make('format_nomor_sppd')
+                                ->label('Format Penomoran SPPD')
+                                ->required(fn(Forms\Get $get) => $get('is_sppd'))
+                                ->default(function () {
+                                    $settings = app(\App\Settings\SystemSettings::class);
+                                    $prefix = $settings->surat_prefix ?? 'B';
+                                    $office = $settings->office_code ?? '33210';
+                                    $year = now()->year;
+                                    return "{$prefix}-{urut}/{$office}/KP.650/{$year}";
+                                })
+                                ->helperText('Gunakan {urut} sebagai placeholder'),
+                            
                             Forms\Components\Select::make('tingkat_perjalanan_dinas')
                                 ->label('Tingkat Perjalanan Dinas')
                                 ->options([
@@ -420,7 +449,10 @@ class CreateBulkSuratTugas extends Page implements HasForms
                     }
 
                     $urut = str_pad($currentUrut, 4, '0', STR_PAD_LEFT);
-                    $nomorSurat = "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$year}";
+                    
+                    // Replace placeholders
+                    $nomorSurat = str_replace('{urut}', $urut, $data['format_nomor_surat']);
+                    $nomorSurat = str_replace('{klasifikasi}', $klasifikasi, $nomorSurat);
 
                     $jabatanPegawai = $jabatanManual;
                     if ($sumberJabatan === 'database') {
@@ -437,7 +469,8 @@ class CreateBulkSuratTugas extends Page implements HasForms
                         $nomorUrutSppdFinal = $nextSppdUrut;
                         $urutSppdPad = str_pad($nomorUrutSppdFinal, 4, '0', STR_PAD_LEFT);
                         $klasifikasiSppd = 'KP.650';
-                        $nomorSppd = "{$prefix}-{$urutSppdPad}/{$office}/{$klasifikasiSppd}/{$year}";
+                        $nomorSppd = str_replace('{urut}', $urutSppdPad, $data['format_nomor_sppd']);
+                        $nomorSppd = str_replace('{klasifikasi}', $klasifikasiSppd, $nomorSppd);
                     }
 
                     $suratTugas = SuratTugas::create([
