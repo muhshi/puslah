@@ -349,11 +349,12 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                 ->columnSpanFull(),
 
                             Forms\Components\TextInput::make('tempat_berangkat')
-                                ->label('Tempat Berangkat (Opsional, kosongkan untuk mengikuti Pengaturan Sistem)')
+                                ->label('Tempat Berangkat')
+                                ->default('Demak')
                                 ->maxLength(255),
 
                             Forms\Components\TextInput::make('tempat_tujuan')
-                                ->label('Tempat Tujuan (Opsional, kosongkan untuk mengikuti Surat Tugas)')
+                                ->label('Tempat Tujuan (Kosongkan jika mengikuti Tempat Tugas)')
                                 ->maxLength(255),
                         ])->columns(2)->visible(fn (Forms\Get $get) => $get('is_sppd')),
                     ]),
@@ -468,7 +469,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
                             'alat_angkutan' => $alatAngkutan,
                             'mak' => $mak,
                             'maksud_perjalanan' => $maksudPerjalananInput ?: $data['keperluan'],
-                            'tempat_berangkat' => $tempatBerangkatInput ?: $settings->cert_city,
+                            'tempat_berangkat' => $tempatBerangkatInput ?: 'Demak',
                             'tempat_tujuan' => $tempatTujuanInput ?: ($data['tempat_tugas'] ?? '-'),
                             'ppk_name' => $settings->ppk_name,
                             'ppk_nip' => $settings->ppk_nip,

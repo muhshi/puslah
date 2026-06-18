@@ -277,12 +277,12 @@ class SuratTugasResource extends Resource
 
                         Forms\Components\TextInput::make('tempat_berangkat')
                             ->label('Tempat Berangkat')
-                            ->default(fn () => app(SystemSettings::class)->cert_city)
+                            ->default('Demak')
                             ->maxLength(255),
 
                         Forms\Components\TextInput::make('tempat_tujuan')
                             ->label('Tempat Tujuan')
-                            ->default(fn (Get $get) => $get('tempat_tugas'))
+                            ->placeholder('Kosongkan untuk mengikuti Tempat Tugas')
                             ->maxLength(255),
                     ])->columns(2)->visible(fn (Get $get) => $get('is_sppd')),
                 ]),
@@ -545,7 +545,7 @@ class SuratTugasResource extends Resource
                             ->columnSpanFull(),
                         Forms\Components\TextInput::make('tempat_berangkat')
                             ->label('Tempat Berangkat')
-                            ->default(fn() => app(SystemSettings::class)->cert_city)
+                            ->default('Demak')
                             ->maxLength(255)
                             ->required(),
                         Forms\Components\TextInput::make('tempat_tujuan')
@@ -619,7 +619,7 @@ class SuratTugasResource extends Resource
                         $template->setValue('tingkat_perjalanan', $sppd->tingkat_perjalanan_dinas ?? '-');
                         $template->setValue('maksud_perjalanan', $sppd->maksud_perjalanan ?? $record->keperluan);
                         $template->setValue('alat_angkutan', $sppd->alat_angkutan ?? '-');
-                        $template->setValue('tempat_berangkat', $sppd->tempat_berangkat ?? $record->signer_city ?? $settings->cert_city); 
+                        $template->setValue('tempat_berangkat', $sppd->tempat_berangkat ?? 'Demak'); 
                         $template->setValue('tempat_tujuan', $sppd->tempat_tujuan ?? $record->tempat_tugas ?? '-');
                         
                         $start = \Carbon\Carbon::parse($record->waktu_mulai);
@@ -709,10 +709,12 @@ class SuratTugasResource extends Resource
                                 ->label('Maksud Perjalanan Dinas (Opsional, kosongkan untuk mengikuti Surat Tugas)')
                                 ->columnSpanFull(),
                             Forms\Components\TextInput::make('tempat_berangkat')
-                                ->label('Tempat Berangkat (Opsional, kosongkan untuk mengikuti Pengaturan Sistem)')
-                                ->maxLength(255),
+                                ->label('Tempat Berangkat')
+                                ->default('Demak')
+                                ->maxLength(255)
+                                ->required(),
                             Forms\Components\TextInput::make('tempat_tujuan')
-                                ->label('Tempat Tujuan (Opsional, kosongkan untuk mengikuti Surat Tugas)')
+                                ->label('Tempat Tujuan (Kosongkan jika mengikuti Surat Tugas)')
                                 ->maxLength(255),
                         ])
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
@@ -737,7 +739,7 @@ class SuratTugasResource extends Resource
                                         'alat_angkutan' => $data['alat_angkutan'],
                                         'mak' => $data['mak'],
                                         'maksud_perjalanan' => $data['maksud_perjalanan'] ?: $record->keperluan,
-                                        'tempat_berangkat' => $data['tempat_berangkat'] ?: ($settings->cert_city),
+                                        'tempat_berangkat' => $data['tempat_berangkat'] ?: 'Demak',
                                         'tempat_tujuan' => $data['tempat_tujuan'] ?: $record->tempat_tugas,
                                         'ppk_name' => $settings->ppk_name,
                                         'ppk_nip' => $settings->ppk_nip,
