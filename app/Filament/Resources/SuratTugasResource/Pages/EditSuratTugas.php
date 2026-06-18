@@ -34,6 +34,9 @@ class EditSuratTugas extends EditRecord
             $data['ppk_name'] = $sppd->ppk_name;
             $data['ppk_nip'] = $sppd->ppk_nip;
             $data['ppk_title'] = $sppd->ppk_title;
+            $data['maksud_perjalanan'] = $sppd->maksud_perjalanan;
+            $data['tempat_berangkat'] = $sppd->tempat_berangkat;
+            $data['tempat_tujuan'] = $sppd->tempat_tujuan;
         }
         return $data;
     }
@@ -58,9 +61,12 @@ class EditSuratTugas extends EditRecord
             'ppk_name' => $data['ppk_name'] ?? null,
             'ppk_nip' => $data['ppk_nip'] ?? null,
             'ppk_title' => $data['ppk_title'] ?? null,
+            'maksud_perjalanan' => $data['maksud_perjalanan'] ?? null,
+            'tempat_berangkat' => $data['tempat_berangkat'] ?? null,
+            'tempat_tujuan' => $data['tempat_tujuan'] ?? null,
         ];
         
-        unset($data['is_sppd'], $data['nomor_sppd'], $data['nomor_urut_sppd'], $data['kode_klasifikasi_sppd'], $data['tingkat_perjalanan_dinas'], $data['alat_angkutan'], $data['mak'], $data['ppk_name'], $data['ppk_nip'], $data['ppk_title']);
+        unset($data['is_sppd'], $data['nomor_sppd'], $data['nomor_urut_sppd'], $data['kode_klasifikasi_sppd'], $data['tingkat_perjalanan_dinas'], $data['alat_angkutan'], $data['mak'], $data['ppk_name'], $data['ppk_nip'], $data['ppk_title'], $data['maksud_perjalanan'], $data['tempat_berangkat'], $data['tempat_tujuan']);
 
         return $data;
     }

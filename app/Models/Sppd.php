@@ -17,6 +17,9 @@ class Sppd extends Model
         'ppk_name',
         'ppk_nip',
         'ppk_title',
+        'maksud_perjalanan',
+        'tempat_berangkat',
+        'tempat_tujuan',
     ];
 
     public function suratTugas()

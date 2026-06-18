@@ -269,6 +269,21 @@ class SuratTugasResource extends Resource
                             ->default('054.01.GG.2902.006.005.A.524113')
                             ->maxLength(255)
                             ->columnSpanFull(),
+
+                        Forms\Components\Textarea::make('maksud_perjalanan')
+                            ->label('Maksud Perjalanan Dinas')
+                            ->default(fn (Get $get) => $get('keperluan'))
+                            ->columnSpanFull(),
+
+                        Forms\Components\TextInput::make('tempat_berangkat')
+                            ->label('Tempat Berangkat')
+                            ->default(fn () => app(SystemSettings::class)->cert_city)
+                            ->maxLength(255),
+
+                        Forms\Components\TextInput::make('tempat_tujuan')
+                            ->label('Tempat Tujuan')
+                            ->default(fn (Get $get) => $get('tempat_tugas'))
+                            ->maxLength(255),
                     ])->columns(2)->visible(fn (Get $get) => $get('is_sppd')),
                 ]),
 
@@ -523,6 +538,21 @@ class SuratTugasResource extends Resource
                             ->default('054.01.GG.2902.006.005.A.524113')
                             ->maxLength(255)
                             ->required(),
+                        Forms\Components\Textarea::make('maksud_perjalanan')
+                            ->label('Maksud Perjalanan Dinas')
+                            ->default(fn(SuratTugas $record) => $record->keperluan)
+                            ->required()
+                            ->columnSpanFull(),
+                        Forms\Components\TextInput::make('tempat_berangkat')
+                            ->label('Tempat Berangkat')
+                            ->default(fn() => app(SystemSettings::class)->cert_city)
+                            ->maxLength(255)
+                            ->required(),
+                        Forms\Components\TextInput::make('tempat_tujuan')
+                            ->label('Tempat Tujuan')
+                            ->default(fn(SuratTugas $record) => $record->tempat_tugas)
+                            ->maxLength(255)
+                            ->required(),
                     ])
                     ->action(function (SuratTugas $record, array $data) {
                         $year = \Carbon\Carbon::parse($record->tanggal)->year;
@@ -541,6 +571,9 @@ class SuratTugasResource extends Resource
                             'tingkat_perjalanan_dinas' => $data['tingkat_perjalanan_dinas'],
                             'alat_angkutan' => $data['alat_angkutan'],
                             'mak' => $data['mak'],
+                            'maksud_perjalanan' => $data['maksud_perjalanan'],
+                            'tempat_berangkat' => $data['tempat_berangkat'],
+                            'tempat_tujuan' => $data['tempat_tujuan'],
                             'ppk_name' => $settings->ppk_name,
                             'ppk_nip' => $settings->ppk_nip,
                             'ppk_title' => $settings->ppk_title,
@@ -584,10 +617,10 @@ class SuratTugasResource extends Resource
                         $template->setValue('jabatan_pegawai', $record->user->profile->jabatan ?? '-');
                         
                         $template->setValue('tingkat_perjalanan', $sppd->tingkat_perjalanan_dinas ?? '-');
-                        $template->setValue('maksud_perjalanan', $record->keperluan);
+                        $template->setValue('maksud_perjalanan', $sppd->maksud_perjalanan ?? $record->keperluan);
                         $template->setValue('alat_angkutan', $sppd->alat_angkutan ?? '-');
-                        $template->setValue('tempat_berangkat', $record->signer_city ?? $settings->cert_city); 
-                        $template->setValue('tempat_tujuan', $record->tempat_tugas ?? '-');
+                        $template->setValue('tempat_berangkat', $sppd->tempat_berangkat ?? $record->signer_city ?? $settings->cert_city); 
+                        $template->setValue('tempat_tujuan', $sppd->tempat_tujuan ?? $record->tempat_tugas ?? '-');
                         
                         $start = \Carbon\Carbon::parse($record->waktu_mulai);
                         $end = \Carbon\Carbon::parse($record->waktu_selesai);
@@ -672,6 +705,15 @@ class SuratTugasResource extends Resource
                                 ->default('054.01.GG.2902.006.005.A.524113')
                                 ->maxLength(255)
                                 ->required(),
+                            Forms\Components\Textarea::make('maksud_perjalanan')
+                                ->label('Maksud Perjalanan Dinas (Opsional, kosongkan untuk mengikuti Surat Tugas)')
+                                ->columnSpanFull(),
+                            Forms\Components\TextInput::make('tempat_berangkat')
+                                ->label('Tempat Berangkat (Opsional, kosongkan untuk mengikuti Pengaturan Sistem)')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('tempat_tujuan')
+                                ->label('Tempat Tujuan (Opsional, kosongkan untuk mengikuti Surat Tugas)')
+                                ->maxLength(255),
                         ])
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
                             $settings = app(SystemSettings::class);
@@ -694,6 +736,9 @@ class SuratTugasResource extends Resource
                                         'tingkat_perjalanan_dinas' => $data['tingkat_perjalanan_dinas'],
                                         'alat_angkutan' => $data['alat_angkutan'],
                                         'mak' => $data['mak'],
+                                        'maksud_perjalanan' => $data['maksud_perjalanan'] ?: $record->keperluan,
+                                        'tempat_berangkat' => $data['tempat_berangkat'] ?: ($settings->cert_city),
+                                        'tempat_tujuan' => $data['tempat_tujuan'] ?: $record->tempat_tugas,
                                         'ppk_name' => $settings->ppk_name,
                                         'ppk_nip' => $settings->ppk_nip,
                                         'ppk_title' => $settings->ppk_title,

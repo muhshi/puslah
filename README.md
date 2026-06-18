@@ -54,7 +54,7 @@ composer dev
 ## Changelog
 
 ### 2026-06-18
-- **Perbaikan Pembuatan & Cetak SPPD** — Menambahkan form popup (modal) saat generate SPPD untuk mengisi Tingkat Perjalanan Dinas, Alat Angkutan, dan MAK. Memperbaiki bug placeholder pada template SPPD dimana variabel nama kepala, nip kepala, dan nomor surat tidak ter-replace dengan benar.
+- **Perbaikan Pembuatan & Cetak SPPD** — Menambahkan form popup (modal) saat generate SPPD untuk mengisi Tingkat Perjalanan Dinas, Alat Angkutan, MAK, Maksud Perjalanan, Tempat Berangkat, dan Tempat Tujuan. Maksud Perjalanan dan Tempat Tujuan sekarang dapat diedit dan di-override khusus untuk SPPD tanpa harus merubah data utama di Surat Tugas. Memperbaiki bug placeholder pada template SPPD dimana variabel nama kepala, nip kepala, dan nomor surat tidak ter-replace dengan benar.
 - **Pembaruan Layout Pengaturan Sistem** — Memindahkan letak form pengaturan Pejabat Pembuat Komitmen (SPPD) menjadi di bawah bagian Proteksi Dokumen PDF pada halaman Pengaturan Sistem untuk memperbaiki alur antarmuka pengguna.
 
 ### 2026-06-17

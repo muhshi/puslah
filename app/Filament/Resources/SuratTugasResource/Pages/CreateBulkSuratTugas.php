@@ -343,6 +343,18 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                 ->default('054.01.GG.2902.006.005.A.524113')
                                 ->maxLength(255)
                                 ->columnSpanFull(),
+
+                            Forms\Components\Textarea::make('maksud_perjalanan')
+                                ->label('Maksud Perjalanan Dinas (Opsional, kosongkan untuk mengikuti Surat Tugas)')
+                                ->columnSpanFull(),
+
+                            Forms\Components\TextInput::make('tempat_berangkat')
+                                ->label('Tempat Berangkat (Opsional, kosongkan untuk mengikuti Pengaturan Sistem)')
+                                ->maxLength(255),
+
+                            Forms\Components\TextInput::make('tempat_tujuan')
+                                ->label('Tempat Tujuan (Opsional, kosongkan untuk mengikuti Surat Tugas)')
+                                ->maxLength(255),
                         ])->columns(2)->visible(fn (Forms\Get $get) => $get('is_sppd')),
                     ]),
             ])
@@ -385,11 +397,14 @@ class CreateBulkSuratTugas extends Page implements HasForms
         $tingkatPerjalanan = $data['tingkat_perjalanan_dinas'] ?? 'C';
         $alatAngkutan = $data['alat_angkutan'] ?? 'Kendaraan Pribadi';
         $mak = $data['mak'] ?? '054.01.GG.2902.006.005.A.524113';
+        $maksudPerjalananInput = $data['maksud_perjalanan'] ?? null;
+        $tempatBerangkatInput = $data['tempat_berangkat'] ?? null;
+        $tempatTujuanInput = $data['tempat_tujuan'] ?? null;
 
         $nextSppdUrut = SuratTugas::getNextNomorUrutSppd($year) - 1;
 
         try {
-            DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $year, &$currentUrut, &$nextSppdUrut, $usedNumbers, $sumberJabatan, $jabatanManual, $isSppd, $tingkatPerjalanan, $alatAngkutan, $mak) {
+            DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $year, &$currentUrut, &$nextSppdUrut, $usedNumbers, $sumberJabatan, $jabatanManual, $isSppd, $tingkatPerjalanan, $alatAngkutan, $mak, $maksudPerjalananInput, $tempatBerangkatInput, $tempatTujuanInput) {
                 foreach ($userIds as $userId) {
                     if (SuratTugas::hasOverlap($userId, $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null)) {
                         $user = User::find($userId);
@@ -452,6 +467,9 @@ class CreateBulkSuratTugas extends Page implements HasForms
                             'tingkat_perjalanan_dinas' => $tingkatPerjalanan,
                             'alat_angkutan' => $alatAngkutan,
                             'mak' => $mak,
+                            'maksud_perjalanan' => $maksudPerjalananInput ?: $data['keperluan'],
+                            'tempat_berangkat' => $tempatBerangkatInput ?: $settings->cert_city,
+                            'tempat_tujuan' => $tempatTujuanInput ?: ($data['tempat_tugas'] ?? '-'),
                             'ppk_name' => $settings->ppk_name,
                             'ppk_nip' => $settings->ppk_nip,
                             'ppk_title' => $settings->ppk_title,
