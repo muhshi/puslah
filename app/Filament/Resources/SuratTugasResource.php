@@ -503,8 +503,28 @@ class SuratTugasResource extends Resource
                     ->icon('heroicon-o-plus-circle')
                     ->color('primary')
                     ->visible(fn(SuratTugas $record) => !$record->sppd()->exists() && auth()->user()->hasAnyRole(['super_admin', 'Kasubag', 'Kepala', 'Operator']))
-                    ->requiresConfirmation()
-                    ->action(function (SuratTugas $record) {
+                    ->form([
+                        Forms\Components\Select::make('tingkat_perjalanan_dinas')
+                            ->label('Tingkat Perjalanan Dinas')
+                            ->options([
+                                'A' => 'Tingkat A',
+                                'B' => 'Tingkat B',
+                                'C' => 'Tingkat C',
+                            ])
+                            ->default('C')
+                            ->required(),
+                        Forms\Components\TextInput::make('alat_angkutan')
+                            ->label('Alat Angkutan')
+                            ->default('Kendaraan Pribadi')
+                            ->maxLength(255)
+                            ->required(),
+                        Forms\Components\TextInput::make('mak')
+                            ->label('Pembebanan Anggaran (MAK)')
+                            ->default('054.01.GG.2902.006.005.A.524113')
+                            ->maxLength(255)
+                            ->required(),
+                    ])
+                    ->action(function (SuratTugas $record, array $data) {
                         $year = \Carbon\Carbon::parse($record->tanggal)->year;
                         $nextSppdUrut = SuratTugas::getNextNomorUrutSppd($year);
                         $settings = app(SystemSettings::class);
@@ -518,9 +538,9 @@ class SuratTugasResource extends Resource
                             'nomor_sppd' => $nomorSppd,
                             'nomor_urut_sppd' => $nextSppdUrut,
                             'kode_klasifikasi_sppd' => $klasifikasi,
-                            'tingkat_perjalanan_dinas' => 'C',
-                            'alat_angkutan' => 'Kendaraan Pribadi',
-                            'mak' => '054.01.GG.2902.006.005.A.524113',
+                            'tingkat_perjalanan_dinas' => $data['tingkat_perjalanan_dinas'],
+                            'alat_angkutan' => $data['alat_angkutan'],
+                            'mak' => $data['mak'],
                             'ppk_name' => $settings->ppk_name,
                             'ppk_nip' => $settings->ppk_nip,
                             'ppk_title' => $settings->ppk_title,
@@ -553,6 +573,10 @@ class SuratTugasResource extends Resource
                         
                         $template->setValue('nama_ppk', $ppkName);
                         $template->setValue('nip_ppk', $ppkNip);
+                        
+                        $template->setValue('nama_kepala', $record->signer_name ?? $settings->cert_signer_name);
+                        $template->setValue('nip_kepala', $record->signer_nip ?? $settings->cert_signer_nip);
+                        $template->setValue('nomor_surat', $record->nomor_surat);
                         
                         $template->setValue('nama_pegawai', $record->user->profile->full_name ?? $record->user->name);
                         $template->setValue('nip_pegawai', '-'); 
@@ -628,8 +652,28 @@ class SuratTugasResource extends Resource
                         ->icon('heroicon-o-document-plus')
                         ->color('primary')
                         ->visible(fn() => auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag', 'Operator']))
-                        ->requiresConfirmation()
-                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                        ->form([
+                            Forms\Components\Select::make('tingkat_perjalanan_dinas')
+                                ->label('Tingkat Perjalanan Dinas')
+                                ->options([
+                                    'A' => 'Tingkat A',
+                                    'B' => 'Tingkat B',
+                                    'C' => 'Tingkat C',
+                                ])
+                                ->default('C')
+                                ->required(),
+                            Forms\Components\TextInput::make('alat_angkutan')
+                                ->label('Alat Angkutan')
+                                ->default('Kendaraan Pribadi')
+                                ->maxLength(255)
+                                ->required(),
+                            Forms\Components\TextInput::make('mak')
+                                ->label('Pembebanan Anggaran (MAK)')
+                                ->default('054.01.GG.2902.006.005.A.524113')
+                                ->maxLength(255)
+                                ->required(),
+                        ])
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
                             $settings = app(SystemSettings::class);
                             $count = 0;
                             
@@ -647,9 +691,9 @@ class SuratTugasResource extends Resource
                                         'nomor_sppd' => $nomorSppd,
                                         'nomor_urut_sppd' => $nextSppdUrut,
                                         'kode_klasifikasi_sppd' => $klasifikasi,
-                                        'tingkat_perjalanan_dinas' => 'C',
-                                        'alat_angkutan' => 'Kendaraan Pribadi',
-                                        'mak' => '054.01.GG.2902.006.005.A.524113',
+                                        'tingkat_perjalanan_dinas' => $data['tingkat_perjalanan_dinas'],
+                                        'alat_angkutan' => $data['alat_angkutan'],
+                                        'mak' => $data['mak'],
                                         'ppk_name' => $settings->ppk_name,
                                         'ppk_nip' => $settings->ppk_nip,
                                         'ppk_title' => $settings->ppk_title,
