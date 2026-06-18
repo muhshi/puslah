@@ -77,8 +77,15 @@ class UserResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('email')
+                Tables\Columns\TextColumn::make('profile.nip')
+                    ->label('NIP')
                     ->searchable(),
+                Tables\Columns\TextColumn::make('profile.jabatan')
+                    ->label('Jabatan')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('email')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('roles.name')
                     ->badge()
                     ->separator(',')

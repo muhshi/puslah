@@ -444,7 +444,7 @@ class SuratTugasResource extends Resource
                     ->label('Buat SPPD')
                     ->icon('heroicon-o-plus-circle')
                     ->color('primary')
-                    ->visible(fn(SuratTugas $record) => !$record->sppd()->exists() && auth()->user()->hasAnyRole(['super_admin', 'Kasubag', 'Kepala', 'Operator']))
+                    ->visible(fn(SuratTugas $record) => !$record->sppd()->exists() && auth()->user()->hasAnyRole(['super_admin', 'Kasubag', 'Kepala', 'Operator', 'Ketua Tim', 'Pegawai']))
                     ->form([
                         Forms\Components\TextInput::make('nomor_sppd')
                             ->label('Nomor SPPD')
@@ -639,7 +639,7 @@ class SuratTugasResource extends Resource
                         ->label('Buat SPPD')
                         ->icon('heroicon-o-document-plus')
                         ->color('primary')
-                        ->visible(fn() => auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag', 'Operator']))
+                        ->visible(fn() => auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag', 'Operator', 'Ketua Tim', 'Pegawai']))
                         ->form([
                             Forms\Components\TextInput::make('nomor_urut_sppd_mulai')
                                 ->label('Nomor Urut Mulai')
