@@ -378,26 +378,7 @@ class SuratTugasResource extends Resource
                     ->color('info')
                     ->url(fn(SuratTugas $record) => route('surat-tugas.preview', $record->id))
                     ->openUrlInNewTab(),
-                //tombol sync pejabat darurat
-                Tables\Actions\Action::make('sync_pejabat')
-                    ->label('Update Pejabat')
-                    ->icon('heroicon-o-arrow-path')
-                    ->color('warning')
-                    ->visible(fn() => auth()->user()->hasAnyRole(['super_admin', 'kepala', 'kasubag']))
-                    ->action(function (SuratTugas $record) {
-                        $settings = app(SystemSettings::class);
-                        $record->update([
-                            'signer_name' => $settings->cert_signer_name,
-                            'signer_nip' => $settings->cert_signer_nip,
-                            'signer_title' => $settings->cert_signer_title,
-                            'signer_city' => $settings->cert_city,
-                            'signer_signature_path' => $settings->cert_signer_signature_path,
-                        ]);
-                        \Filament\Notifications\Notification::make()
-                            ->title('Pejabat penandatangan diperbarui ke pengaturan terbaru.')
-                            ->success()
-                            ->send();
-                    }),
+
                 Tables\Actions\Action::make('approve')
                     ->label('Approve')
                     ->icon('heroicon-o-check-circle')
