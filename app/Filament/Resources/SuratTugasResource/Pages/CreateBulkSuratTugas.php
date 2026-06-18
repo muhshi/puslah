@@ -250,7 +250,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                         $prefix = $settings->surat_prefix ?? 'B';
                                         $office = $settings->office_code ?? '33210';
                                         $year = now()->year;
-                                        return "{$prefix}-{urut}/{$office}/{klasifikasi}/{$year}";
+                                        return "{$prefix}-{urut}/{$office}/SE2026/{klasifikasi}/{$year}";
                                     })
                                     ->helperText('Gunakan {urut} dan {klasifikasi} sebagai placeholder (contoh: B-{urut}/33210/{klasifikasi}/2026)'),
 
@@ -349,7 +349,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                     $prefix = $settings->surat_prefix ?? 'B';
                                     $office = $settings->office_code ?? '33210';
                                     $year = now()->year;
-                                    return "{$prefix}-{urut}/{$office}/KP.650/{$year}";
+                                    return "{$prefix}-{urut}/{$office}/SE2026/KP.650/{$year}";
                                 })
                                 ->helperText('Gunakan {urut} sebagai placeholder'),
                             

@@ -148,7 +148,7 @@ class SuratTugasResource extends Resource
 
                                 $klasifikasi = 'KP.650';
 
-                                return "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$year}";
+                                return "{$prefix}-{$urut}/{$office}/SE2026/{$klasifikasi}/{$year}";
                             })
                             ->helperText('Otomatis: Prefix-Urut/Kantor/Klasifikasi/Tahun. Bisa diedit manual.'),
 
@@ -459,7 +459,7 @@ class SuratTugasResource extends Resource
                                 $nextUrut = SuratTugas::getNextNomorUrutSppd($year);
                                 $urut = str_pad($nextUrut, 4, '0', STR_PAD_LEFT);
                                 $klasifikasi = 'KP.650';
-                                return "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$year}";
+                                return "{$prefix}-{$urut}/{$office}/SE2026/{$klasifikasi}/{$year}";
                             }),
                         Forms\Components\TextInput::make('nomor_urut_sppd')
                             ->label('No. Urut SPPD')
@@ -477,7 +477,7 @@ class SuratTugasResource extends Resource
                                 $urut = str_pad($state, 4, '0', STR_PAD_LEFT);
                                 $klasifikasi = $get('kode_klasifikasi_sppd') ?? 'KP.650';
                                 $year = $get('tahun_sppd') ?? now()->year;
-                                $set('nomor_sppd', "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$year}");
+                                $set('nomor_sppd', "{$prefix}-{$urut}/{$office}/SE2026/{$klasifikasi}/{$year}");
                             }),
                         Forms\Components\Hidden::make('kode_klasifikasi_sppd')->default('KP.650'),
                         Forms\Components\Hidden::make('tahun_sppd')->default(fn(SuratTugas $record) => \Carbon\Carbon::parse($record->tanggal)->year),
@@ -866,7 +866,7 @@ class SuratTugasResource extends Resource
         $tanggal = $get('tanggal');
         $year = $tanggal ? \Carbon\Carbon::parse($tanggal)->year : now()->year;
 
-        $nomor = "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$year}";
+        $nomor = "{$prefix}-{$urut}/{$office}/SE2026/{$klasifikasi}/{$year}";
         $set('nomor_surat', $nomor);
     }
 
@@ -911,7 +911,7 @@ class SuratTugasResource extends Resource
         $tanggal = $get('tanggal');
         $year = $tanggal ? \Carbon\Carbon::parse($tanggal)->year : now()->year;
 
-        $nomor = "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$year}";
+        $nomor = "{$prefix}-{$urut}/{$office}/SE2026/{$klasifikasi}/{$year}";
         $set('nomor_sppd', $nomor);
     }
 }
