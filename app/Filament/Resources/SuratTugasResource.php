@@ -453,6 +453,7 @@ class SuratTugasResource extends Resource
                                 $year = \Carbon\Carbon::parse($record->tanggal)->year;
                                 $nextUrut = SuratTugas::getNextNomorUrutSppd($year);
                                 $urut = str_pad($nextUrut, 4, '0', STR_PAD_LEFT);
+                                $klasifikasi = 'KP.650';
                                 return "{$prefix}-{$urut}/{$office}/SE2026/{$klasifikasi}/{$year}";
                             })
                             ->live(onBlur: true)
