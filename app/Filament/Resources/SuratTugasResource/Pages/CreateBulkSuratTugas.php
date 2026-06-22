@@ -242,17 +242,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                     ->default(fn(Forms\Get $get) => SuratTugas::getNextNomorUrut($get('tanggal') ? \Carbon\Carbon::parse($get('tanggal'))->year : now()->year))
                                     ->helperText('Nomor urut akan di-increment otomatis untuk setiap pegawai.'),
 
-                                Forms\Components\TextInput::make('format_nomor_surat')
-                                    ->label('Format Penomoran Surat Tugas')
-                                    ->required()
-                                    ->default(function () {
-                                        $settings = app(\App\Settings\SystemSettings::class);
-                                        $prefix = $settings->surat_prefix ?? 'B';
-                                        $office = $settings->office_code ?? '33210';
-                                        $year = now()->year;
-                                        return "{$prefix}-{urut}/{$office}/SE2026/{klasifikasi}/{$year}";
-                                    })
-                                    ->helperText('Gunakan {urut} dan {klasifikasi} sebagai placeholder (contoh: B-{urut}/33210/{klasifikasi}/2026)'),
+
 
                                 Forms\Components\Placeholder::make('range_info')
                                     ->label('Preview Range Nomor')
@@ -332,61 +322,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
                             ])->columns(1),
                     ]),
 
-                Forms\Components\Section::make('Informasi SPPD')
-                    ->description('Jika diaktifkan, semua pegawai yang dipilih akan dibuatkan dokumen SPPD dengan konfigurasi yang sama.')
-                    ->schema([
-                        Forms\Components\Toggle::make('is_sppd')
-                            ->label('Buatkan SPPD untuk Semua Pegawai Terpilih?')
-                            ->default(false)
-                            ->live(),
 
-                        Forms\Components\Group::make()->schema([
-                            Forms\Components\TextInput::make('format_nomor_sppd')
-                                ->label('Format Penomoran SPPD')
-                                ->required(fn(Forms\Get $get) => $get('is_sppd'))
-                                ->default(function () {
-                                    $settings = app(\App\Settings\SystemSettings::class);
-                                    $prefix = $settings->surat_prefix ?? 'B';
-                                    $office = $settings->office_code ?? '33210';
-                                    $year = now()->year;
-                                    return "{$prefix}-{urut}/{$office}/SE2026/KP.650/{$year}";
-                                })
-                                ->helperText('Gunakan {urut} sebagai placeholder'),
-                            
-                            Forms\Components\Select::make('tingkat_perjalanan_dinas')
-                                ->label('Tingkat Perjalanan Dinas')
-                                ->options([
-                                    'A' => 'Tingkat A',
-                                    'B' => 'Tingkat B',
-                                    'C' => 'Tingkat C',
-                                ])
-                                ->default('C'),
-
-                            Forms\Components\TextInput::make('alat_angkutan')
-                                ->label('Alat Angkutan')
-                                ->default('Kendaraan Pribadi')
-                                ->maxLength(255),
-
-                            Forms\Components\TextInput::make('mak')
-                                ->label('Pembebanan Anggaran (MAK)')
-                                ->default('054.01.GG.2902.006.005.A.524113')
-                                ->maxLength(255)
-                                ->columnSpanFull(),
-
-                            Forms\Components\Textarea::make('maksud_perjalanan')
-                                ->label('Maksud Perjalanan Dinas (Opsional, kosongkan untuk mengikuti Surat Tugas)')
-                                ->columnSpanFull(),
-
-                            Forms\Components\TextInput::make('tempat_berangkat')
-                                ->label('Tempat Berangkat')
-                                ->default('Demak')
-                                ->maxLength(255),
-
-                            Forms\Components\TextInput::make('tempat_tujuan')
-                                ->label('Tempat Tujuan (Kosongkan jika mengikuti Tempat Tugas)')
-                                ->maxLength(255),
-                        ])->columns(2)->visible(fn (Forms\Get $get) => $get('is_sppd')),
-                    ]),
             ])
             ->statePath('data');
     }
@@ -423,18 +359,10 @@ class CreateBulkSuratTugas extends Page implements HasForms
         $sumberJabatan = $data['sumber_jabatan'] ?? 'database';
         $jabatanManual = $data['jabatan'] ?? '-';
 
-        $isSppd = $data['is_sppd'] ?? false;
-        $tingkatPerjalanan = $data['tingkat_perjalanan_dinas'] ?? 'C';
-        $alatAngkutan = $data['alat_angkutan'] ?? 'Kendaraan Pribadi';
-        $mak = $data['mak'] ?? '054.01.GG.2902.006.005.A.524113';
-        $maksudPerjalananInput = $data['maksud_perjalanan'] ?? null;
-        $tempatBerangkatInput = $data['tempat_berangkat'] ?? null;
-        $tempatTujuanInput = $data['tempat_tujuan'] ?? null;
 
-        $nextSppdUrut = SuratTugas::getNextNomorUrutSppd($year) - 1;
 
         try {
-            DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $year, &$currentUrut, &$nextSppdUrut, $usedNumbers, $sumberJabatan, $jabatanManual, $isSppd, $tingkatPerjalanan, $alatAngkutan, $mak, $maksudPerjalananInput, $tempatBerangkatInput, $tempatTujuanInput) {
+            DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $year, &$currentUrut, $usedNumbers, $sumberJabatan, $jabatanManual) {
                 foreach ($userIds as $userId) {
                     if (SuratTugas::hasOverlap($userId, $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null)) {
                         $user = User::find($userId);
@@ -450,9 +378,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
 
                     $urut = str_pad($currentUrut, 4, '0', STR_PAD_LEFT);
                     
-                    // Replace placeholders
-                    $nomorSurat = str_replace('{urut}', $urut, $data['format_nomor_surat']);
-                    $nomorSurat = str_replace('{klasifikasi}', $klasifikasi, $nomorSurat);
+                    $nomorSurat = "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$year}";
 
                     $jabatanPegawai = $jabatanManual;
                     if ($sumberJabatan === 'database') {
@@ -460,18 +386,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
                         $jabatanPegawai = $profile && !empty($profile->jabatan) ? $profile->jabatan : '-';
                     }
 
-                    $nomorSppd = null;
-                    $nomorUrutSppdFinal = null;
-                    $klasifikasiSppd = null;
 
-                    if ($isSppd) {
-                        $nextSppdUrut++;
-                        $nomorUrutSppdFinal = $nextSppdUrut;
-                        $urutSppdPad = str_pad($nomorUrutSppdFinal, 4, '0', STR_PAD_LEFT);
-                        $klasifikasiSppd = 'KP.650';
-                        $nomorSppd = str_replace('{urut}', $urutSppdPad, $data['format_nomor_sppd']);
-                        $nomorSppd = str_replace('{klasifikasi}', $klasifikasiSppd, $nomorSppd);
-                    }
 
                     $suratTugas = SuratTugas::create([
                         'user_id' => $userId,
@@ -493,22 +408,6 @@ class CreateBulkSuratTugas extends Page implements HasForms
                         'created_by' => auth()->id(),
                     ]);
 
-                    if ($isSppd) {
-                        $suratTugas->sppd()->create([
-                            'nomor_sppd' => $nomorSppd,
-                            'nomor_urut_sppd' => $nomorUrutSppdFinal,
-                            'kode_klasifikasi_sppd' => $klasifikasiSppd,
-                            'tingkat_perjalanan_dinas' => $tingkatPerjalanan,
-                            'alat_angkutan' => $alatAngkutan,
-                            'mak' => $mak,
-                            'maksud_perjalanan' => $maksudPerjalananInput ?: $data['keperluan'],
-                            'tempat_berangkat' => $tempatBerangkatInput ?: 'Demak',
-                            'tempat_tujuan' => $tempatTujuanInput ?: ($data['tempat_tugas'] ?? '-'),
-                            'ppk_name' => $settings->ppk_name,
-                            'ppk_nip' => $settings->ppk_nip,
-                            'ppk_title' => $settings->ppk_title,
-                        ]);
-                    }
                 }
             });
 

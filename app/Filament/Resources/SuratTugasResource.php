@@ -148,28 +148,17 @@ class SuratTugasResource extends Resource
 
                                 $klasifikasi = 'KP.650';
 
-                                return "{$prefix}-{$urut}/{$office}/SE2026/{$klasifikasi}/{$year}";
+                                return "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$year}";
                             })
-                            ->helperText('Otomatis: Prefix-Urut/Kantor/Klasifikasi/Tahun. Bisa diedit manual.'),
+                            ->readOnly()
+                            ->helperText('Otomatis dibuat oleh sistem.'),
 
-                        Section::make('Generator Nomor Surat')
-                            ->description('Ubah komponen ini untuk menghasilkan nomor surat.')
-                            ->schema([
-                                Forms\Components\Hidden::make('kode_klasifikasi')
-                                    ->default('KP.650'),
-                                Forms\Components\TextInput::make('nomor_urut')
-                                    ->label('No. Urut')
-                                    ->numeric()
-                                    ->default(function () {
-                                        // Get max nomor_urut for current year (tanggal default is now)
-                                        return SuratTugas::getNextNomorUrut(now()->year);
-                                    })
-                                    ->live()
-                                    ->afterStateUpdated(function (Get $get, Set $set) {
-                                        self::updateNomorSurat($get, $set);
-                                    })
-                                    ->columnSpanFull(),
-                            ]),
+                        Forms\Components\Hidden::make('kode_klasifikasi')
+                            ->default('KP.650'),
+                        Forms\Components\Hidden::make('nomor_urut')
+                            ->default(function () {
+                                return SuratTugas::getNextNomorUrut(now()->year);
+                            }),
                     ])->columns(1),
 
                     Forms\Components\Group::make()->schema([
@@ -459,7 +448,7 @@ class SuratTugasResource extends Resource
                                 $nextUrut = SuratTugas::getNextNomorUrutSppd($year);
                                 $urut = str_pad($nextUrut, 4, '0', STR_PAD_LEFT);
                                 $klasifikasi = 'KP.650';
-                                return "{$prefix}-{$urut}/{$office}/SE2026/{$klasifikasi}/{$year}";
+                                return "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$year}";
                             }),
                         Forms\Components\TextInput::make('nomor_urut_sppd')
                             ->label('No. Urut SPPD')
@@ -477,7 +466,7 @@ class SuratTugasResource extends Resource
                                 $urut = str_pad($state, 4, '0', STR_PAD_LEFT);
                                 $klasifikasi = $get('kode_klasifikasi_sppd') ?? 'KP.650';
                                 $year = $get('tahun_sppd') ?? now()->year;
-                                $set('nomor_sppd', "{$prefix}-{$urut}/{$office}/SE2026/{$klasifikasi}/{$year}");
+                                $set('nomor_sppd', "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$year}");
                             }),
                         Forms\Components\Hidden::make('kode_klasifikasi_sppd')->default('KP.650'),
                         Forms\Components\Hidden::make('tahun_sppd')->default(fn(SuratTugas $record) => \Carbon\Carbon::parse($record->tanggal)->year),
@@ -660,7 +649,7 @@ class SuratTugasResource extends Resource
                                     $year = now()->year;
                                     return "{$prefix}-{urut}/{$office}/{$klasifikasi}/{$year}";
                                 })
-                                ->helperText('Gunakan {urut} di mana nomor urut akan disisipkan (contoh: B-{urut}/3321/SE2026/KP.650/2026)'),
+                                ->helperText('Gunakan {urut} di mana nomor urut akan disisipkan (contoh: B-{urut}/33210/KP.650/2026)'),
                             Forms\Components\Select::make('tingkat_perjalanan_dinas')
                                 ->label('Tingkat Perjalanan Dinas')
                                 ->options([
@@ -866,7 +855,7 @@ class SuratTugasResource extends Resource
         $tanggal = $get('tanggal');
         $year = $tanggal ? \Carbon\Carbon::parse($tanggal)->year : now()->year;
 
-        $nomor = "{$prefix}-{$urut}/{$office}/SE2026/{$klasifikasi}/{$year}";
+        $nomor = "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$year}";
         $set('nomor_surat', $nomor);
     }
 
@@ -911,7 +900,7 @@ class SuratTugasResource extends Resource
         $tanggal = $get('tanggal');
         $year = $tanggal ? \Carbon\Carbon::parse($tanggal)->year : now()->year;
 
-        $nomor = "{$prefix}-{$urut}/{$office}/SE2026/{$klasifikasi}/{$year}";
+        $nomor = "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$year}";
         $set('nomor_sppd', $nomor);
     }
 }
