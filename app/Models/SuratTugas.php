@@ -133,19 +133,6 @@ class SuratTugas extends Model
         return $next;
     }
 
-    /**
-     * Get next available nomor_urut_sppd for a given year.
-     * SPPD has a separate numbering sequence from Surat Tugas.
-     */
-    public static function getNextNomorUrutSppd(int $year): int
-    {
-        // Query directly via Sppd model or joined, but it's cleaner to query Sppd table
-        $maxUsed = Sppd::whereHas('suratTugas', function($q) use ($year) {
-            $q->whereYear('tanggal', $year);
-        })->max('nomor_urut_sppd') ?? 0;
-        
-        return $maxUsed + 1;
-    }
 
     /**
      * Get all occupied nomor_urut (used + blocked) for a given year, as a flipped array for fast lookup
