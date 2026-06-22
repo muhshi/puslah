@@ -163,6 +163,8 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
             $suratTugasInserts = [];
             $now = now()->toDateTimeString();
 
+            $nextSppdUrut = SuratTugas::getNextNomorUrutSppd($this->year) - 1;
+
 
             foreach ($validRows as $vRow) {
                 $email = $vRow['email'];
@@ -205,7 +207,8 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
                 $klasifikasiSppd = null;
 
                 if ($vRow['perlu_sppd']) {
-                    $nomorUrutSppdFinal = $currentUrut;
+                    $nextSppdUrut++;
+                    $nomorUrutSppdFinal = $nextSppdUrut;
                     $urutSppdPad = str_pad($nomorUrutSppdFinal, 4, '0', STR_PAD_LEFT);
                     $klasifikasiSppd = 'KP.650';
                     $nomorSppd = "{$prefix}-{$urutSppdPad}/{$office}/SE2026/{$klasifikasiSppd}/{$this->year}";

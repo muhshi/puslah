@@ -175,7 +175,8 @@ class SuratTugasResource extends Resource
                                     $set('nomor_urut', $next);
 
                                     // For SPPD
-                                    $set('nomor_urut_sppd', $next);
+                                    $nextSppd = SuratTugas::getNextNomorUrutSppd($year);
+                                    $set('nomor_urut_sppd', $nextSppd);
                                 }
                                 self::updateNomorSurat($get, $set);
                                 self::updateNomorSppd($get, $set);
@@ -216,11 +217,17 @@ class SuratTugasResource extends Resource
                                 $prefix = $settings->surat_prefix ?? 'B';
                                 $office = $settings->office_code ?? '33210';
                                 $year = now()->year;
-                                $nextUrut = SuratTugas::getNextNomorUrut($year);
+                                $nextUrut = SuratTugas::getNextNomorUrutSppd($year);
                                 $urut = str_pad($nextUrut, 4, '0', STR_PAD_LEFT);
                                 $klasifikasi = 'KP.650';
 
                                 return "{$prefix}-{$urut}/{$office}/SE2026/{$klasifikasi}/{$year}";
+                            })
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(function (\Filament\Forms\Get $get, \Filament\Forms\Set $set, $state) {
+                                if (preg_match('/(?:B-)?0*(\d+)\//', $state, $matches)) {
+                                    $set('nomor_urut_sppd', (int)$matches[1]);
+                                }
                             })
                             ->helperText('Otomatis di-generate saat disimpan.'),
 
@@ -231,7 +238,7 @@ class SuratTugasResource extends Resource
                             ->label('No. Urut SPPD')
                             ->numeric()
                             ->default(function () {
-                                return SuratTugas::getNextNomorUrut(now()->year);
+                                return SuratTugas::getNextNomorUrutSppd(now()->year);
                             })
                             ->live()
                             ->afterStateUpdated(function (Get $get, Set $set) {
@@ -444,17 +451,22 @@ class SuratTugasResource extends Resource
                                 $prefix = $settings->surat_prefix ?? 'B';
                                 $office = $settings->office_code ?? '33210';
                                 $year = \Carbon\Carbon::parse($record->tanggal)->year;
-                                $nextUrut = $record->nomor_urut;
+                                $nextUrut = SuratTugas::getNextNomorUrutSppd($year);
                                 $urut = str_pad($nextUrut, 4, '0', STR_PAD_LEFT);
-                                $klasifikasi = 'KP.650';
                                 return "{$prefix}-{$urut}/{$office}/SE2026/{$klasifikasi}/{$year}";
+                            })
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(function (\Filament\Forms\Get $get, \Filament\Forms\Set $set, $state) {
+                                if (preg_match('/(?:B-)?0*(\d+)\//', $state, $matches)) {
+                                    $set('nomor_urut_sppd', (int)$matches[1]);
+                                }
                             }),
                         Forms\Components\TextInput::make('nomor_urut_sppd')
                             ->label('No. Urut SPPD')
                             ->numeric()
                             ->required()
                             ->default(function (SuratTugas $record) {
-                                return $record->nomor_urut;
+                                return SuratTugas::getNextNomorUrutSppd(\Carbon\Carbon::parse($record->tanggal)->year);
                             })
                             ->live()
                             ->afterStateUpdated(function (\Filament\Forms\Get $get, \Filament\Forms\Set $set, $state) {
@@ -629,7 +641,14 @@ class SuratTugasResource extends Resource
                         ->color('primary')
                         ->visible(fn() => auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag', 'Operator', 'Ketua Tim', 'Pegawai']))
                         ->form([
-
+                            Forms\Components\TextInput::make('nomor_urut_sppd_mulai')
+                                ->label('Nomor Urut Mulai')
+                                ->numeric()
+                                ->required()
+                                ->default(function () {
+                                    return SuratTugas::getNextNomorUrutSppd(now()->year);
+                                })
+                                ->helperText('Nomor urut akan di-increment otomatis untuk setiap SPPD dari angka ini.'),
                             Forms\Components\TextInput::make('format_nomor_sppd')
                                 ->label('Format Nomor SPPD')
                                 ->required()
@@ -676,11 +695,12 @@ class SuratTugasResource extends Resource
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
                             $settings = app(SystemSettings::class);
                             $count = 0;
+                            $nextSppdUrut = $data['nomor_urut_sppd_mulai'] - 1;
                             
                             foreach ($records as $record) {
                                 if (!$record->sppd()->exists()) {
                                     $year = \Carbon\Carbon::parse($record->tanggal)->year;
-                                    $nextSppdUrut = $record->nomor_urut;
+                                    $nextSppdUrut++;
                                     $urutSppdPad = str_pad($nextSppdUrut, 4, '0', STR_PAD_LEFT);
                                     $nomorSppd = str_replace('{urut}', $urutSppdPad, $data['format_nomor_sppd']);
 
