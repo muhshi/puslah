@@ -55,6 +55,10 @@ class ProfileMe extends Page implements HasForms
             'address' => $this->profile->address,
             'phone' => $this->profile->phone,
             'employment_status' => $this->profile->employment_status,
+            'nip' => $this->profile->nip,
+            'old_nip' => $this->profile->old_nip,
+            'jabatan' => $this->profile->jabatan,
+            'pangkat_golongan' => $this->profile->pangkat_golongan,
         ]);
 
         // Kosongkan form password
@@ -106,6 +110,12 @@ class ProfileMe extends Page implements HasForms
                         ->label('No. HP/WA')
                         ->tel()
                         ->maxLength(30),
+                ])->columns(2),
+                Section::make('Informasi Kepegawaian')->schema([
+                    TextInput::make('nip')->label('NIP Baru')->maxLength(50),
+                    TextInput::make('old_nip')->label('NIP Lama')->maxLength(50),
+                    TextInput::make('jabatan')->label('Jabatan')->maxLength(255),
+                    TextInput::make('pangkat_golongan')->label('Pangkat/Golongan')->maxLength(100),
                     TextInput::make('employment_status')
                         ->label('Status kerja')
                         ->default('aktif')
@@ -127,6 +137,10 @@ class ProfileMe extends Page implements HasForms
             'gender' => $data['gender'] ?? null,
             'address' => $data['address'] ?? null,
             'phone' => $data['phone'] ?? null,
+            'nip' => $data['nip'] ?? null,
+            'old_nip' => $data['old_nip'] ?? null,
+            'jabatan' => $data['jabatan'] ?? null,
+            'pangkat_golongan' => $data['pangkat_golongan'] ?? null,
         ]);
 
         Notification::make()->title('Profil berhasil disimpan')->success()->send();

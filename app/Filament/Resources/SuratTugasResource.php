@@ -490,7 +490,7 @@ class SuratTugasResource extends Resource
                             ->required(),
                         Forms\Components\Textarea::make('maksud_perjalanan')
                             ->label('Maksud Perjalanan Dinas')
-                            ->default(fn(SuratTugas $record) => $record->keperluan)
+                            ->default('Transport lokal dalam rangka supervisi pendataan sensus ekonomi 2026 (SE2026)')
                             ->required()
                             ->columnSpanFull(),
                         Forms\Components\TextInput::make('tempat_berangkat')
@@ -663,6 +663,7 @@ class SuratTugasResource extends Resource
                                 ->required(),
                             Forms\Components\Textarea::make('maksud_perjalanan')
                                 ->label('Maksud Perjalanan Dinas (Opsional, kosongkan untuk mengikuti Surat Tugas)')
+                                ->default('Transport lokal dalam rangka supervisi pendataan sensus ekonomi 2026 (SE2026)')
                                 ->columnSpanFull(),
                             Forms\Components\TextInput::make('tempat_berangkat')
                                 ->label('Tempat Berangkat')

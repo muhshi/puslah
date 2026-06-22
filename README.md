@@ -58,6 +58,8 @@ composer dev
 - **Penyederhanaan Form Bulk Create Surat Tugas** — Menghapus toggle dan form isian untuk pembuatan SPPD di halaman Bulk Create (Surat Tugas Kolektif) agar lebih ringkas, karena pembuatan SPPD secara massal bisa dilakukan via aksi Bulk Action `Buat SPPD` di tabel list Surat Tugas.
 - **Update Format Penomoran** — Menyesuaikan format generasi otomatis penomoran dengan menghapus prefix `/SE2026/` pada Surat Tugas agar sesuai standar (contoh: `B-2843/33210/KP.650/2026`), sedangkan untuk SPPD tetap menggunakan prefix `/SE2026/` (contoh: `B-2843/33210/SE2026/KP.650/2026`).
 - **Sinkronisasi Nomor Urut SPPD** — Nomor urut pada SPPD kini dibuat tersinkronisasi (sama persis) dengan nomor urut pada Surat Tugas utamanya. Tidak ada lagi sistem penomoran terpisah antara SPPD dan Surat Tugas.
+- **Pembaruan Profil Pegawai** — Menambahkan form input untuk melengkapi data informasi kepegawaian (NIP Baru, NIP Lama, Jabatan, Pangkat/Golongan) di halaman Pengaturan Profil Saya, serta melakukan sinkronisasi data pegawai dari sistem lama.
+- **Default Maksud Perjalanan Dinas** — Menambahkan default kalimat *"Transport lokal dalam rangka supervisi pendataan sensus ekonomi 2026 (SE2026)"* pada saat membuat SPPD secara tunggal maupun kolektif.
 
 ### 2026-06-18
 - **Perbaikan Pembuatan & Cetak SPPD** — Menambahkan form popup (modal) saat generate SPPD untuk mengisi Tingkat Perjalanan Dinas, Alat Angkutan, MAK, Maksud Perjalanan, Tempat Berangkat, dan Tempat Tujuan. Maksud Perjalanan dan Tempat Tujuan sekarang dapat diedit dan di-override khusus untuk SPPD tanpa harus merubah data utama di Surat Tugas. Memperbaiki bug placeholder pada template SPPD dimana variabel nama kepala, nip kepala, dan nomor surat tidak ter-replace dengan benar.
