@@ -568,7 +568,7 @@ class SuratTugasResource extends Resource
                         $template->setValue('nomor_surat', $record->nomor_surat);
                         
                         $template->setValue('nama_pegawai', $record->user->profile->full_name ?? $record->user->name);
-                        $template->setValue('nip_pegawai', '-'); 
+                        $template->setValue('nip_pegawai', $record->user->profile->nip ?? '-');
                         $template->setValue('pangkat_golongan', $record->user->profile->pangkat_golongan ?? '-');
                         $template->setValue('jabatan_pegawai', $record->user->profile->jabatan ?? '-');
                         
