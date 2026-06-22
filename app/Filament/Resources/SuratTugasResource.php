@@ -490,7 +490,7 @@ class SuratTugasResource extends Resource
                             ->required(),
                         Forms\Components\Textarea::make('maksud_perjalanan')
                             ->label('Maksud Perjalanan Dinas')
-                            ->default('Transport lokal dalam rangka supervisi pendataan sensus ekonomi 2026 (SE2026)')
+                            ->default(fn(SuratTugas $record) => "Transport lokal dalam rangka {$record->keperluan}")
                             ->required()
                             ->columnSpanFull(),
                         Forms\Components\TextInput::make('tempat_berangkat')
@@ -560,7 +560,7 @@ class SuratTugasResource extends Resource
                         $template->setValue('jabatan_pegawai', $record->user->profile->jabatan ?? '-');
                         
                         $template->setValue('tingkat_perjalanan', $sppd->tingkat_perjalanan_dinas ?? '-');
-                        $template->setValue('maksud_perjalanan', $sppd->maksud_perjalanan ?? $record->keperluan);
+                        $template->setValue('maksud_perjalanan', $sppd->maksud_perjalanan ?? "Transport lokal dalam rangka {$record->keperluan}");
                         $template->setValue('alat_angkutan', $sppd->alat_angkutan ?? '-');
                         $template->setValue('tempat_berangkat', $sppd->tempat_berangkat ?? 'Demak'); 
                         $template->setValue('tempat_tujuan', $sppd->tempat_tujuan ?? $record->tempat_tugas ?? '-');
@@ -662,8 +662,7 @@ class SuratTugasResource extends Resource
                                 ->maxLength(255)
                                 ->required(),
                             Forms\Components\Textarea::make('maksud_perjalanan')
-                                ->label('Maksud Perjalanan Dinas (Opsional, kosongkan untuk mengikuti Surat Tugas)')
-                                ->default('Transport lokal dalam rangka supervisi pendataan sensus ekonomi 2026 (SE2026)')
+                                ->label('Maksud Perjalanan Dinas (Opsional, kosongkan untuk default otomatis)')
                                 ->columnSpanFull(),
                             Forms\Components\TextInput::make('tempat_berangkat')
                                 ->label('Tempat Berangkat')
@@ -692,7 +691,7 @@ class SuratTugasResource extends Resource
                                         'tingkat_perjalanan_dinas' => $data['tingkat_perjalanan_dinas'],
                                         'alat_angkutan' => $data['alat_angkutan'],
                                         'mak' => $data['mak'],
-                                        'maksud_perjalanan' => $data['maksud_perjalanan'] ?: $record->keperluan,
+                                        'maksud_perjalanan' => $data['maksud_perjalanan'] ?: "Transport lokal dalam rangka {$record->keperluan}",
                                         'tempat_berangkat' => $data['tempat_berangkat'] ?: 'Demak',
                                         'tempat_tujuan' => $data['tempat_tujuan'] ?: $record->tempat_tugas,
                                         'ppk_name' => $settings->ppk_name,

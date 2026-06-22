@@ -242,6 +242,7 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
                         'tingkat_perjalanan_dinas' => $vRow['tingkat_perjalanan'],
                         'alat_angkutan' => $vRow['alat_angkutan'],
                         'mak' => $vRow['mak'],
+                        'maksud_perjalanan' => "Transport lokal dalam rangka {$this->keperluan}",
                         'ppk_name' => $this->settings->ppk_name,
                         'ppk_nip' => $this->settings->ppk_nip,
                         'ppk_title' => $this->settings->ppk_title,
