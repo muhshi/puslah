@@ -210,7 +210,7 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
                     $nomorUrutSppdFinal = $nextSppdUrut;
                     $urutSppdPad = str_pad($nomorUrutSppdFinal, 4, '0', STR_PAD_LEFT);
                     $klasifikasiSppd = 'KP.650';
-                    $nomorSppd = "{$prefix}-{$urutSppdPad}/{$office}/{$klasifikasiSppd}/{$this->year}";
+                    $nomorSppd = "{$prefix}-{$urutSppdPad}/{$office}/SE2026/{$klasifikasiSppd}/{$this->year}";
                 }
 
                 $suratTugasData = [
