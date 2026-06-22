@@ -571,6 +571,8 @@ class SuratTugasResource extends Resource
                         $template->setValue('nip_pegawai', $record->user->profile->nip ?? '-');
                         $template->setValue('pangkat_golongan', $record->user->profile->pangkat_golongan ?? '-');
                         $template->setValue('jabatan_pegawai', $record->user->profile->jabatan ?? '-');
+                        $template->setValue('jabatan', $record->user->profile->jabatan ?? '-');
+                        $template->setValue('unit_kerja', 'Badan Pusat Statistik Kabupaten Demak');
                         
                         $template->setValue('tingkat_perjalanan', $sppd->tingkat_perjalanan_dinas ?? '-');
                         $template->setValue('maksud_perjalanan', $sppd->maksud_perjalanan ?? "Transport lokal dalam rangka {$record->keperluan}");
@@ -590,6 +592,7 @@ class SuratTugasResource extends Resource
                         $template->setValue('mak', $sppd->mak ?? '-');
                         $template->setValue('nomor_surat_tugas', $record->nomor_surat);
                         $template->setValue('tanggal_surat', \Carbon\Carbon::parse($record->tanggal)->translatedFormat('d F Y'));
+                        $template->setValue('tanggal_pernyataan', \Carbon\Carbon::parse($record->tanggal)->translatedFormat('d F Y'));
 
                         $safeFilename = str_replace(['/', '\\'], '_', $sppd->nomor_sppd);
                         $fileName = "SPPD_{$safeFilename}.docx";
