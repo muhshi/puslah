@@ -700,7 +700,7 @@ class SuratTugasResource extends Resource
                             Forms\Components\TextInput::make('biaya_transport')
                                 ->label('Biaya Transport (Rp)')
                                 ->numeric()
-                                ->default(150000)
+                                ->default(170000)
                                 ->required(),
                             Forms\Components\Textarea::make('maksud_perjalanan')
                                 ->label('Maksud Perjalanan Dinas (Opsional, kosongkan untuk default otomatis)')
