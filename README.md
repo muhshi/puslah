@@ -53,6 +53,9 @@ composer dev
 
 ## Changelog
 
+### 2026-06-23
+- **Update Variabel Surat Pernyataan** — Menambahkan variabel `${keperluan}` pada data yang di-generate untuk template SPPD (Surat Perjalanan Dinas) agar sinkron dengan template surat pernyataan yang baru.
+
 ### 2026-06-22
 - **Penyesuaian Form Surat Tugas** — Menghapus isian manual format nomor surat tugas karena format pernomoran sudah sepenuhnya diotomatisasi oleh sistem. Pengguna tidak perlu lagi mengetik atau mengatur placeholder `{urut}` dan `{klasifikasi}` secara manual.
 - **Penyederhanaan Form Bulk Create Surat Tugas** — Menghapus toggle dan form isian untuk pembuatan SPPD di halaman Bulk Create (Surat Tugas Kolektif) agar lebih ringkas, karena pembuatan SPPD secara massal bisa dilakukan via aksi Bulk Action `Buat SPPD` di tabel list Surat Tugas.

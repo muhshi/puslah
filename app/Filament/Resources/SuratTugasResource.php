@@ -576,6 +576,7 @@ class SuratTugasResource extends Resource
                         
                         $template->setValue('tingkat_perjalanan', $sppd->tingkat_perjalanan_dinas ?? '-');
                         $template->setValue('maksud_perjalanan', $sppd->maksud_perjalanan ?? "Transport lokal dalam rangka {$record->keperluan}");
+                        $template->setValue('keperluan', $record->keperluan);
                         $template->setValue('alat_angkutan', $sppd->alat_angkutan ?? '-');
                         $template->setValue('tempat_berangkat', $sppd->tempat_berangkat ?? 'Demak'); 
                         $template->setValue('tempat_tujuan', $sppd->tempat_tujuan ?? $record->tempat_tugas ?? '-');
