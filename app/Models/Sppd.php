@@ -20,6 +20,7 @@ class Sppd extends Model
         'maksud_perjalanan',
         'tempat_berangkat',
         'tempat_tujuan',
+        'biaya_transport',
     ];
 
     public function suratTugas()

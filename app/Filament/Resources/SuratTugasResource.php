@@ -88,7 +88,7 @@ class SuratTugasResource extends Resource
                                 if ($surveyId) {
                                     $survey = \App\Models\Survey::find($surveyId);
                                     $query = \App\Models\SurveyUser::where('survey_id', $surveyId);
-                                    
+
                                     if ($survey && !$survey->is_multiple) {
                                         $query->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
                                             $q->where('survey_id', $surveyId);
@@ -226,14 +226,14 @@ class SuratTugasResource extends Resource
                             ->live(onBlur: true)
                             ->afterStateUpdated(function (\Filament\Forms\Get $get, \Filament\Forms\Set $set, $state) {
                                 if (preg_match('/(?:B-)?0*(\d+)\//', $state, $matches)) {
-                                    $set('nomor_urut_sppd', (int)$matches[1]);
+                                    $set('nomor_urut_sppd', (int) $matches[1]);
                                 }
                             })
                             ->helperText('Otomatis di-generate saat disimpan.'),
 
                         Forms\Components\Hidden::make('kode_klasifikasi_sppd')
                             ->default('KP.650'),
-                            
+
                         Forms\Components\TextInput::make('nomor_urut_sppd')
                             ->label('No. Urut SPPD')
                             ->numeric()
@@ -267,7 +267,7 @@ class SuratTugasResource extends Resource
 
                         Forms\Components\Textarea::make('maksud_perjalanan')
                             ->label('Maksud Perjalanan Dinas')
-                            ->default(fn (Get $get) => $get('keperluan'))
+                            ->default(fn(Get $get) => $get('keperluan'))
                             ->columnSpanFull(),
 
                         Forms\Components\TextInput::make('tempat_berangkat')
@@ -279,7 +279,7 @@ class SuratTugasResource extends Resource
                             ->label('Tempat Tujuan')
                             ->placeholder('Kosongkan untuk mengikuti Tempat Tugas')
                             ->maxLength(255),
-                    ])->columns(2)->visible(fn (Get $get) => $get('is_sppd')),
+                    ])->columns(2)->visible(fn(Get $get) => $get('is_sppd')),
                 ]),
 
                 Section::make('Pejabat Penandatangan (Snapshot)')
@@ -459,7 +459,7 @@ class SuratTugasResource extends Resource
                             ->live(onBlur: true)
                             ->afterStateUpdated(function (\Filament\Forms\Get $get, \Filament\Forms\Set $set, $state) {
                                 if (preg_match('/(?:B-)?0*(\d+)\//', $state, $matches)) {
-                                    $set('nomor_urut_sppd', (int)$matches[1]);
+                                    $set('nomor_urut_sppd', (int) $matches[1]);
                                 }
                             }),
                         Forms\Components\TextInput::make('nomor_urut_sppd')
@@ -471,7 +471,8 @@ class SuratTugasResource extends Resource
                             })
                             ->live()
                             ->afterStateUpdated(function (\Filament\Forms\Get $get, \Filament\Forms\Set $set, $state) {
-                                if (blank($state)) return;
+                                if (blank($state))
+                                    return;
                                 $settings = app(SystemSettings::class);
                                 $prefix = $settings->surat_prefix ?? 'B';
                                 $office = $settings->office_code ?? '33210';
@@ -500,6 +501,11 @@ class SuratTugasResource extends Resource
                             ->label('Pembebanan Anggaran (MAK)')
                             ->default('054.01.GG.2902.006.005.A.524113')
                             ->maxLength(255)
+                            ->required(),
+                        Forms\Components\TextInput::make('biaya_transport')
+                            ->label('Biaya Transport (Rp)')
+                            ->numeric()
+                            ->default(170000)
                             ->required(),
                         Forms\Components\Textarea::make('maksud_perjalanan')
                             ->label('Maksud Perjalanan Dinas')
@@ -530,6 +536,7 @@ class SuratTugasResource extends Resource
                             'maksud_perjalanan' => $data['maksud_perjalanan'],
                             'tempat_berangkat' => $data['tempat_berangkat'],
                             'tempat_tujuan' => $data['tempat_tujuan'],
+                            'biaya_transport' => $data['biaya_transport'],
                             'ppk_name' => $settings->ppk_name,
                             'ppk_nip' => $settings->ppk_nip,
                             'ppk_title' => $settings->ppk_title,
@@ -544,7 +551,7 @@ class SuratTugasResource extends Resource
                     ->action(function (SuratTugas $record) {
                         $settings = app(SystemSettings::class);
                         $templatePath = $settings->sppd_template_path;
-            
+
                         if (!$templatePath || !file_exists(storage_path('app/public/' . $templatePath))) {
                             \Filament\Notifications\Notification::make()
                                 ->title('Template SPPD belum diupload di Pengaturan Sistem')
@@ -559,38 +566,43 @@ class SuratTugasResource extends Resource
                         $template->setValue('nomor_sppd', $sppd->nomor_sppd);
                         $ppkName = $sppd->ppk_name ?? $settings->ppk_name;
                         $ppkNip = $sppd->ppk_nip ?? $settings->ppk_nip;
-                        
+
                         $template->setValue('nama_ppk', $ppkName);
                         $template->setValue('nip_ppk', $ppkNip);
-                        
+
                         $template->setValue('nama_kepala', $record->signer_name ?? $settings->cert_signer_name);
                         $template->setValue('nip_kepala', $record->signer_nip ?? $settings->cert_signer_nip);
                         $template->setValue('nomor_surat', $record->nomor_surat);
-                        
+
                         $template->setValue('nama_pegawai', $record->user->profile->full_name ?? $record->user->name);
                         $template->setValue('nip_pegawai', $record->user->profile->nip ?? '-');
                         $template->setValue('pangkat_golongan', $record->user->profile->pangkat_golongan ?? '-');
                         $template->setValue('jabatan_pegawai', $record->user->profile->jabatan ?? '-');
                         $template->setValue('jabatan', $record->user->profile->jabatan ?? '-');
                         $template->setValue('unit_kerja', 'Badan Pusat Statistik Kabupaten Demak');
-                        
+
                         $template->setValue('tingkat_perjalanan', $sppd->tingkat_perjalanan_dinas ?? '-');
                         $template->setValue('maksud_perjalanan', $sppd->maksud_perjalanan ?? "Transport lokal dalam rangka {$record->keperluan}");
                         $template->setValue('keperluan', $record->keperluan);
                         $template->setValue('alat_angkutan', $sppd->alat_angkutan ?? '-');
-                        $template->setValue('tempat_berangkat', $sppd->tempat_berangkat ?? 'Demak'); 
+                        $template->setValue('tempat_berangkat', $sppd->tempat_berangkat ?? 'Demak');
                         $template->setValue('tempat_tujuan', $sppd->tempat_tujuan ?? $record->tempat_tugas ?? '-');
-                        
+
                         $start = \Carbon\Carbon::parse($record->waktu_mulai);
                         $end = \Carbon\Carbon::parse($record->waktu_selesai);
-                        $lama = $start->diffInDays($end) + 1; 
-                        $terbilang = [1=>'satu', 2=>'dua', 3=>'tiga', 4=>'empat', 5=>'lima', 6=>'enam', 7=>'tujuh', 8=>'delapan', 9=>'sembilan', 10=>'sepuluh', 11=>'sebelas', 12=>'dua belas', 13=>'tiga belas', 14=>'empat belas', 15=>'lima belas', 30=>'tiga puluh', 31=>'tiga puluh satu'];
+                        $lama = $start->diffInDays($end) + 1;
+                        $terbilang = [1 => 'satu', 2 => 'dua', 3 => 'tiga', 4 => 'empat', 5 => 'lima', 6 => 'enam', 7 => 'tujuh', 8 => 'delapan', 9 => 'sembilan', 10 => 'sepuluh', 11 => 'sebelas', 12 => 'dua belas', 13 => 'tiga belas', 14 => 'empat belas', 15 => 'lima belas', 30 => 'tiga puluh', 31 => 'tiga puluh satu'];
                         $lamaText = $terbilang[$lama] ?? $lama;
-                        
+
                         $template->setValue('lama_perjalanan', $lama . ' (' . $lamaText . ') hari');
                         $template->setValue('tanggal_berangkat', $start->translatedFormat('d F Y'));
                         $template->setValue('tanggal_kembali', $end->translatedFormat('d F Y'));
                         $template->setValue('mak', $sppd->mak ?? '-');
+                        
+                        $biaya = $sppd->biaya_transport ?? 0;
+                        $template->setValue('biaya_transport', 'Rp ' . number_format($biaya, 0, ',', '.') . ',-');
+                        $template->setValue('terbilang_biaya', ucfirst(trim(self::terbilang($biaya))) . ' rupiah');
+                        
                         $template->setValue('nomor_surat_tugas', $record->nomor_surat);
                         $template->setValue('tanggal_surat', \Carbon\Carbon::parse($record->tanggal)->translatedFormat('d F Y'));
                         $template->setValue('tanggal_pernyataan', \Carbon\Carbon::parse($record->tanggal)->translatedFormat('d F Y'));
@@ -685,6 +697,11 @@ class SuratTugasResource extends Resource
                                 ->default('054.01.GG.2902.006.005.A.524113')
                                 ->maxLength(255)
                                 ->required(),
+                            Forms\Components\TextInput::make('biaya_transport')
+                                ->label('Biaya Transport (Rp)')
+                                ->numeric()
+                                ->default(150000)
+                                ->required(),
                             Forms\Components\Textarea::make('maksud_perjalanan')
                                 ->label('Maksud Perjalanan Dinas (Opsional, kosongkan untuk default otomatis)')
                                 ->columnSpanFull(),
@@ -701,7 +718,7 @@ class SuratTugasResource extends Resource
                             $settings = app(SystemSettings::class);
                             $count = 0;
                             $nextSppdUrut = $data['nomor_urut_sppd_mulai'] - 1;
-                            
+
                             foreach ($records as $record) {
                                 if (!$record->sppd()->exists()) {
                                     $year = \Carbon\Carbon::parse($record->tanggal)->year;
@@ -719,6 +736,7 @@ class SuratTugasResource extends Resource
                                         'maksud_perjalanan' => $data['maksud_perjalanan'] ?: "Transport lokal dalam rangka {$record->keperluan}",
                                         'tempat_berangkat' => $data['tempat_berangkat'] ?: 'Demak',
                                         'tempat_tujuan' => $data['tempat_tujuan'] ?: $record->tempat_tugas,
+                                        'biaya_transport' => $data['biaya_transport'],
                                         'ppk_name' => $settings->ppk_name,
                                         'ppk_nip' => $settings->ppk_nip,
                                         'ppk_title' => $settings->ppk_title,
@@ -918,5 +936,29 @@ class SuratTugasResource extends Resource
 
         $nomor = "{$prefix}-{$urut}/{$office}/SE2026/{$klasifikasi}/{$year}";
         $set('nomor_sppd', $nomor);
+    }
+
+    public static function terbilang($angka) {
+        $angka = abs((int)$angka);
+        $baca = array("", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan", "sepuluh", "sebelas");
+        $terbilang = "";
+        if ($angka < 12) {
+            $terbilang = " " . $baca[$angka];
+        } else if ($angka < 20) {
+            $terbilang = self::terbilang($angka - 10) . " belas";
+        } else if ($angka < 100) {
+            $terbilang = self::terbilang($angka / 10) . " puluh" . self::terbilang($angka % 10);
+        } else if ($angka < 200) {
+            $terbilang = " seratus" . self::terbilang($angka - 100);
+        } else if ($angka < 1000) {
+            $terbilang = self::terbilang($angka / 100) . " ratus" . self::terbilang($angka % 100);
+        } else if ($angka < 2000) {
+            $terbilang = " seribu" . self::terbilang($angka - 1000);
+        } else if ($angka < 1000000) {
+            $terbilang = self::terbilang($angka / 1000) . " ribu" . self::terbilang($angka % 1000);
+        } else if ($angka < 1000000000) {
+            $terbilang = self::terbilang($angka / 1000000) . " juta" . self::terbilang($angka % 1000000);
+        }
+        return $terbilang;
     }
 }
