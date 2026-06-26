@@ -53,6 +53,9 @@ composer dev
 
 ## Changelog
 
+### 2026-06-26
+- **Multiple Surat Tugas Khusus Terlampir** — Petugas dengan nama "Terlampir" sekarang dapat dibuatkan Surat Tugas (serta di-import via Excel) berulang kali pada *survey* dan tanggal yang sama, mengabaikan batasan validasi *overlap* dan duplikasi.
+
 ### 2026-06-23
 - **Fitur Daftar Pengeluaran Riil (DPR) SPPD** — Menambahkan field `biaya_transport` pada database dan form pengisian SPPD (single & bulk). Nilai ini otomatis di-generate ke dalam template Word SPPD dengan variabel `${biaya_transport}` (contoh: Rp 170.000,-) dan `${terbilang_biaya}` (contoh: Seratus tujuh puluh ribu rupiah) untuk mendukung format baru Daftar Pengeluaran Riil lampiran SPPD.
 - **Update Variabel Surat Pernyataan** — Menambahkan variabel `${keperluan}` pada data yang di-generate untuk template SPPD (Surat Perjalanan Dinas) agar sinkron dengan template surat pernyataan yang baru.

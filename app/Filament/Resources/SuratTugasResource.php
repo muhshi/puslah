@@ -63,8 +63,12 @@ class SuratTugasResource extends Resource
                                     // Checker for empty users
                                     $query = \App\Models\SurveyUser::where('survey_id', $state);
                                     if (!$survey->is_multiple) {
-                                        $query->whereDoesntHave('user.suratTugas', function ($q) use ($state) {
-                                            $q->where('survey_id', $state);
+                                        $query->where(function ($q) use ($state) {
+                                            $q->whereHas('user', function ($uq) {
+                                                $uq->where('name', 'like', '%Terlampir%');
+                                            })->orWhereDoesntHave('user.suratTugas', function ($sq) use ($state) {
+                                                $sq->where('survey_id', $state);
+                                            });
                                         });
                                     }
                                     $hasParticipants = $query->exists();
@@ -90,8 +94,12 @@ class SuratTugasResource extends Resource
                                     $query = \App\Models\SurveyUser::where('survey_id', $surveyId);
 
                                     if ($survey && !$survey->is_multiple) {
-                                        $query->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
-                                            $q->where('survey_id', $surveyId);
+                                        $query->where(function ($q) use ($surveyId) {
+                                            $q->whereHas('user', function ($uq) {
+                                                $uq->where('name', 'like', '%Terlampir%');
+                                            })->orWhereDoesntHave('user.suratTugas', function ($sq) use ($surveyId) {
+                                                $sq->where('survey_id', $surveyId);
+                                            });
                                         });
                                     }
 

@@ -175,7 +175,7 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
                 }
 
                 // Check if already has Surat Tugas
-                if (isset($existingSuratTugas[$user->id])) {
+                if (isset($existingSuratTugas[$user->id]) && stripos($user->name, 'Terlampir') === false) {
                     $this->skipped++;
                     continue;
                 }
@@ -260,7 +260,9 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
                 ];
 
                 // Mark this user as having Surat Tugas to prevent duplicates from within the Excel file itself
-                $existingSuratTugas[$user->id] = true;
+                if (stripos($user->name, 'Terlampir') === false) {
+                    $existingSuratTugas[$user->id] = true;
+                }
                 $this->success++;
             }
 

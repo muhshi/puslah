@@ -91,8 +91,14 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                         ->whereHas('user.roles', fn($q) => $q->where('name', 'Organik'));
 
                                     if (!$survey->is_multiple) {
-                                        $queryMitra->whereDoesntHave('user.suratTugas', fn($q) => $q->where('survey_id', $state));
-                                        $queryOrganik->whereDoesntHave('user.suratTugas', fn($q) => $q->where('survey_id', $state));
+                                        $queryMitra->where(function ($q) use ($state) {
+                                            $q->whereHas('user', fn($uq) => $uq->where('name', 'like', '%Terlampir%'))
+                                              ->orWhereDoesntHave('user.suratTugas', fn($sq) => $sq->where('survey_id', $state));
+                                        });
+                                        $queryOrganik->where(function ($q) use ($state) {
+                                            $q->whereHas('user', fn($uq) => $uq->where('name', 'like', '%Terlampir%'))
+                                              ->orWhereDoesntHave('user.suratTugas', fn($sq) => $sq->where('survey_id', $state));
+                                        });
                                     }
 
                                     $hasMitra = $queryMitra->exists();
@@ -126,8 +132,9 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                     });
 
                                 if ($survey && !$survey->is_multiple) {
-                                    $query->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
-                                        $q->where('survey_id', $surveyId);
+                                    $query->where(function ($q) use ($surveyId) {
+                                        $q->whereHas('user', fn($uq) => $uq->where('name', 'like', '%Terlampir%'))
+                                          ->orWhereDoesntHave('user.suratTugas', fn($sq) => $sq->where('survey_id', $surveyId));
                                     });
                                 }
 
@@ -158,8 +165,9 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                     });
 
                                 if ($survey && !$survey->is_multiple) {
-                                    $query->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
-                                        $q->where('survey_id', $surveyId);
+                                    $query->where(function ($q) use ($surveyId) {
+                                        $q->whereHas('user', fn($uq) => $uq->where('name', 'like', '%Terlampir%'))
+                                          ->orWhereDoesntHave('user.suratTugas', fn($sq) => $sq->where('survey_id', $surveyId));
                                     });
                                 }
 

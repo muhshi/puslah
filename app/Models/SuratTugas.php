@@ -221,6 +221,12 @@ class SuratTugas extends Model
             return false;
         }
 
+        // Pengecualian khusus untuk petugas bernama "Terlampir"
+        $user = User::find($userId);
+        if ($user && stripos($user->name, 'Terlampir') !== false) {
+            return false;
+        }
+
         $mulai = \Carbon\Carbon::parse($waktuMulai)->startOfDay();
         $selesai = \Carbon\Carbon::parse($waktuSelesai)->endOfDay();
 
