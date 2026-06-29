@@ -53,6 +53,10 @@ composer dev
 
 ## Changelog
 
+### 2026-06-29
+- **Tab Role di Profil Pengguna** — Menambahkan tab filter secara dinamis pada halaman daftar Profil Pengguna (Filament) berdasarkan *role* (contoh: Pegawai, Mitra, Ketua Tim, dll) untuk mempermudah pencarian.
+- **Update NIP Pegawai** — Melakukan sinkronisasi dan *update* data NIP Baru di profil pegawai berdasarkan `pegawai.json`.
+
 ### 2026-06-26
 - **Multiple Surat Tugas Khusus Terlampir** — Petugas dengan nama "Terlampir" sekarang dapat dibuatkan Surat Tugas (serta di-import via Excel) berulang kali pada *survey* dan tanggal yang sama, mengabaikan batasan validasi *overlap* dan duplikasi.
 
