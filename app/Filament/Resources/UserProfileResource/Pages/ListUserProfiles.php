@@ -15,12 +15,16 @@ class ListUserProfiles extends ListRecords
 
     public function getTabs(): array
     {
-        $tabs = ['semua' => Tab::make('Semua')];
+        $tabs = [
+            'semua' => Tab::make('Semua')->badge(\App\Models\UserProfile::count())
+        ];
 
-        $roles = Role::all();
+        $roles = Role::whereNotIn('name', ['super_admin', 'Kepala', 'Kasubag'])->get();
         
         foreach ($roles as $role) {
+            $count = \App\Models\UserProfile::whereHas('user.roles', fn ($q) => $q->where('name', $role->name))->count();
             $tabs[$role->name] = Tab::make($role->name)
+                ->badge($count)
                 ->modifyQueryUsing(fn (Builder $query) => $query->whereHas('user.roles', fn ($q) => $q->where('name', $role->name)));
         }
 
