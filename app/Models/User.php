@@ -29,8 +29,6 @@ class User extends Authenticatable implements FilamentUser
         'sipetra_id',
         'sipetra_token',
         'sipetra_refresh_token',
-        'nip',
-        'jabatan',
     ];
 
     /**

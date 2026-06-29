@@ -39,8 +39,6 @@ class SsoController extends Controller
             'email'         => $ssoUser->getEmail(),
             'sipetra_token' => $ssoUser->token,
             'sipetra_refresh_token' => $ssoUser->refreshToken,
-            'nip'           => $rawData['nip'] ?? null,
-            'jabatan'       => $rawData['jabatan'] ?? null,
         ];
 
         if ($user) {
@@ -62,20 +60,26 @@ class SsoController extends Controller
         }
 
         // Sync with UserProfile
-        if ($user->profile) {
-            $updateData = [
-                'full_name' => $user->name,
-                'jabatan' => $user->jabatan,
-            ];
-            
-            // Hanya timpa NIP profil jika NIP di profil masih kosong,
-            // untuk menghindari NIP Baru yang sudah diinput tertimpa oleh data NIP Lama dari SSO.
-            if (empty($user->profile->nip) && !empty($user->nip)) {
-                $updateData['nip'] = $user->nip;
-            }
-            
-            $user->profile->update($updateData);
+        $profile = $user->profile()->firstOrCreate([
+            'user_id' => $user->id
+        ], [
+            'employment_status' => 'aktif',
+            'full_name' => $user->name,
+        ]);
+        
+        $updateData = [
+            'full_name' => $user->name,
+            'jabatan' => $rawData['jabatan'] ?? $profile->jabatan,
+        ];
+        
+        // Hanya timpa NIP profil jika NIP di profil masih kosong,
+        // untuk menghindari NIP Baru yang sudah diinput tertimpa oleh data NIP Lama dari SSO.
+        $ssoNip = $rawData['nip'] ?? null;
+        if (empty($profile->nip) && !empty($ssoNip)) {
+            $updateData['nip'] = $ssoNip;
         }
+        
+        $profile->update($updateData);
 
         Auth::login($user);
         return redirect()->intended('/admin');

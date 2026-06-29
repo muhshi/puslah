@@ -145,7 +145,7 @@ class Leaderboard extends Page implements HasForms
             return (object) [
                 'id' => $user->id,
                 'name' => $user->name,
-                'jabatan' => $user->jabatan ?? $user->profile?->jabatan ?? 'Pegawai',
+                'jabatan' => $user->profile?->jabatan ?? 'Pegawai',
                 'avatar' => $avatar,
                 'count' => $user->surat_tugas_count,
                 'initials' => collect(explode(' ', $user->name))
