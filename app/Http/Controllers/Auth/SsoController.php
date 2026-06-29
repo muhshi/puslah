@@ -63,11 +63,18 @@ class SsoController extends Controller
 
         // Sync with UserProfile
         if ($user->profile) {
-            $user->profile->update([
+            $updateData = [
                 'full_name' => $user->name,
-                'nip' => $user->nip,
                 'jabatan' => $user->jabatan,
-            ]);
+            ];
+            
+            // Hanya timpa NIP profil jika NIP di profil masih kosong,
+            // untuk menghindari NIP Baru yang sudah diinput tertimpa oleh data NIP Lama dari SSO.
+            if (empty($user->profile->nip) && !empty($user->nip)) {
+                $updateData['nip'] = $user->nip;
+            }
+            
+            $user->profile->update($updateData);
         }
 
         Auth::login($user);
