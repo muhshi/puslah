@@ -298,6 +298,12 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                                 ->default(now()),
 
                             Forms\Components\Group::make([
+                                Forms\Components\Toggle::make('abaikan_validasi')
+                                    ->label('Abaikan Validasi Bentrok')
+                                    ->helperText('Hanya untuk Admin.')
+                                    ->default(false)
+                                    ->dehydrated(false)
+                                    ->visible(fn() => auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag'])),
                                 Forms\Components\DatePicker::make('waktu_mulai')
                                     ->label('Mulai')
                                     ->default(now()),
@@ -315,7 +321,8 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
 
                         try {
                             \Illuminate\Support\Facades\DB::transaction(function () use ($record, $data, $settings, $prefix, $office, $klasifikasi) {
-                                if (SuratTugas::hasOverlap($data['user_id'], $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null)) {
+                                $abaikanValidasi = $data['abaikan_validasi'] ?? false;
+                                if (!$abaikanValidasi && SuratTugas::hasOverlap($data['user_id'], $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null)) {
                                     throw new \Exception("Overlap: Pegawai ini sudah memiliki Surat Tugas di rentang tanggal tersebut untuk survey yang sama.");
                                 }
 
@@ -511,6 +518,12 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                                         ->columnSpanFull(),
 
                                     Forms\Components\Group::make()->schema([
+                                        Forms\Components\Toggle::make('abaikan_validasi')
+                                            ->label('Abaikan Validasi Bentrok')
+                                            ->helperText('Hanya untuk Admin.')
+                                            ->default(false)
+                                            ->dehydrated(false)
+                                            ->visible(fn() => auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag'])),
                                         Forms\Components\DatePicker::make('tanggal')
                                             ->label('Tanggal Surat')
                                             ->required()
@@ -560,7 +573,8 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                             try {
                                 \Illuminate\Support\Facades\DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $records, &$successCount) {
                                     foreach ($userIds as $index => $userId) {
-                                        if (SuratTugas::hasOverlap($userId, $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null)) {
+                                        $abaikanValidasi = $data['abaikan_validasi'] ?? false;
+                                        if (!$abaikanValidasi && SuratTugas::hasOverlap($userId, $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null)) {
                                             $user = User::find($userId);
                                             throw new \Exception("Overlap: Pegawai " . ($user->name ?? $userId) . " sudah memiliki Surat Tugas di rentang tanggal tersebut.");
                                         }

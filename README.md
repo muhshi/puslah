@@ -53,6 +53,10 @@ composer dev
 
 ## Changelog
 
+### 2026-07-01
+- **Bypass Validasi Bentrok Surat Tugas** — Menambahkan opsi *toggle* "Abaikan Validasi Bentrok Tanggal" khusus untuk admin (`super_admin`, `Kepala`, `Kasubag`) pada pembuatan surat tugas single, bulk, dan release nomor. Fitur ini berguna untuk memberikan pengecualian ketika pegawai benar-benar ditugaskan pada 2 kegiatan berbeda (misal MOOC/pelatihan non-lapangan) di hari yang sama tanpa diblokir oleh sistem.
+
+
 ### 2026-06-29
 - **Tab Role di Profil Pengguna** — Menambahkan tab filter secara dinamis pada halaman daftar Profil Pengguna (Filament) berdasarkan *role* (contoh: Pegawai, Mitra, Ketua Tim, dll) untuk mempermudah pencarian.
 - **Update NIP Pegawai** — Melakukan sinkronisasi dan *update* data NIP Baru di profil pegawai berdasarkan `pegawai.json`.

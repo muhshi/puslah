@@ -189,6 +189,12 @@ class SuratTugasResource extends Resource
                                 self::updateNomorSurat($get, $set);
                                 self::updateNomorSppd($get, $set);
                             }),
+                        Forms\Components\Toggle::make('abaikan_validasi')
+                            ->label('Abaikan Validasi Bentrok Tanggal')
+                            ->helperText('Hanya untuk Admin. Jika diaktifkan, pegawai bisa ditugaskan di tanggal yang sama dengan survei lain.')
+                            ->default(false)
+                            ->dehydrated(false)
+                            ->visible(fn() => auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag'])),
                         Forms\Components\DatePicker::make('waktu_mulai')
                             ->label('Mulai')
                             ->default(now()),

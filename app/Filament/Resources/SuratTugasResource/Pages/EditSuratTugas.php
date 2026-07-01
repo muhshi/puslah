@@ -43,7 +43,9 @@ class EditSuratTugas extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        if (\App\Models\SuratTugas::hasOverlap($data['user_id'], $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null, $this->record->id)) {
+        $abaikanValidasi = $data['abaikan_validasi'] ?? false;
+        
+        if (!$abaikanValidasi && \App\Models\SuratTugas::hasOverlap($data['user_id'], $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null, $this->record->id)) {
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'waktu_mulai' => 'Tanggal tugas overlap (tumpang tindih) dengan surat tugas pegawai ini di survey yang sama.',
                 'waktu_selesai' => 'Tanggal tugas overlap (tumpang tindih) dengan surat tugas pegawai ini di survey yang sama.',
@@ -66,7 +68,7 @@ class EditSuratTugas extends EditRecord
             'tempat_tujuan' => $data['tempat_tujuan'] ?? null,
         ];
         
-        unset($data['is_sppd'], $data['nomor_sppd'], $data['nomor_urut_sppd'], $data['kode_klasifikasi_sppd'], $data['tingkat_perjalanan_dinas'], $data['alat_angkutan'], $data['mak'], $data['ppk_name'], $data['ppk_nip'], $data['ppk_title'], $data['maksud_perjalanan'], $data['tempat_berangkat'], $data['tempat_tujuan']);
+        unset($data['abaikan_validasi'], $data['is_sppd'], $data['nomor_sppd'], $data['nomor_urut_sppd'], $data['kode_klasifikasi_sppd'], $data['tingkat_perjalanan_dinas'], $data['alat_angkutan'], $data['mak'], $data['ppk_name'], $data['ppk_nip'], $data['ppk_title'], $data['maksud_perjalanan'], $data['tempat_berangkat'], $data['tempat_tujuan']);
 
         return $data;
     }
