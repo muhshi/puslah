@@ -53,6 +53,9 @@ composer dev
 
 ## Changelog
 
+### 2026-07-08
+- **Perbaikan Validasi SPPD** — Memperbaiki bug validasi unique (error kolom tidak ditemukan) pada field `nomor_sppd` saat mengedit form Surat Tugas, dengan menyesuaikan pengecekan unik ke tabel `sppds` secara benar.
+
 ### 2026-07-01
 - **Bypass Validasi Bentrok Surat Tugas** — Menambahkan opsi *toggle* "Abaikan Validasi Bentrok Tanggal" khusus untuk admin (`super_admin`, `Kepala`, `Kasubag`) pada pembuatan surat tugas single, bulk, dan release nomor. Fitur ini berguna untuk memberikan pengecualian ketika pegawai benar-benar ditugaskan pada 2 kegiatan berbeda (misal MOOC/pelatihan non-lapangan) di hari yang sama tanpa diblokir oleh sistem.
 
