@@ -44,7 +44,7 @@ class SsoController extends Controller
         if ($user) {
             $user->update($data);
         } else {
-            $data['password'] = null;
+            $data['password'] = bcrypt(\Illuminate\Support\Str::random(24));
             $user = User::create($data);
             
             // Assign role default (jika pakai Spatie Permission)

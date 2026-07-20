@@ -54,6 +54,7 @@ composer dev
 ## Changelog
 
 ### 2026-07-20
+- **Fix Error SSO Login** — Mengatasi bug `password cannot be null` saat login SSO pertama kali dengan men-generate random string password untuk user baru.
 - **Perbaikan Tabel Laporan Dinas** — Menambahkan filter laporan dinas berdasarkan kegiatan (untuk semua pengguna) dan nama petugas (khusus super admin). Mengganti kolom 'Tujuan' menjadi 'Nama Petugas', menyesuaikan kolom tanggal agar menampilkan rentang tanggal berangkat dan kembali dari surat tugas (jika berbeda), membatasi lebar teks kolom survei, serta mengurutkan daftar tabel dari laporan terbaru.
 
 ### 2026-07-08
