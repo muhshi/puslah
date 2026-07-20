@@ -22,6 +22,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \Illuminate\Support\Facades\Gate::define('viewPulse', function (User $user) {
+            return $user->hasAnyRole(['super_admin', 'Kepala']);
+        });
+
         if (app()->environment('production')) {
             URL::forceScheme('https');
         }

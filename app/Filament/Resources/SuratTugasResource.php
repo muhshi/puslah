@@ -628,6 +628,11 @@ class SuratTugasResource extends Resource
                         return response()->download($tempPath)->deleteFileAfterSend();
                     }),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('activities')
+                    ->label('History')
+                    ->icon('heroicon-o-clock')
+                    ->color('info')
+                    ->url(fn ($record) => SuratTugasResource::getUrl('activities', ['record' => $record])),
             ])
             ->headerActions([
                 \pxlrbt\FilamentExcel\Actions\Tables\ExportAction::make()
@@ -887,6 +892,7 @@ class SuratTugasResource extends Resource
             'create-bulk' => Pages\CreateBulkSuratTugas::route('/create-bulk'),
             'manage-blocked-numbers' => Pages\ManageBlockedNumbers::route('/manage-blocked-numbers'),
             'edit' => Pages\EditSuratTugas::route('/{record}/edit'),
+            'activities' => Pages\ListSuratTugasActivities::route('/{record}/activities'),
         ];
     }
 

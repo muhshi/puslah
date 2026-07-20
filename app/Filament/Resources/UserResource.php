@@ -108,6 +108,11 @@ class UserResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('activities')
+                    ->label('History')
+                    ->icon('heroicon-o-clock')
+                    ->color('info')
+                    ->url(fn ($record) => UserResource::getUrl('activities', ['record' => $record])),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -153,6 +158,7 @@ class UserResource extends Resource
             //'create' => Pages\CreateUser::route('/create'),
             //'view' => Pages\ViewUser::route('/{record}'),
             //'edit' => Pages\EditUser::route('/{record}/edit'),
+            'activities' => Pages\ListUserActivities::route('/{record}/activities'),
         ];
     }
 }

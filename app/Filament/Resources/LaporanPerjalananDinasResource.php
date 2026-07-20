@@ -257,6 +257,11 @@ class LaporanPerjalananDinasResource extends Resource
                     }),
 
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('activities')
+                    ->label('History')
+                    ->icon('heroicon-o-clock')
+                    ->color('info')
+                    ->url(fn ($record) => LaporanPerjalananDinasResource::getUrl('activities', ['record' => $record])),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -438,6 +443,7 @@ class LaporanPerjalananDinasResource extends Resource
             'index' => Pages\ListLaporanPerjalananDinas::route('/'),
             'create' => Pages\CreateLaporanPerjalananDinas::route('/create'),
             'edit' => Pages\EditLaporanPerjalananDinas::route('/{record}/edit'),
+            'activities' => Pages\ListLaporanPerjalananDinasActivities::route('/{record}/activities'),
         ];
     }
 }

@@ -54,6 +54,7 @@ composer dev
 ## Changelog
 
 ### 2026-07-20
+- **Fitur Analytics & Log** — Menambahkan widget kunjungan (DashboardStatsWidget) di Dashboard utama, serta mengintegrasikan Laravel Pulse (khusus Super Admin/Kepala) di endpoint `/pulse` untuk pemantauan traffic & performa. Menambahkan fitur Activity Log menggunakan `spatie/laravel-activitylog` pada resource utama (Surat Tugas, Survey, User, Laporan Perjalanan Dinas) lengkap dengan tombol "History" untuk melacak riwayat perubahan.
 - **Fix Error SSO Login** — Mengatasi bug `password cannot be null` saat login SSO pertama kali dengan men-generate random string password untuk user baru.
 - **Perbaikan Tabel Laporan Dinas** — Menambahkan filter laporan dinas berdasarkan kegiatan (untuk semua pengguna) dan nama petugas (khusus super admin). Mengganti kolom 'Tujuan' menjadi 'Nama Petugas', menyesuaikan kolom tanggal agar menampilkan rentang tanggal berangkat dan kembali dari surat tugas (jika berbeda), membatasi lebar teks kolom survei, serta mengurutkan daftar tabel dari laporan terbaru.
 

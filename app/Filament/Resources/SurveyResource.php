@@ -156,6 +156,11 @@ class SurveyResource extends Resource
                             ->send();
                     }),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('activities')
+                    ->label('History')
+                    ->icon('heroicon-o-clock')
+                    ->color('info')
+                    ->url(fn ($record) => SurveyResource::getUrl('activities', ['record' => $record])),
                 Tables\Actions\DeleteAction::make(),
                 Tables\Actions\ForceDeleteAction::make(),
                 Tables\Actions\RestoreAction::make(),
@@ -192,6 +197,7 @@ class SurveyResource extends Resource
             'index' => Pages\ListSurveys::route('/'),
             'create' => Pages\CreateSurvey::route('/create'),
             'edit' => Pages\EditSurvey::route('/{record}/edit'),
+            'activities' => Pages\ListSurveyActivities::route('/{record}/activities'),
         ];
     }
 }
