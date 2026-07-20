@@ -188,6 +188,7 @@ class LaporanPerjalananDinasResource extends Resource
                     });
                 }
             })
+            ->defaultSort('created_at', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('nomor_surat_tugas')
                     ->label('Nomor Surat')
@@ -195,21 +196,54 @@ class LaporanPerjalananDinasResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('suratTugas.survey.name')
                     ->label('Survey')
+                    ->wrap()
+                    ->limit(50)
                     ->searchable(),
-                Tables\Columns\TextColumn::make('tujuan')
-                    ->limit(40)
+                Tables\Columns\TextColumn::make('suratTugas.user.name')
+                    ->label('Nama Petugas')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('tanggal_kunjungan')
-                    ->label('Tanggal')
-                    ->date('d M Y')
-                    ->sortable(),
+                Tables\Columns\TextColumn::make('tanggal')
+                    ->label('Tanggal Kunjungan')
+                    ->getStateUsing(function (LaporanPerjalananDinas $record) {
+                        $start = $record->suratTugas?->waktu_mulai;
+                        $end = $record->suratTugas?->waktu_selesai;
+
+                        if (!$start || !$end) {
+                            return $record->tanggal_kunjungan?->format('d M Y');
+                        }
+
+                        $startDate = $start->format('d M Y');
+                        $endDate = $end->format('d M Y');
+
+                        if ($startDate === $endDate) {
+                            return $startDate;
+                        }
+
+                        return $startDate . ' - ' . $endDate;
+                    })
+                    ->sortable(query: function (\Illuminate\Database\Eloquent\Builder $query, string $direction): \Illuminate\Database\Eloquent\Builder {
+                        return $query
+                            ->join('surat_tugas', 'laporan_perjalanan_dinas.surat_tugas_id', '=', 'surat_tugas.id')
+                            ->orderBy('surat_tugas.waktu_mulai', $direction)
+                            ->select('laporan_perjalanan_dinas.*');
+                    }),
                 Tables\Columns\TextColumn::make('fotos_count')
                     ->counts('fotos')
                     ->label('Foto')
                     ->badge(),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('survey')
+                    ->relationship('suratTugas.survey', 'name')
+                    ->label('Kegiatan')
+                    ->searchable()
+                    ->preload(),
+                Tables\Filters\SelectFilter::make('user')
+                    ->relationship('suratTugas.user', 'name')
+                    ->label('Nama Petugas')
+                    ->searchable()
+                    ->preload()
+                    ->visible(fn () => Auth::user()->roles[0]->name === 'super_admin'),
             ])
             ->actions([
                 Tables\Actions\Action::make('downloadWord')
