@@ -122,6 +122,7 @@ return [
 
     'middleware' => [
         'web',
+        \Filament\Http\Middleware\Authenticate::class,
         Authorize::class,
     ],
 
