@@ -15,14 +15,4 @@ class PulseAnalytics extends Page
     protected static ?string $title = 'Pulse Analytics';
 
     protected static string $view = 'filament.pages.pulse-analytics';
-
-    public static function getUrl(array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?\Illuminate\Database\Eloquent\Model $tenant = null): string
-    {
-        return url('/pulse');
-    }
-
-    public function mount()
-    {
-        return $this->redirect(url('/pulse'), navigate: false);
-    }
 }
