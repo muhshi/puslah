@@ -188,6 +188,14 @@ composer dev
 - Fitur import user pegawai via Excel.
 - Rebranding: ubah nama aplikasi dan landing page.
 
+### 2026-07-21
+- Integrasi Laravel Pulse Analytics sebagai halaman Filament (embed, bukan redirect) untuk menghindari error 401 di server production.
+- Integrasi Pulse Analytics dengan Filament Shield (`HasPageShield`) — akses bisa diatur per-role dari pengaturan Shield.
+- Integrasi `spatie/laravel-activitylog` pada model User, SuratTugas, Survey, LaporanPerjalananDinas.
+- Halaman History (Activity Log) pada resource User, SuratTugas, Survey, LaporanPerjalananDinas.
+- Widget DashboardStatsWidget untuk statistik sederhana.
+- Fix SSO: password cannot be null saat user baru login via SSO.
+
 ### 2026-01-12
 - Import user (Mitra) dengan Excel + validasi.
 - Fix bug approve/unapprove sertifikat dan download.

@@ -4,6 +4,9 @@ trigger: always_on
 
 jangan sampai migrate fresh, apapun yang berhubungan dengan menghapus database harus ada warning keras ke aku.
 
+### Browser Testing
+Jangan pernah menggunakan browser subagent untuk testing. Biarkan user yang mengecek sendiri di browser.
+
 ### Workflow Selesai Fitur/Perbaikan
 Setiap kali perbaikan atau penambahan fitur selesai dan sudah OK (terverifikasi):
 1.  **Commit & Push**: Lakukan `git add .`, `git commit -m "pesan commit yang jelas"`, dan `git push`.
