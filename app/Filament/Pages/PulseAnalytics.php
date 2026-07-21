@@ -23,6 +23,6 @@ class PulseAnalytics extends Page
 
     public function mount()
     {
-        return $this->redirect(url('/pulse'));
+        return $this->redirect(url('/pulse'), navigate: false);
     }
 }

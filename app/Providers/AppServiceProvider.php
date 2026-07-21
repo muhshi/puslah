@@ -22,7 +22,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        \Illuminate\Support\Facades\Gate::define('viewPulse', function (User $user) {
+        \Illuminate\Support\Facades\Gate::define('viewPulse', function (?User $user = null) {
+            if (! $user) {
+                return false;
+            }
             return $user->hasAnyRole(['super_admin', 'Super Admin', 'Kepala', 'Kasubag', 'admin', 'Admin', 'Operator'])
                 || $user->can('page_PulseAnalytics')
                 || $user->roles()->exists();
