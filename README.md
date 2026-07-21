@@ -189,7 +189,7 @@ composer dev
 - Rebranding: ubah nama aplikasi dan landing page.
 
 ### 2026-07-21
-- **Solusi Final Error 401 Pulse Analytics di Server Production** — Menyesuaikan middleware `config/pulse.php` menggunakan `'auth:web'` agar secara spesifik memeriksa sesi authentikasi `web` guard milik Filament, serta memperbarui Gate `viewPulse` di `AppServiceProvider` dengan parameter nullable `?User $user`. Navigasi `PulseAnalytics` kini menggunakan top-level HTTP redirect (`navigate: false`) menuju `/pulse` agar browser mengirimkan cookie sesi secara utuh di server HTTPS.
+- **Solusi Final Error 401 Pulse Analytics di Server Production** — Mengatasi masalah gate authorization bawaan Pulse yang menimpa gate kustom dengan memindahkan deklarasi Gate `viewPulse` ke dalam fungsi `app()->booted()` di `AppServiceProvider`. Menggunakan top-level HTTP redirect (`navigate: false`) pada halaman `PulseAnalytics` agar cookie sesi aman terkirim, serta menggunakan middleware `auth:web` pada konfigurasi `pulse.php`.
 - Integrasi Pulse Analytics dengan Filament Shield (`HasPageShield`) — akses bisa diatur per-role dari pengaturan Shield.
 - Integrasi `spatie/laravel-activitylog` pada model User, SuratTugas, Survey, LaporanPerjalananDinas.
 - Halaman History (Activity Log) pada resource User, SuratTugas, Survey, LaporanPerjalananDinas.

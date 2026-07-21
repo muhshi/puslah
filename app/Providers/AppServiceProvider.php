@@ -22,13 +22,20 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        \Illuminate\Support\Facades\Gate::define('viewPulse', function (?User $user = null) {
-            if (! $user) {
-                return false;
-            }
-            return $user->hasAnyRole(['super_admin', 'Super Admin', 'Kepala', 'Kasubag', 'admin', 'Admin', 'Operator'])
-                || $user->can('page_PulseAnalytics')
-                || $user->roles()->exists();
+        // viewPulse gate MUST be defined inside app()->booted() callback.
+        // Pulse's PulseServiceProvider uses callAfterResolving(Gate::class, ...)
+        // which registers a default gate: fn($user) => $app->environment('local')
+        // That deferred callback runs AFTER boot(), overwriting any gate defined here.
+        // By using booted(), our definition runs LAST and takes priority.
+        $this->app->booted(function () {
+            \Illuminate\Support\Facades\Gate::define('viewPulse', function (?User $user = null) {
+                if (! $user) {
+                    return false;
+                }
+                return $user->hasAnyRole(['super_admin', 'Super Admin', 'Kepala', 'Kasubag', 'admin', 'Admin', 'Operator'])
+                    || $user->can('page_PulseAnalytics')
+                    || $user->roles()->exists();
+            });
         });
 
         if (app()->environment('production')) {
