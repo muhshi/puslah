@@ -1,15 +1,14 @@
 <x-filament-panels::page>
-    <style>
-        /* Reset Pulse styles agar cocok dengan Filament */
-        .pulse-embed {
-            --pulse-bg: transparent;
-        }
-        .pulse-embed .pulse-card {
-            border-radius: 0.75rem;
-        }
-    </style>
-
     <div class="pulse-embed">
+        <style>
+            .pulse-embed {
+                --pulse-bg: transparent;
+            }
+            .pulse-embed .pulse-card {
+                border-radius: 0.75rem;
+            }
+        </style>
+
         <x-pulse>
             <livewire:pulse.servers cols="full" />
 
