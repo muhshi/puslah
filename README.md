@@ -189,6 +189,7 @@ composer dev
 - Rebranding: ubah nama aplikasi dan landing page.
 
 ### 2026-07-21
+- **Memperbaiki Error 401 Pulse Analytics** — Menyesuaikan konfigurasi middleware Pulse dari `Authenticate::class` bawaan Filament ke `auth` bawaan Laravel agar _Livewire endpoint_ dari Pulse mengenali sesi user (terutama saat diakses via iframe di server production).
 - Integrasi Laravel Pulse Analytics sebagai halaman Filament (embed, bukan redirect) untuk menghindari error 401 di server production.
 - Integrasi Pulse Analytics dengan Filament Shield (`HasPageShield`) — akses bisa diatur per-role dari pengaturan Shield.
 - Integrasi `spatie/laravel-activitylog` pada model User, SuratTugas, Survey, LaporanPerjalananDinas.
