@@ -21,8 +21,8 @@ class PulseAnalytics extends Page
         return url('/pulse');
     }
 
-    public function mount(): void
+    public function mount()
     {
-        redirect()->to(url('/pulse'))->send();
+        return $this->redirect(url('/pulse'));
     }
 }

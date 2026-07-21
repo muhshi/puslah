@@ -189,7 +189,7 @@ composer dev
 - Rebranding: ubah nama aplikasi dan landing page.
 
 ### 2026-07-21
-- **Fix Error 401 & MultipleRootElementsDetectedException Pulse Analytics** — Mengarahkan navigasi `PulseAnalytics` di Filament secara langsung ke route native Laravel Pulse (`/pulse`) melalui `getUrl()` dan `mount()` redirect. Pendekatan ini menghilangkan error `MultipleRootElementsDetectedException` (akibat konflik komponen Livewire bersarang di Livewire 3) dan error `401 Unauthorized` (akibat pembatasan cookie iframe HTTPS di server production). Menambahkan role `Kepala`, `Kasubag`, `admin`, `Operator` pada Gate `viewPulse` agar pengguna terotorisasi dapat langsung mengakses Pulse dashboard secara lancar.
+- **Fix Livewire Redirect & Error 401 Pulse Analytics** — Menggunakan `$this->redirect(url('/pulse'))` pada `mount()` dan `getUrl()` di Filament `PulseAnalytics` tanpa pemanggilan `->send()` untuk mengatasi `BadMethodCallException` pada Livewire 3. Mengarahkan navigasi langsung ke route native `/pulse` untuk menghindari error `MultipleRootElementsDetectedException` dan pembatasan cookie iframe HTTPS (error 401) di server production.
 - Integrasi Pulse Analytics dengan Filament Shield (`HasPageShield`) — akses bisa diatur per-role dari pengaturan Shield.
 - Integrasi `spatie/laravel-activitylog` pada model User, SuratTugas, Survey, LaporanPerjalananDinas.
 - Halaman History (Activity Log) pada resource User, SuratTugas, Survey, LaporanPerjalananDinas.
