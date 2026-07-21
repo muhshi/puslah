@@ -64,14 +64,7 @@ class AdminPanelProvider extends PanelProvider
                 Dashboard::class,
                 ProfileMe::class,
             ])
-            ->navigationItems([
-                \Filament\Navigation\NavigationItem::make('Pulse Analytics')
-                    ->url('/pulse')
-                    ->icon('heroicon-o-presentation-chart-line')
-                    ->group('Pengaturan')
-                    ->sort(99)
-                    ->visible(fn (): bool => auth()->user()?->hasAnyRole(['super_admin', 'Kepala']) ?? false),
-            ])
+    // Removed hardcoded navigationItems for Pulse Analytics
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
