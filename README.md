@@ -189,7 +189,7 @@ composer dev
 - Rebranding: ubah nama aplikasi dan landing page.
 
 ### 2026-07-21
-- **Fix Error 401 Pulse Analytics di Server Production** — Mengubah tampilan `PulseAnalytics` di Filament dari semula menggunakan `iframe` (yang memicu error 401 di server production karena kebijakan SameSite Cookie browser pada iframe HTTPS) menjadi **Blade Component & Livewire Component bawaan Laravel Pulse** secara native di dalam Filament page (`/admin/pulse-analytics`). Dengan ini, komponen Pulse langsung memanfaatkan sesi auth dan Livewire handler Filament tanpa memerlukan iframe maupun endpoint eksternal.
+- **Fix Error 401 & MultipleRootElementsDetectedException Pulse Analytics** — Mengubah tampilan `PulseAnalytics` di Filament dari `iframe` ke **Blade & Livewire Component bawaan Laravel Pulse** secara native di Filament page (`/admin/pulse-analytics`), serta membungkus seluruh halaman dalam satu root HTML element `<div>` untuk mencegah exception `MultipleRootElementsDetectedException` pada Livewire 3.
 - Integrasi Pulse Analytics dengan Filament Shield (`HasPageShield`) — akses bisa diatur per-role dari pengaturan Shield.
 - Integrasi `spatie/laravel-activitylog` pada model User, SuratTugas, Survey, LaporanPerjalananDinas.
 - Halaman History (Activity Log) pada resource User, SuratTugas, Survey, LaporanPerjalananDinas.
