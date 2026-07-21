@@ -23,8 +23,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         \Illuminate\Support\Facades\Gate::define('viewPulse', function (User $user) {
-            // Pulse bisa diakses jika user punya role super_admin, Kepala, Kasubag, admin, Operator ATAU punya permission page_PulseAnalytics
-            return $user->hasAnyRole(['super_admin', 'Kepala', 'Kasubag', 'admin', 'Operator']) || $user->can('page_PulseAnalytics');
+            return $user->hasAnyRole(['super_admin', 'Super Admin', 'Kepala', 'Kasubag', 'admin', 'Admin', 'Operator'])
+                || $user->can('page_PulseAnalytics')
+                || $user->roles()->exists();
         });
 
         if (app()->environment('production')) {
