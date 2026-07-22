@@ -2,6 +2,8 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Widgets\DailyVisitsWidget;
+use App\Filament\Widgets\DailyVisitsChartWidget;
 use App\Filament\Widgets\StatsOverviewWidget;
 use App\Filament\Widgets\SuratTugasChartWidget;
 use App\Filament\Widgets\LatestSuratTugasWidget;
@@ -34,7 +36,8 @@ class Dashboard extends BaseDashboard
     {
         return [
             StatsOverviewWidget::class,
-            \App\Filament\Widgets\DailyVisitsWidget::class,
+            DailyVisitsWidget::class,
+            DailyVisitsChartWidget::class,
             CalendarWidget::class,
             SuratTugasChartWidget::class,
             SurveyChartWidget::class,

@@ -38,9 +38,9 @@ class StatsOverviewWidget extends BaseWidget
                 ->color('success')
                 ->url(route('filament.admin.resources.surveys.index')),
 
-            Stat::make('Sertifikat Terbit', \App\Models\Certificate::count())
-                ->description('Total sertifikat dikeluarkan')
-                ->descriptionIcon('heroicon-m-academic-cap')
+            Stat::make('Surat Tugas Tahun Ini', SuratTugas::whereYear('created_at', now()->year)->count())
+                ->description('Total surat tugas sepanjang tahun')
+                ->descriptionIcon('heroicon-m-document-text')
                 ->color('info'),
         ];
     }
