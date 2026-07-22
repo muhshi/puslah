@@ -53,6 +53,9 @@ composer dev
 
 ## Changelog
 
+### 2026-07-22
+- **Dashboard Kunjungan Harian** — Menambahkan widget `DailyVisitsWidget` di Dashboard utama Filament untuk menampilkan jumlah kunjungan user unik hari ini, total interaksi/request, dan log aktivitas sistem menggunakan data dari Laravel Pulse. Dilengkapi dengan grafik trend 7 hari terakhir.
+
 ### 2026-07-20
 - **Fitur Analytics & Log** — Menambahkan widget kunjungan (DashboardStatsWidget) di Dashboard utama, serta mengintegrasikan Laravel Pulse (khusus Super Admin/Kepala) di endpoint `/pulse` untuk pemantauan traffic & performa. Menambahkan fitur Activity Log menggunakan `spatie/laravel-activitylog` pada resource utama (Surat Tugas, Survey, User, Laporan Perjalanan Dinas) lengkap dengan tombol "History" untuk melacak riwayat perubahan.
 - **Fix Error SSO Login** — Mengatasi bug `password cannot be null` saat login SSO pertama kali dengan men-generate random string password untuk user baru.
