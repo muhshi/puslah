@@ -22,19 +22,20 @@ class DailyVisitsChartWidget extends ChartWidget
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i);
             $dayStart = $date->startOfDay()->timestamp;
+            $dayEnd = $date->endOfDay()->timestamp;
             
             $labels[] = $date->translatedFormat('d M');
             
             $visitsData[] = DB::table('pulse_aggregates')
                 ->where('period', 1440)
                 ->where('type', 'user_request')
-                ->where('bucket', $dayStart)
+                ->whereBetween('bucket', [$dayStart, $dayEnd])
                 ->count('key_hash');
                 
             $requestsData[] = (int) DB::table('pulse_aggregates')
                 ->where('period', 1440)
                 ->where('type', 'user_request')
-                ->where('bucket', $dayStart)
+                ->whereBetween('bucket', [$dayStart, $dayEnd])
                 ->sum('value');
         }
 

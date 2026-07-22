@@ -13,21 +13,22 @@ class DailyVisitsWidget extends BaseWidget
 
     protected function getStats(): array
     {
-        // Gunakan pulse_aggregates dengan period 1440 (1 hari = 1440 menit) untuk data harian
+        // 1 hari = 1440 menit
         $startOfDay = now()->startOfDay()->timestamp;
+        $endOfDay = now()->endOfDay()->timestamp;
 
         // Hitung kunjungan (user_request) unik hari ini dari Laravel Pulse aggregates
         $uniqueUsersToday = DB::table('pulse_aggregates')
             ->where('period', 1440)
             ->where('type', 'user_request')
-            ->where('bucket', $startOfDay)
+            ->whereBetween('bucket', [$startOfDay, $endOfDay])
             ->count('key_hash');
             
         // Hitung total request hari ini dari Pulse aggregates
         $totalRequestsToday = DB::table('pulse_aggregates')
             ->where('period', 1440)
             ->where('type', 'user_request')
-            ->where('bucket', $startOfDay)
+            ->whereBetween('bucket', [$startOfDay, $endOfDay])
             ->sum('value');
             
         // Hitung jumlah aktivitas hari ini dari activity_log
@@ -39,18 +40,19 @@ class DailyVisitsWidget extends BaseWidget
         $visitsTrend = [];
         $requestsTrend = [];
         for ($i = 6; $i >= 0; $i--) {
-            $dayBucket = now()->subDays($i)->startOfDay()->timestamp;
+            $dayStart = now()->subDays($i)->startOfDay()->timestamp;
+            $dayEnd = now()->subDays($i)->endOfDay()->timestamp;
             
             $visitsTrend[] = DB::table('pulse_aggregates')
                 ->where('period', 1440)
                 ->where('type', 'user_request')
-                ->where('bucket', $dayBucket)
+                ->whereBetween('bucket', [$dayStart, $dayEnd])
                 ->count('key_hash');
                 
             $requestsTrend[] = (int) DB::table('pulse_aggregates')
                 ->where('period', 1440)
                 ->where('type', 'user_request')
-                ->where('bucket', $dayBucket)
+                ->whereBetween('bucket', [$dayStart, $dayEnd])
                 ->sum('value');
         }
 
