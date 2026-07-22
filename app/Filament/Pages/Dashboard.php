@@ -34,6 +34,7 @@ class Dashboard extends BaseDashboard
     {
         return [
             StatsOverviewWidget::class,
+            \App\Filament\Widgets\DailyVisitsWidget::class,
             CalendarWidget::class,
             SuratTugasChartWidget::class,
             SurveyChartWidget::class,
