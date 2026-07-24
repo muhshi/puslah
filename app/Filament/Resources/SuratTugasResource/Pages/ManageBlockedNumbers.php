@@ -42,6 +42,13 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
         $this->nomor_sampai = $nextNumber;
     }
 
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            SuratTugasResource\Widgets\SkippedNumbersInfoWidget::class,
+        ];
+    }
+
     protected function getForms(): array
     {
         return [

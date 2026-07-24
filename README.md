@@ -53,6 +53,9 @@ composer dev
 
 ## Changelog
 
+### 2026-07-24
+- **Perbaikan Fitur Nomor Di-block (Khusus / Reserved)** — Menambahkan tombol aksi **Buat ST** dan **Release** secara langsung di setiap kartu (card) hasil block nomor pada widget `SkippedNumbersInfoWidget`. Pengguna kini bisa langsung membuat Surat Tugas menggunakan nomor terblokir pilihan dari card tersebut (otomatis di-release setelah Surat Tugas dibuat) atau merelease nomor yang di-block tanpa perlu bingung cara menggunakannya. Menambahkan pula widget monitor nomor ini pada halaman Kelola Nomor Terblokir (`ManageBlockedNumbers`).
+
 ### 2026-07-22
 - **Dashboard Kunjungan Harian** — Menambahkan widget `DailyVisitsWidget` di Dashboard utama Filament untuk menampilkan jumlah kunjungan user unik hari ini, total interaksi/request, dan log aktivitas sistem menggunakan data dari Laravel Pulse. Dilengkapi dengan grafik trend 7 hari terakhir.
 

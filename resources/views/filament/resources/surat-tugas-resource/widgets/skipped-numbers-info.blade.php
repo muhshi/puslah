@@ -62,7 +62,7 @@
 
             {{-- Bagian Nomor Di-block --}}
             @php
-                $blockedGroups = $this->getBlockedNumbersGrouped();
+                $blockedGroups = $this->getBlockedGroupsDetails();
             @endphp
             @if (!empty($blockedGroups))
                 <div>
@@ -72,13 +72,42 @@
                             <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3">TAHUN {{ $selectedYear }}</h4>
                             
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                @foreach ($blockedGroups as $keterangan => $ranges)
-                                    <div class="rounded-md bg-white p-3 shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700">
-                                        <h5 class="text-xs font-semibold text-gray-800 dark:text-gray-200 mb-1 line-clamp-2" title="{{ $keterangan }}">
-                                            {{ $keterangan }}
-                                        </h5>
-                                        <div class="text-sm font-bold text-primary-600 dark:text-primary-400 break-words">
-                                            {{ $ranges }}
+                                @foreach ($blockedGroups as $group)
+                                    <div class="flex flex-col justify-between rounded-md bg-white p-3 shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700 gap-3">
+                                        <div>
+                                            <div class="flex items-center justify-between gap-1 mb-1">
+                                                <h5 class="text-xs font-semibold text-gray-800 dark:text-gray-200 line-clamp-2" title="{{ $group['keterangan'] }}">
+                                                    {{ $group['keterangan'] }}
+                                                </h5>
+                                                <span class="inline-flex items-center rounded-full bg-danger-50 px-2 py-0.5 text-[10px] font-medium text-danger-700 dark:bg-danger-950/50 dark:text-danger-400 border border-danger-200 dark:border-danger-900 flex-shrink-0">
+                                                    {{ $group['count'] }} nomor
+                                                </span>
+                                            </div>
+                                            <div class="text-sm font-bold text-primary-600 dark:text-primary-400 break-words">
+                                                {{ $group['ranges'] }}
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700/60">
+                                            <x-filament::button
+                                                wire:click="mountAction('buatSuratTugas', { keterangan: '{{ addslashes($group['keterangan']) }}' })"
+                                                color="success"
+                                                size="xs"
+                                                icon="heroicon-m-document-plus"
+                                                class="flex-1"
+                                            >
+                                                Buat ST
+                                            </x-filament::button>
+
+                                            <x-filament::button
+                                                wire:click="mountAction('releaseBlockedGroup', { keterangan: '{{ addslashes($group['keterangan']) }}' })"
+                                                color="warning"
+                                                size="xs"
+                                                icon="heroicon-m-lock-open"
+                                                outlined
+                                            >
+                                                Release
+                                            </x-filament::button>
                                         </div>
                                     </div>
                                 @endforeach
@@ -89,11 +118,11 @@
                             <x-filament::button
                                 href="{{ App\Filament\Resources\SuratTugasResource::getUrl('manage-blocked-numbers') }}"
                                 tag="a"
-                                color="success"
+                                color="gray"
                                 size="sm"
-                                icon="heroicon-m-document-plus"
+                                icon="heroicon-m-cog-6-tooth"
                             >
-                                Kelola & Buat ST
+                                Kelola Semua
                             </x-filament::button>
                         </div>
                     </div>
@@ -101,4 +130,6 @@
             @endif
         </div>
     </x-filament::section>
+
+    <x-filament-actions::modals />
 </x-filament::widget>
