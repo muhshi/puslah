@@ -53,6 +53,9 @@ composer dev
 
 ## Changelog
 
+### 2026-07-28
+- **Penggabungan Akun Duplikat & Relink SSO Sipetra** — Menggabungkan akun duplikat atas nama Saiful Mujab S.Pd dengan mengalihkan data login SSO Sipetra dari akun duplikat (`340065595@bps.go.id`) ke akun utama (`saifulmujab-pppk@bps.go.id`) yang memiliki 9 Surat Tugas, 3 Sertifikat, dan 6 Survey User, lalu menghapus akun duplikat secara aman dari database.
+
 ### 2026-07-24
 - **Perbaikan Fitur Nomor Di-block (Khusus / Reserved)** — Menambahkan tombol aksi **Buat ST** dan **Release** secara langsung di setiap kartu (card) hasil block nomor pada widget `SkippedNumbersInfoWidget`. Pengguna kini bisa langsung membuat Surat Tugas menggunakan nomor terblokir pilihan dari card tersebut (otomatis di-release setelah Surat Tugas dibuat) atau merelease nomor yang di-block tanpa perlu bingung cara menggunakannya. Menambahkan pula widget monitor nomor ini pada halaman Kelola Nomor Terblokir (`ManageBlockedNumbers`).
 
