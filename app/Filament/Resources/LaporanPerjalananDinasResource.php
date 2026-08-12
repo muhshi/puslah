@@ -24,6 +24,8 @@ class LaporanPerjalananDinasResource extends Resource
 
     public static function form(Form $form): Form
     {
+        $isSuperAdmin = Auth::user()?->roles[0]?->name === 'super_admin';
+
         return $form
             ->schema([
                 Forms\Components\Section::make('Pilih Pegawai, Survey & Surat Tugas')->schema([
@@ -186,7 +188,7 @@ class LaporanPerjalananDinasResource extends Resource
                             });
                         })
                         ->required(),
-                ])->columns(fn () => Auth::user()->roles[0]->name === 'super_admin' ? 3 : 2),
+                ])->columns($isSuperAdmin ? 3 : 2),
 
                 Forms\Components\Section::make('Data Laporan')->schema([
                     Forms\Components\TextInput::make('nomor_surat_tugas')
