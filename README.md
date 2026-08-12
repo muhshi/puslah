@@ -54,7 +54,7 @@ composer dev
 ## Changelog
 
 ### 2026-08-12
-- **Pembaruan Fitur Pembuatan Laporan Dinas (LPD)** — Menyesuaikan filter pilihan Surat Tugas pada form pembuatan LPD sehingga hanya menampilkan Surat Tugas yang **belum dibuatkan LPD** (berlaku untuk semua role termasuk Super Admin). Menambahkan tampilan tanggal/periode tugas (contoh: `(12 - 14 Agu 2026)`) pada label pilihan Surat Tugas di dropdown untuk memudahkan identifikasi. Menambahkan dukungan auto-fill via parameter URL serta tombol aksi **Buat LPD** dan **Lihat LPD** secara langsung di tabel daftar Surat Tugas.
+- **Pembaruan Fitur Pembuatan Laporan Dinas (LPD)** — Menyesuaikan filter pilihan Surat Tugas pada form pembuatan LPD sehingga hanya menampilkan Surat Tugas yang **belum dibuatkan LPD** serta mengecualikan petugas kolektif/mitra ("Terlampir") sehingga Surat Tugas milik pegawai organik muncul dengan jelas (termasuk untuk Super Admin). Menambahkan tampilan tanggal/periode tugas (contoh: `(12 - 14 Agu 2026)`) pada label pilihan Surat Tugas di dropdown untuk memudahkan identifikasi. Menambahkan dukungan auto-fill via parameter URL serta tombol aksi **Buat LPD** dan **Lihat LPD** secara langsung di tabel daftar Surat Tugas.
 
 ### 2026-07-28
 - **Penggabungan Akun Duplikat & Relink SSO Sipetra** — Menggabungkan akun duplikat atas nama Saiful Mujab S.Pd dengan mengalihkan data login SSO Sipetra dari akun duplikat (`340065595@bps.go.id`) ke akun utama (`saifulmujab-pppk@bps.go.id`) yang memiliki 9 Surat Tugas, 3 Sertifikat, dan 6 Survey User, lalu menghapus akun duplikat secara aman dari database.

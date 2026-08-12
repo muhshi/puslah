@@ -46,6 +46,11 @@ class LaporanPerjalananDinasResource extends Resource
                             $query = \App\Models\Survey::whereHas('suratTugas', function ($q) use ($isSuperAdmin, $record) {
                                 if (!$isSuperAdmin) {
                                     $q->where('user_id', Auth::id());
+                                } else {
+                                    // Exclude dummy "Terlampir" users (mitra kolektif)
+                                    $q->whereHas('user', function ($u) {
+                                        $u->where('name', 'not like', '%Terlampir%');
+                                    });
                                 }
                                 $q->where(function ($sub) use ($record) {
                                     $sub->whereDoesntHave('laporanPerjalananDinas');
@@ -116,6 +121,11 @@ class LaporanPerjalananDinasResource extends Resource
                             if (!$isSuperAdmin) {
                                 // Regular users: only their own surat tugas
                                 $query->where('user_id', Auth::id());
+                            } else {
+                                // Super Admin: exclude dummy "Terlampir" users (mitra kolektif)
+                                $query->whereHas('user', function ($u) {
+                                    $u->where('name', 'not like', '%Terlampir%');
+                                });
                             }
 
                             // Filter: ONLY Surat Tugas that DO NOT have an LPD created yet (unless editing current record)
