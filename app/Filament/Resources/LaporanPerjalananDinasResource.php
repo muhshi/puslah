@@ -186,7 +186,7 @@ class LaporanPerjalananDinasResource extends Resource
                             });
                         })
                         ->required(),
-                ])->columns(3),
+                ])->columns(fn () => Auth::user()->roles[0]->name === 'super_admin' ? 3 : 2),
 
                 Forms\Components\Section::make('Data Laporan')->schema([
                     Forms\Components\TextInput::make('nomor_surat_tugas')
