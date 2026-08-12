@@ -26,7 +26,41 @@ class LaporanPerjalananDinasResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('Pilih Survey & Surat Tugas')->schema([
+                Forms\Components\Section::make('Pilih Pegawai, Survey & Surat Tugas')->schema([
+                    Forms\Components\Select::make('user_id_temp')
+                        ->label('Pegawai / Petugas')
+                        ->searchable()
+                        ->preload()
+                        ->live()
+                        ->visible(fn () => Auth::user()->roles[0]->name === 'super_admin')
+                        ->default(function () {
+                            $stId = request()->query('surat_tugas_id');
+                            if ($stId) {
+                                return SuratTugas::find($stId)?->user_id;
+                            }
+                            return Auth::id();
+                        })
+                        ->formatStateUsing(fn (?LaporanPerjalananDinas $record) => $record?->suratTugas?->user_id ?? Auth::id())
+                        ->options(function (?LaporanPerjalananDinas $record) {
+                            return \App\Models\User::where('name', 'not like', '%Terlampir%')
+                                ->whereHas('suratTugas', function ($q) use ($record) {
+                                    $q->where(function ($sub) use ($record) {
+                                        $sub->whereDoesntHave('laporanPerjalananDinas');
+                                        if ($record?->surat_tugas_id) {
+                                            $sub->orWhere('id', $record->surat_tugas_id);
+                                        }
+                                    });
+                                })
+                                ->pluck('name', 'id');
+                        })
+                        ->afterStateUpdated(function (Forms\Set $set) {
+                            $set('survey_id_temp', null);
+                            $set('surat_tugas_id', null);
+                            $set('nomor_surat_tugas', '');
+                            $set('tujuan', '');
+                        })
+                        ->helperText('Super Admin: Default terisi akun Anda. Pilih pegawai lain jika ingin membuat LPD pegawai tersebut.'),
+
                     Forms\Components\Select::make('survey_id_temp')
                         ->label('Survey')
                         ->searchable()
@@ -40,17 +74,15 @@ class LaporanPerjalananDinasResource extends Resource
                             return null;
                         })
                         ->formatStateUsing(fn (?LaporanPerjalananDinas $record) => $record?->suratTugas?->survey_id)
-                        ->options(function (?LaporanPerjalananDinas $record) {
+                        ->options(function (Forms\Get $get, ?LaporanPerjalananDinas $record) {
                             $isSuperAdmin = Auth::user()->roles[0]->name === 'super_admin';
+                            $userId = $isSuperAdmin ? ($get('user_id_temp') ?? Auth::id()) : Auth::id();
 
-                            $query = \App\Models\Survey::whereHas('suratTugas', function ($q) use ($isSuperAdmin, $record) {
-                                if (!$isSuperAdmin) {
-                                    $q->where('user_id', Auth::id());
+                            $query = \App\Models\Survey::whereHas('suratTugas', function ($q) use ($userId, $record) {
+                                if ($userId) {
+                                    $q->where('user_id', $userId);
                                 } else {
-                                    // Exclude dummy "Terlampir" users (mitra kolektif)
-                                    $q->whereHas('user', function ($u) {
-                                        $u->where('name', 'not like', '%Terlampir%');
-                                    });
+                                    $q->whereHas('user', fn($u) => $u->where('name', 'not like', '%Terlampir%'));
                                 }
                                 $q->where(function ($sub) use ($record) {
                                     $sub->whereDoesntHave('laporanPerjalananDinas');
@@ -62,36 +94,32 @@ class LaporanPerjalananDinasResource extends Resource
 
                             return $query->pluck('name', 'id');
                         })
-                        ->afterStateUpdated(function (Forms\Set $set, $state) {
+                        ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
                             if ($state) {
                                 $isSuperAdmin = Auth::user()->roles[0]->name === 'super_admin';
+                                $userId = $isSuperAdmin ? ($get('user_id_temp') ?? Auth::id()) : Auth::id();
 
-                                if ($isSuperAdmin) {
-                                    // Super admin: don't auto-select, just reset
-                                    $set('surat_tugas_id', null);
-                                    $set('nomor_surat_tugas', '');
-                                    $set('tujuan', '');
-                                } else {
-                                    // Regular user: auto-select their own surat tugas (without LPD yet)
-                                    $st = SuratTugas::where('survey_id', $state)
-                                        ->where('user_id', Auth::id())
-                                        ->whereDoesntHave('laporanPerjalananDinas')
-                                        ->first();
+                                $stQuery = SuratTugas::where('survey_id', $state)
+                                    ->whereDoesntHave('laporanPerjalananDinas');
+                                if ($userId) {
+                                    $stQuery->where('user_id', $userId);
+                                }
 
-                                    if ($st) {
-                                        $set('surat_tugas_id', $st->id);
-                                        $set('nomor_surat_tugas', $st->nomor_surat);
-                                        $set('tujuan', $st->keperluan);
-                                        if ($st->waktu_mulai) {
-                                            $set('tanggal_kunjungan', $st->waktu_mulai->format('Y-m-d'));
-                                        } elseif ($st->tanggal) {
-                                            $set('tanggal_kunjungan', $st->tanggal->format('Y-m-d'));
-                                        }
+                                $st = $stQuery->first();
+
+                                if ($st) {
+                                    $set('surat_tugas_id', $st->id);
+                                    $set('nomor_surat_tugas', $st->nomor_surat);
+                                    $set('tujuan', $st->keperluan);
+                                    if ($st->waktu_mulai) {
+                                        $set('tanggal_kunjungan', $st->waktu_mulai->format('Y-m-d'));
+                                    } elseif ($st->tanggal) {
+                                        $set('tanggal_kunjungan', $st->tanggal->format('Y-m-d'));
                                     }
                                 }
                             }
                         })
-                        ->helperText('Pilih survey untuk auto-fill data'),
+                        ->helperText('Pilih survey untuk menyaring Surat Tugas'),
 
                     Forms\Components\Select::make('surat_tugas_id')
                         ->label('Surat Tugas')
@@ -114,18 +142,15 @@ class LaporanPerjalananDinasResource extends Resource
                         })
                         ->options(function (Forms\Get $get, ?LaporanPerjalananDinas $record) {
                             $isSuperAdmin = Auth::user()->roles[0]->name === 'super_admin';
+                            $userId = $isSuperAdmin ? ($get('user_id_temp') ?? Auth::id()) : Auth::id();
                             $surveyId = $get('survey_id_temp');
 
                             $query = SuratTugas::with('user', 'survey');
 
-                            if (!$isSuperAdmin) {
-                                // Regular users: only their own surat tugas
-                                $query->where('user_id', Auth::id());
+                            if ($userId) {
+                                $query->where('user_id', $userId);
                             } else {
-                                // Super Admin: exclude dummy "Terlampir" users (mitra kolektif)
-                                $query->whereHas('user', function ($u) {
-                                    $u->where('name', 'not like', '%Terlampir%');
-                                });
+                                $query->whereHas('user', fn($u) => $u->where('name', 'not like', '%Terlampir%'));
                             }
 
                             // Filter: ONLY Surat Tugas that DO NOT have an LPD created yet (unless editing current record)
@@ -137,7 +162,6 @@ class LaporanPerjalananDinasResource extends Resource
                             });
 
                             if ($surveyId) {
-                                // Filter by selected survey if any
                                 $query->where('survey_id', $surveyId);
                             }
 
@@ -162,7 +186,7 @@ class LaporanPerjalananDinasResource extends Resource
                             });
                         })
                         ->required(),
-                ])->columns(2),
+                ])->columns(3),
 
                 Forms\Components\Section::make('Data Laporan')->schema([
                     Forms\Components\TextInput::make('nomor_surat_tugas')
