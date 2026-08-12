@@ -21,6 +21,7 @@ use Filament\Forms\Components\Group;
 use PhpOffice\PhpWord\TemplateProcessor;
 use App\Models\User;
 use App\Models\UserProfile;
+use App\Filament\Resources\LaporanPerjalananDinasResource;
 
 class SuratTugasResource extends Resource
 {
@@ -627,6 +628,18 @@ class SuratTugasResource extends Resource
                         $template->saveAs($tempPath);
                         return response()->download($tempPath)->deleteFileAfterSend();
                     }),
+                Tables\Actions\Action::make('generate_lpd')
+                    ->label('Buat LPD')
+                    ->icon('heroicon-o-document-plus')
+                    ->color('info')
+                    ->visible(fn(SuratTugas $record) => !$record->laporanPerjalananDinas()->exists())
+                    ->url(fn(SuratTugas $record) => LaporanPerjalananDinasResource::getUrl('create', ['surat_tugas_id' => $record->id])),
+                Tables\Actions\Action::make('view_lpd')
+                    ->label('Lihat LPD')
+                    ->icon('heroicon-o-document-check')
+                    ->color('success')
+                    ->visible(fn(SuratTugas $record) => $record->laporanPerjalananDinas()->exists())
+                    ->url(fn(SuratTugas $record) => LaporanPerjalananDinasResource::getUrl('edit', ['record' => $record->laporanPerjalananDinas->id])),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\Action::make('activities')
                     ->label('History')

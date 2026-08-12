@@ -53,6 +53,11 @@ class SuratTugas extends Model
         return $this->hasOne(Sppd::class);
     }
 
+    public function laporanPerjalananDinas(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(LaporanPerjalananDinas::class);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

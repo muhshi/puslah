@@ -32,17 +32,30 @@ class LaporanPerjalananDinasResource extends Resource
                         ->searchable()
                         ->preload()
                         ->live()
+                        ->default(function () {
+                            $stId = request()->query('surat_tugas_id');
+                            if ($stId) {
+                                return SuratTugas::find($stId)?->survey_id;
+                            }
+                            return null;
+                        })
                         ->formatStateUsing(fn (?LaporanPerjalananDinas $record) => $record?->suratTugas?->survey_id)
-                        ->options(function () {
+                        ->options(function (?LaporanPerjalananDinas $record) {
                             $isSuperAdmin = Auth::user()->roles[0]->name === 'super_admin';
 
-                            if ($isSuperAdmin) {
-                                return \App\Models\Survey::pluck('name', 'id');
-                            }
+                            $query = \App\Models\Survey::whereHas('suratTugas', function ($q) use ($isSuperAdmin, $record) {
+                                if (!$isSuperAdmin) {
+                                    $q->where('user_id', Auth::id());
+                                }
+                                $q->where(function ($sub) use ($record) {
+                                    $sub->whereDoesntHave('laporanPerjalananDinas');
+                                    if ($record?->surat_tugas_id) {
+                                        $sub->orWhere('id', $record->surat_tugas_id);
+                                    }
+                                });
+                            });
 
-                            return \App\Models\Survey::whereHas('suratTugas', function ($q) {
-                                $q->where('user_id', Auth::id());
-                            })->pluck('name', 'id');
+                            return $query->pluck('name', 'id');
                         })
                         ->afterStateUpdated(function (Forms\Set $set, $state) {
                             if ($state) {
@@ -54,15 +67,21 @@ class LaporanPerjalananDinasResource extends Resource
                                     $set('nomor_surat_tugas', '');
                                     $set('tujuan', '');
                                 } else {
-                                    // Regular user: auto-select their own surat tugas
+                                    // Regular user: auto-select their own surat tugas (without LPD yet)
                                     $st = SuratTugas::where('survey_id', $state)
                                         ->where('user_id', Auth::id())
+                                        ->whereDoesntHave('laporanPerjalananDinas')
                                         ->first();
 
                                     if ($st) {
                                         $set('surat_tugas_id', $st->id);
                                         $set('nomor_surat_tugas', $st->nomor_surat);
                                         $set('tujuan', $st->keperluan);
+                                        if ($st->waktu_mulai) {
+                                            $set('tanggal_kunjungan', $st->waktu_mulai->format('Y-m-d'));
+                                        } elseif ($st->tanggal) {
+                                            $set('tanggal_kunjungan', $st->tanggal->format('Y-m-d'));
+                                        }
                                     }
                                 }
                             }
@@ -73,16 +92,22 @@ class LaporanPerjalananDinasResource extends Resource
                         ->label('Surat Tugas')
                         ->searchable()
                         ->live()
+                        ->default(fn () => request()->query('surat_tugas_id'))
                         ->afterStateUpdated(function (Forms\Set $set, $state) {
                             if ($state) {
                                 $st = SuratTugas::find($state);
                                 if ($st) {
                                     $set('nomor_surat_tugas', $st->nomor_surat);
                                     $set('tujuan', $st->keperluan);
+                                    if ($st->waktu_mulai) {
+                                        $set('tanggal_kunjungan', $st->waktu_mulai->format('Y-m-d'));
+                                    } elseif ($st->tanggal) {
+                                        $set('tanggal_kunjungan', $st->tanggal->format('Y-m-d'));
+                                    }
                                 }
                             }
                         })
-                        ->options(function (Forms\Get $get) {
+                        ->options(function (Forms\Get $get, ?LaporanPerjalananDinas $record) {
                             $isSuperAdmin = Auth::user()->roles[0]->name === 'super_admin';
                             $surveyId = $get('survey_id_temp');
 
@@ -93,15 +118,37 @@ class LaporanPerjalananDinasResource extends Resource
                                 $query->where('user_id', Auth::id());
                             }
 
+                            // Filter: ONLY Surat Tugas that DO NOT have an LPD created yet (unless editing current record)
+                            $query->where(function ($q) use ($record) {
+                                $q->whereDoesntHave('laporanPerjalananDinas');
+                                if ($record?->surat_tugas_id) {
+                                    $q->orWhere('id', $record->surat_tugas_id);
+                                }
+                            });
+
                             if ($surveyId) {
                                 // Filter by selected survey if any
                                 $query->where('survey_id', $surveyId);
                             }
 
                             return $query->get()->mapWithKeys(function ($st) {
+                                // Format tanggal/periode keberangkatan
+                                $tglStr = '';
+                                if ($st->waktu_mulai && $st->waktu_selesai) {
+                                    $start = \Carbon\Carbon::parse($st->waktu_mulai);
+                                    $end = \Carbon\Carbon::parse($st->waktu_selesai);
+                                    if ($start->isSameDay($end)) {
+                                        $tglStr = ' (' . $start->translatedFormat('d M Y') . ')';
+                                    } else {
+                                        $tglStr = ' (' . $start->translatedFormat('d M') . ' - ' . $end->translatedFormat('d M Y') . ')';
+                                    }
+                                } elseif ($st->tanggal) {
+                                    $tglStr = ' (' . \Carbon\Carbon::parse($st->tanggal)->translatedFormat('d M Y') . ')';
+                                }
+
                                 $survey = $st->survey ? " [{$st->survey->name}]" : '';
                                 $user = $st->user ? " - {$st->user->name}" : '';
-                                return [$st->id => "{$st->nomor_surat}{$survey}{$user}"];
+                                return [$st->id => "{$st->nomor_surat}{$tglStr}{$survey}{$user}"];
                             });
                         })
                         ->required(),
@@ -112,15 +159,31 @@ class LaporanPerjalananDinasResource extends Resource
                         ->label('Nomor Surat Tugas')
                         ->disabled()
                         ->dehydrated()
+                        ->default(function () {
+                            $stId = request()->query('surat_tugas_id');
+                            return $stId ? SuratTugas::find($stId)?->nomor_surat : null;
+                        })
                         ->required(),
 
                     Forms\Components\TextInput::make('tujuan')
                         ->label('Tujuan/Keperluan')
+                        ->default(function () {
+                            $stId = request()->query('surat_tugas_id');
+                            return $stId ? SuratTugas::find($stId)?->keperluan : null;
+                        })
                         ->required()
                         ->maxLength(255),
 
                     Forms\Components\DatePicker::make('tanggal_kunjungan')
                         ->label('Tanggal Kunjungan')
+                        ->default(function () {
+                            $stId = request()->query('surat_tugas_id');
+                            if ($stId) {
+                                $st = SuratTugas::find($stId);
+                                return $st?->waktu_mulai?->format('Y-m-d') ?? $st?->tanggal?->format('Y-m-d');
+                            }
+                            return null;
+                        })
                         ->required(),
 
                     Forms\Components\RichEditor::make('uraian_kegiatan')
