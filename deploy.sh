@@ -69,11 +69,11 @@ if [ "$NEED_BUILD" = true ]; then
     echo "🔨 [2/6] Rebuild Docker image & restart stack..."
     docker compose build
     docker compose down
-    docker compose up -d
+    docker compose up -d --build
     echo "   ✅ Image berhasil di-build & container dinyalakan ulang."
 else
-    echo "⚡ [2/6] Lewati build Docker (tidak ada perubahan file Docker/Caddy)..."
-    docker compose up -d
+    echo "⚡ [2/6] Lewati build Docker (menggunakan image & container aktif)..."
+    docker compose up -d --no-build
     echo "   ✅ Container aktif."
 fi
 
