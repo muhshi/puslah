@@ -53,6 +53,9 @@ composer dev
 
 ## Changelog
 
+### 2026-08-18
+- **Perbaikan Format Export Word Laporan Perjalanan Dinas (LPD)** — Memperbaiki hasil generate Word (.docx) pada bagian Uraian Kegiatan yang sebelumnya kehilangan format (teks tebal/miring terhapus, sub-bullet/daftar bertingkat menjadi rata kiri semua, dan muncul spasi kosong berlebih). Ditambahkan service `HtmlToWordXmlConverter` untuk mengonversi HTML RichEditor secara utuh menjadi OpenXML Word dengan mempertahankan formatting teks (**bold**, *italic*, underline), nested bullet/numbering list beserta indentasi berjenjang yang presisi, serta jarak antar paragraf yang rapi.
+
 ### 2026-08-12
 - **Pembaruan Fitur Pembuatan Laporan Dinas (LPD)** — Menambahkan field filter **Pegawai / Petugas** pada form LPD khusus Super Admin yang secara **default otomatis terisi akun pengguna yang sedang login** (sehingga Surat Tugas milik pengguna sendiri langsung muncul tanpa tergeser/terpotong oleh data ribuan ST pegawai lain). Layout form disesuaikan secara dinamis: **3 kolom** (Pegawai, Survey, Surat Tugas) untuk Super Admin dan **2 kolom** (Survey, Surat Tugas) untuk pegawai non-super admin agar tampilan antarmuka tetap rapi dan seimbang. Menyesuaikan filter pilihan Surat Tugas sehingga hanya menampilkan Surat Tugas yang **belum dibuatkan LPD** serta mengecualikan petugas kolektif/mitra ("Terlampir"). Menambahkan tampilan tanggal/periode tugas (contoh: `(12 - 14 Agu 2026)`) pada label pilihan Surat Tugas di dropdown, serta dukungan auto-fill dan tombol aksi **Buat LPD** / **Lihat LPD** langsung di tabel Surat Tugas.
 

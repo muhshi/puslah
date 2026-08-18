@@ -440,26 +440,9 @@ class LaporanPerjalananDinasResource extends Resource
         $template->setValue('unit_kerja', $settings->default_office_name ?? 'BPS Kabupaten Demak');
         $template->setValue('tanggal_pernyataan', $record->tanggal_kunjungan->translatedFormat('d F Y'));
 
-        // Strip HTML tags from rich text editor
-        // Strip HTML tags and handle newlines more intelligently
-        $uraian = $record->uraian_kegiatan;
-        // Basic replacements for paragraphs and breaks
-        $uraian = str_replace(['<p>', '<br>', '<br/>'], ["", "\n", "\n"], $uraian);
-        $uraian = str_replace('</p>', "\n\n", $uraian); // double newline for paragraphs
-        // Basic replacements for lists
-        $uraian = str_replace('<li>', "• ", $uraian);
-        $uraian = str_replace('</li>', "\n", $uraian);
-        $uraian = str_replace(['<ul>', '</ul>', '<ol>', '</ol>'], ["\n", "\n", "\n", "\n"], $uraian);
-
-        $cleanUraian = strip_tags($uraian);
-        $cleanUraian = html_entity_decode($cleanUraian);
-        $cleanUraian = trim($cleanUraian);
-
-        // Convert literal newlines to Word XML physical paragraphs (hard returns)
-        // This prevents the stretching issue caused by soft breaks in Justified paragraphs
-        $uraianWord = str_replace("\n", '</w:t></w:r></w:p><w:p><w:r><w:t>', htmlspecialchars($cleanUraian));
-
-        $template->setValue('uraian_kegiatan', $uraianWord);
+        // Convert rich text HTML to OpenXML preserving bold, italic, underline, nested lists and paragraphs
+        $uraianXml = \App\Services\HtmlToWordXmlConverter::convert($record->uraian_kegiatan, 'Aptos Display', 24);
+        $template->setValue('uraian_kegiatan', $uraianXml);
 
         $template->setValue('nama_pejabat', $record->nama_pejabat ?? '-');
         $template->setValue('desa_pejabat', $record->desa_pejabat ?? '-');
