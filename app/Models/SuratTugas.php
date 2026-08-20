@@ -224,25 +224,26 @@ class SuratTugas extends Model
     }
 
     /**
-     * Check if a given date range overlaps with existing surat tugas for a user in a specific survey.
+     * Get overlapping Surat Tugas instance if exists.
      * Optionally exclude a specific surat_tugas_id (useful for updates).
      */
-    public static function hasOverlap(int $userId, ?int $surveyId, $waktuMulai, $waktuSelesai, ?int $excludeId = null): bool
+    public static function getOverlap(int $userId, ?int $surveyId, $waktuMulai, $waktuSelesai, ?int $excludeId = null): ?self
     {
         if (!$waktuMulai || !$waktuSelesai || !$surveyId) {
-            return false;
+            return null;
         }
 
         // Pengecualian khusus untuk petugas bernama "Terlampir"
         $user = User::find($userId);
         if ($user && stripos($user->name, 'Terlampir') !== false) {
-            return false;
+            return null;
         }
 
         $mulai = \Carbon\Carbon::parse($waktuMulai)->startOfDay();
         $selesai = \Carbon\Carbon::parse($waktuSelesai)->endOfDay();
 
-        return self::where('user_id', $userId)
+        return self::with('survey')
+            ->where('user_id', $userId)
             ->where('survey_id', $surveyId)
             ->when($excludeId, function ($query) use ($excludeId) {
                 $query->where('id', '!=', $excludeId);
@@ -252,6 +253,30 @@ class SuratTugas extends Model
                 $query->where('waktu_mulai', '<=', $selesai)
                       ->where('waktu_selesai', '>=', $mulai);
             })
-            ->exists();
+            ->first();
+    }
+
+    /**
+     * Check if a given date range overlaps with existing surat tugas for a user in a specific survey.
+     * Optionally exclude a specific surat_tugas_id (useful for updates).
+     */
+    public static function hasOverlap(int $userId, ?int $surveyId, $waktuMulai, $waktuSelesai, ?int $excludeId = null): bool
+    {
+        return self::getOverlap($userId, $surveyId, $waktuMulai, $waktuSelesai, $excludeId) !== null;
+    }
+
+    /**
+     * Helper to format a clear overlap error message showing clashing survey and date range.
+     */
+    public static function formatOverlapMessage(string $userName, self $overlap): string
+    {
+        $surveyName = $overlap->survey?->name ?? 'Survei';
+        $tglMulai = $overlap->waktu_mulai ? \Carbon\Carbon::parse($overlap->waktu_mulai)->translatedFormat('d F Y') : '-';
+        $tglSelesai = $overlap->waktu_selesai ? \Carbon\Carbon::parse($overlap->waktu_selesai)->translatedFormat('d F Y') : '-';
+        $rentang = ($tglMulai === $tglSelesai) ? $tglMulai : "{$tglMulai} s/d {$tglSelesai}";
+        $nomor = $overlap->nomor_surat ? " ({$overlap->nomor_surat})" : '';
+
+        return "Pegawai {$userName} sudah memiliki Surat Tugas{$nomor} untuk survei '{$surveyName}' di rentang tanggal {$rentang}.";
     }
 }
+

@@ -223,7 +223,6 @@ class SkippedNumbersInfoWidget extends Widget implements HasActions, HasForms
                             ->label('Abaikan Validasi Bentrok')
                             ->helperText('Hanya untuk Admin.')
                             ->default(false)
-                            ->dehydrated(false)
                             ->visible(fn() => auth()->user()?->hasAnyRole(['super_admin', 'Kepala', 'Kasubag'])),
                         Forms\Components\DatePicker::make('waktu_mulai')
                             ->label('Mulai')
@@ -252,8 +251,11 @@ class SkippedNumbersInfoWidget extends Widget implements HasActions, HasForms
                 try {
                     \Illuminate\Support\Facades\DB::transaction(function () use ($record, $data, $settings, $prefix, $office, $klasifikasi) {
                         $abaikanValidasi = $data['abaikan_validasi'] ?? false;
-                        if (!$abaikanValidasi && SuratTugas::hasOverlap($data['user_id'], $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null)) {
-                            throw new \Exception("Overlap: Pegawai ini sudah memiliki Surat Tugas di rentang tanggal tersebut untuk survey yang sama.");
+                        if (!$abaikanValidasi && ($overlap = SuratTugas::getOverlap($data['user_id'], $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null))) {
+                            $user = User::find($data['user_id']);
+                            $userName = $user ? $user->name : 'Pegawai ini';
+                            $overlapMsg = SuratTugas::formatOverlapMessage($userName, $overlap);
+                            throw new \Exception("Overlap: {$overlapMsg}");
                         }
 
                         $urut = str_pad($record->nomor_urut, 4, '0', STR_PAD_LEFT);

@@ -45,10 +45,13 @@ class EditSuratTugas extends EditRecord
     {
         $abaikanValidasi = $data['abaikan_validasi'] ?? false;
         
-        if (!$abaikanValidasi && \App\Models\SuratTugas::hasOverlap($data['user_id'], $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null, $this->record->id)) {
+        if (!$abaikanValidasi && ($overlap = \App\Models\SuratTugas::getOverlap($data['user_id'], $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null, $this->record->id))) {
+            $user = \App\Models\User::find($data['user_id']);
+            $userName = $user ? $user->name : 'Pegawai ini';
+            $overlapMsg = \App\Models\SuratTugas::formatOverlapMessage($userName, $overlap);
             throw \Illuminate\Validation\ValidationException::withMessages([
-                'waktu_mulai' => 'Tanggal tugas overlap (tumpang tindih) dengan surat tugas pegawai ini di survey yang sama.',
-                'waktu_selesai' => 'Tanggal tugas overlap (tumpang tindih) dengan surat tugas pegawai ini di survey yang sama.',
+                'waktu_mulai' => $overlapMsg,
+                'waktu_selesai' => $overlapMsg,
             ]);
         }
 

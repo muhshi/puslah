@@ -234,8 +234,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                 ->label('Abaikan Validasi Bentrok Tanggal')
                                 ->helperText('Hanya untuk Admin.')
                                 ->default(false)
-                                ->dehydrated(false)
-                                ->visible(fn() => auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag'])),
+                                ->visible(fn() => auth()->user()?->hasAnyRole(['super_admin', 'Kepala', 'Kasubag'])),
                             Forms\Components\DatePicker::make('waktu_mulai')
                                 ->label('Mulai')
                                 ->default(now()),
@@ -379,10 +378,11 @@ class CreateBulkSuratTugas extends Page implements HasForms
             DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $year, &$currentUrut, $usedNumbers, $sumberJabatan, $jabatanManual) {
                 $abaikanValidasi = $data['abaikan_validasi'] ?? false;
                 foreach ($userIds as $userId) {
-                    if (!$abaikanValidasi && SuratTugas::hasOverlap($userId, $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null)) {
+                    if (!$abaikanValidasi && ($overlap = SuratTugas::getOverlap($userId, $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null))) {
                         $user = User::find($userId);
                         $userName = $user ? $user->name : 'Pegawai';
-                        throw new \Exception("Overlap: Pegawai {$userName} sudah memiliki Surat Tugas di rentang tanggal tersebut untuk survey ini.");
+                        $overlapMsg = SuratTugas::formatOverlapMessage($userName, $overlap);
+                        throw new \Exception("Overlap: {$overlapMsg}");
                     }
 
                     $currentUrut++;

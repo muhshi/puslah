@@ -194,8 +194,7 @@ class SuratTugasResource extends Resource
                             ->label('Abaikan Validasi Bentrok Tanggal')
                             ->helperText('Hanya untuk Admin. Jika diaktifkan, pegawai bisa ditugaskan di tanggal yang sama dengan survei lain.')
                             ->default(false)
-                            ->dehydrated(false)
-                            ->visible(fn() => auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag'])),
+                            ->visible(fn() => auth()->user()?->hasAnyRole(['super_admin', 'Kepala', 'Kasubag'])),
                         Forms\Components\DatePicker::make('waktu_mulai')
                             ->label('Mulai')
                             ->default(now()),

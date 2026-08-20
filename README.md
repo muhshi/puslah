@@ -53,6 +53,11 @@ composer dev
 
 ## Changelog
 
+### 2026-08-20
+- **Penyempurnaan Pesan Validasi Overlap Surat Tugas & Perbaikan Toggle Abaikan Validasi** — 
+  - Memperjelas pesan error ketika terjadi bentrok (overlap) penugasan pegawai: kini pesan notifikasi secara detail mencantumkan nomor surat tugas, nama survei yang bertabrakan, serta rentang tanggal pelaksanaan tugas yang bentrok.
+  - Memperbaiki toggle **Abaikan Validasi Bentrok Tanggal** pada form pembuatan Surat Tugas (Single, Kolektif/Bulk, dan Kelola Nomor Terblokir/Terlewat) dengan menghapus `->dehydrated(false)` agar nilai toggle benar-benar terbaca oleh backend untuk mengizinkan pembuatan surat tugas saat toggle diaktifkan.
+
 ### 2026-08-18
 - **Optimasi Script Deployment (`deploy.sh`)** — Memperbarui alur deploy agar tidak selalu melakukan `docker compose build` setiap kali deploy. Script sekarang secara cerdas mendeteksi perubahan: jika hanya kode PHP/Blade/Asset yang berubah, deploy berjalan secara instan (pull git, migrasi database jika ada, clear/generate cache, dan restart worker/server). Rebuild image Docker hanya akan berjalan otomatis jika terdapat perubahan pada `Dockerfile`, `docker-compose.yml`, `Caddyfile`, direktori `docker/`, atau jika dipicu manual dengan flag `bash deploy.sh --build`.
 - **Perbaikan Format Export Word Laporan Perjalanan Dinas (LPD)** — Memperbaiki hasil generate Word (.docx) pada bagian Uraian Kegiatan yang sebelumnya kehilangan format (teks tebal/miring terhapus, sub-bullet/daftar bertingkat menjadi rata kiri semua, dan muncul spasi kosong berlebih). Ditambahkan service `HtmlToWordXmlConverter` untuk mengonversi HTML RichEditor secara utuh menjadi OpenXML Word dengan mempertahankan formatting teks (**bold**, *italic*, underline), nested bullet/numbering list beserta indentasi berjenjang yang presisi, serta jarak antar paragraf yang rapi.
