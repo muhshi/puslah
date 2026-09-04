@@ -250,31 +250,8 @@ class SurveyUserResource extends Resource
         $no = "{$cfg->cert_number_prefix}/{$y}/{$m}/{$seq6}";
 
         // 3. Prepare Assets (Base64) for PDF
-        // Background
-        $bgBase64 = null;
-        if ($template->background_path && Storage::disk('public')->exists($template->background_path)) {
-            $bgData = Storage::disk('public')->get($template->background_path);
-            $mime = Storage::disk('public')->mimeType($template->background_path) ?? 'image/jpeg';
-            // Convert WEBP to JPEG if needed (GD)
-            if ($mime === 'image/webp' && function_exists('imagecreatefromstring')) {
-                $im = @imagecreatefromstring($bgData);
-                if ($im) {
-                    ob_start();
-                    imagejpeg($im, null, 85);
-                    $bgData = ob_get_clean();
-                    imagedestroy($im);
-                    $mime = 'image/jpeg';
-                }
-            }
-            $bgBase64 = 'data:' . $mime . ';base64,' . base64_encode($bgData);
-        }
-
-        // Signature Image
-        $signBase64 = null;
-        if ($template->signer_image_path && Storage::disk('public')->exists($template->signer_image_path)) {
-            $signData = Storage::disk('public')->get($template->signer_image_path);
-            $signBase64 = 'data:image/png;base64,' . base64_encode($signData);
-        }
+        $bgBase64 = \App\Services\CertificateImageService::getBase64Image($template->background_path, 'image/jpeg');
+        $signBase64 = \App\Services\CertificateImageService::getBase64Image($template->signer_image_path, 'image/png');
 
         // QRs
         $verifyUrl = route('certificates.verify', ['no' => $no]);

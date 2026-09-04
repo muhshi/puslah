@@ -53,6 +53,14 @@ composer dev
 
 ## Changelog
 
+### 2026-09-04
+- **Perbaikan Error Unduh Sertifikat & Dukungan Format Gambar Template (WebP to JPEG/PNG)**:
+  - Mengatasi `ErrorException: imagecreatefromstring(): No WEBP support in this PHP build` saat mengunduh sertifikat di server yang PHP GD-nya tidak memiliki modul WebP.
+  - Menghadirkan `CertificateImageService` untuk memproses aset sertifikat dengan aman (mencakup konversi via Imagick, pemeriksaan dukungan GD WebP, fallback CLI, dan pencegahan error fatal).
+  - Mengubah format QR code di `CertificateController` menggunakan SVG agar tidak memerlukan ekstensi PHP-Imagick.
+  - Menghapus `->optimize('webp')` pada `CertificateTemplateResource` dan mengunci upload background/signer ke format JPEG/PNG yang kompatibel langsung dengan DomPDF.
+  - Menambahkan command `php artisan certificates:fix-webp` untuk memeriksa dan memperbarui file template lama.
+
 ### 2026-08-20
 - **Penyempurnaan Pesan Validasi Overlap Surat Tugas & Perbaikan Toggle Abaikan Validasi** — 
   - Memperjelas pesan error ketika terjadi bentrok (overlap) penugasan pegawai: kini pesan notifikasi secara detail mencantumkan nomor surat tugas, nama survei yang bertabrakan, serta rentang tanggal pelaksanaan tugas yang bentrok.

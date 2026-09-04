@@ -16,47 +16,18 @@ class CertificateController extends Controller
     {
         $template = $certificate->template ?? CertificateTemplate::where('active', true)->firstOrFail();
 
-        $bgBase64 = null;
-        if ($template->background_path && Storage::disk('public')->exists($template->background_path)) {
-            $bgData = Storage::disk('public')->get($template->background_path);
-            $mime = Storage::disk('public')->mimeType($template->background_path) ?? 'image/jpeg';
-
-            // Konversi WEBP -> JPEG (pakai GD)
-            if ($mime === 'image/webp') {
-                if (function_exists('imagecreatefromstring')) {
-                    $im = imagecreatefromstring($bgData);
-                    if ($im !== false) {
-                        ob_start();
-                        imagejpeg($im, null, 85);
-                        $bgData = ob_get_clean();
-                        imagedestroy($im);
-                        $mime = 'image/jpeg';
-                    }
-                }
-            }
-
-            // pastikan mimetype final PNG/JPEG
-            if (!in_array($mime, ['image/png', 'image/jpeg'])) {
-                $mime = 'image/jpeg';
-            }
-
-            $bgBase64 = 'data:' . $mime . ';base64,' . base64_encode($bgData);
-        }
-
-        $signBase64 = null;
-        if ($template->signer_image_path && Storage::disk('public')->exists($template->signer_image_path)) {
-            $signBase64 = 'data:image/png;base64,' . base64_encode(Storage::disk('public')->get($template->signer_image_path));
-        }
+        $bgBase64 = \App\Services\CertificateImageService::getBase64Image($template->background_path, 'image/jpeg');
+        $signBase64 = \App\Services\CertificateImageService::getBase64Image($template->signer_image_path, 'image/png');
 
         $qrUrl = route('certificates.verify', ['no' => $certificate->certificate_no]);
-        // QR utama (besar)
-        $qrPng = QrCode::format('png')->size($template->qr_size)->margin(0)->generate($qrUrl);
-        $qrBase64 = 'data:image/png;base64,' . base64_encode($qrPng);
+        // QR utama (SVG agar tidak butuh imagick)
+        $qrSvg = QrCode::format('svg')->size($template->qr_size ?? 220)->margin(0)->generate($qrUrl);
+        $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
 
-        // QR kecil untuk area TTD (mis. 120px)
+        // QR kecil untuk area TTD
         $signQrSize = 120;
-        $signQrPng = QrCode::format('png')->size($signQrSize)->margin(0)->generate($qrUrl);
-        $signQrBase64 = 'data:image/png;base64,' . base64_encode($signQrPng);
+        $signQrSvg = QrCode::format('svg')->size($signQrSize)->margin(0)->generate($qrUrl);
+        $signQrBase64 = 'data:image/svg+xml;base64,' . base64_encode($signQrSvg);
 
         return [
             'certificate' => $certificate,

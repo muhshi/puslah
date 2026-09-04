@@ -42,7 +42,7 @@ class CertificateTemplateResource extends Resource
                 Forms\Components\FileUpload::make('background_path')
                     ->label('Background (PNG/JPG)')
                     ->image()
-                    ->optimize('webp') // simpan sebagai webp terkompres
+                    ->acceptedFileTypes(['image/jpeg', 'image/png'])
                     ->imageResizeMode('cover') // bisa "contain" juga
                     ->imageResizeTargetWidth(2200) // lebar max 2200 px (cukup untuk A4)
                     ->imageResizeTargetHeight(null) // biar proporsional
@@ -77,9 +77,9 @@ class CertificateTemplateResource extends Resource
                     ->label('Jabatan')
                     ->default(fn() => app(SystemSettings::class)->cert_signer_title),
                 Forms\Components\FileUpload::make('signer_image_path')
-                    ->label('Gambar TTD/Cap (opsional)')
+                    ->label('Gambar TTD/Cap (PNG transparan disarankan)')
                     ->image()
-                    ->optimize('webp')
+                    ->acceptedFileTypes(['image/png', 'image/jpeg'])
                     ->directory('cert_templates/signs')->disk('public')->preserveFilenames(),
             ])->columns(2),
         ]);
