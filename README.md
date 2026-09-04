@@ -62,7 +62,7 @@ composer dev
   - Menambahkan dukungan `libwebp-dev`, `webp` (CLI), dan `--with-webp` pada `Dockerfile` container FrankenPHP agar GD di container memiliki kapabilitas WebP asli.
   - Memperbaiki CSS penempatan gambar latar (`top: 0; left: 0; right: 0; bottom: 0; z-index: -1`) pada `pdf.blade.php` agar kompatibel penuh dengan mesin rendering DomPDF (CSS 2.1).
   - Mengembalikan posisi asli tanggal dan blok tanda tangan agar pas di atas garis tanda tangan template, memecah teks jabatan (`Kepala Badan Pusat Statistik` / `Kabupaten Demak`) menjadi 2 baris rapi terpusat, dan menghapus catatan kaki elektronik di bawah jabatan.
-  - Mendesain ulang halaman verifikasi sertifikat (`/verify`) menjadi portal kredensial digital modern BPS yang responsif di smartphone maupun desktop, lengkap dengan branding resmi, status validasi animasi, profil penerima, rincian survei, tombol salin nomor sertifikat, dan sidik jari kriptografi SHA-256.
+  - Mendesain ulang seluruh halaman verifikasi dokumen publik (`/verify` untuk Sertifikat dan `/surat-tugas/verify/{hash}` untuk Surat Tugas) menjadi portal verifikasi digital modern BPS yang mobile-responsive, elegan, dan profesional lengkap dengan branding resmi BPS Demak, kartu profil pegawai, rincian penugasan, tombol salin nomor dokumen, serta tautan dokumen PDF resmi.
   - Menambahkan command `php artisan certificates:fix-webp` untuk memeriksa dan memperbarui file template lama.
 
 ### 2026-08-20
