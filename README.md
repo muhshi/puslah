@@ -61,7 +61,7 @@ composer dev
   - Menghapus `->optimize('webp')` pada `CertificateTemplateResource` dan mengunci upload background/signer ke format JPEG/PNG yang kompatibel langsung dengan DomPDF.
   - Menambahkan dukungan `libwebp-dev`, `webp` (CLI), dan `--with-webp` pada `Dockerfile` container FrankenPHP agar GD di container memiliki kapabilitas WebP asli.
   - Memperbaiki CSS penempatan gambar latar (`top: 0; left: 0; right: 0; bottom: 0; z-index: -1`) pada `pdf.blade.php` agar kompatibel penuh dengan mesin rendering DomPDF (CSS 2.1).
-  - Merapikan tata letak blok tanda tangan pada `pdf.blade.php`: menggabungkan tanggal dan area ttd dalam satu kolom proporsional, mengatur margin kanan agar teks jabatan tidak lagi mepet ke pinggir halaman sertifikat.
+  - Mengembalikan posisi asli tanggal dan blok tanda tangan agar pas di atas garis tanda tangan template, serta memecah teks jabatan (`Kepala Badan Pusat Statistik` / `Kabupaten Demak`) dan catatan elektronik menjadi 2 baris rapi terpusat sehingga tidak melebar ke pinggir kanan.
   - Menambahkan command `php artisan certificates:fix-webp` untuk memeriksa dan memperbarui file template lama.
 
 ### 2026-08-20
