@@ -271,9 +271,6 @@
             <div class="fs-12 muted" style="max-width: 270px; margin: 3px auto 0; line-height: 1.35;">
                 {!! nl2br(e(preg_replace('/(\bStatistik)\s+(Kabupaten\b)/i', "$1\n$2", $template->signer_title))) !!}
             </div>
-            <div class="fs-xs muted" style="max-width: 260px; margin: 4px auto 0; line-height: 1.25;">
-                *Ditandatangani secara elektronik<br>— scan untuk verifikasi
-            </div>
         </div>
     </div>
 
