@@ -258,18 +258,16 @@
             style="top: {{ $verifTop }}px; left: {{ $template->qr_left }}px; width: 300px;">
         </div>
 
-        <!-- Tanggal & Kota (kanan bawah sebelum tanda tangan) -->
-        <div class="box right fs-20 muted" style="top: 540px; left: 710px; width: 310px;">
-            {{ $template->city_label }} {{ ($signatureDate ?? $issuedAt)->translatedFormat('d F Y') }}
-        </div>
-
-        <!-- Blok tanda tangan (kanan bawah) -->
-        <div class="box center" style="top: 565px; left: 700px; width: 450px;">
+        <!-- Blok tanda tangan & Tanggal (kanan bawah) -->
+        <div class="box center" style="top: 525px; left: 620px; width: 400px;">
+            <div class="muted" style="font-size: 13px; margin-bottom: 6px;">
+                {{ $template->city_label }} {{ ($signatureDate ?? $issuedAt)->translatedFormat('d F Y') }}
+            </div>
             <img src="{{ $signQrBase64 }}" alt="QR TTD"
-                style="width:95px;height:95px; display:block; margin:0 auto 6px;">
-            <div class="bold fs-14">{{ $template->signer_name }}</div>
-            <div class="fs-12 muted">{{ $template->signer_title }}</div>
-            <div class="fs-xs muted" style="margin-bottom:6px;">
+                style="width:90px;height:90px; display:block; margin:0 auto 6px;">
+            <div class="bold fs-14" style="line-height: 1.3;">{{ $template->signer_name }}</div>
+            <div class="muted" style="font-size: 11.5px; line-height: 1.35; max-width: 360px; margin: 2px auto 0;">{{ $template->signer_title }}</div>
+            <div class="muted" style="font-size: 9.5px; line-height: 1.2; margin-top: 3px;">
                 *Ditandatangani secara elektronik — scan untuk verifikasi
             </div>
         </div>
