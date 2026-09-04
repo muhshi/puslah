@@ -2,10 +2,6 @@
 .env
 vendor/
 node_modules/
-storage/app/filament-excel/
-storage/logs/
-storage/framework/cache/
-storage/framework/sessions/
-storage/framework/views/
-storage/app/temp_*
+storage/
 *.log
+
