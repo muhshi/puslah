@@ -45,7 +45,7 @@ Route::get('/certificates/{certificate}/download', [\App\Http\Controllers\Certif
 
 Route::get('/verify', function () {
     $no = request('no');
-    $cert = Certificate::with(['user', 'survey'])->where('certificate_no', $no)->first();
+    $cert = Certificate::with(['user.profile', 'survey', 'template'])->where('certificate_no', $no)->first();
     if (!$cert || $cert->revoked) {
         return view('certificates.verify', ['ok' => false, 'no' => $no]);
     }
