@@ -53,6 +53,13 @@ composer dev
 
 ## Changelog
 
+### 2026-09-07
+- **Sinkronisasi Akun Mitra Survei (Sensus Ekonomi & Survei Lainnya) ke Database SIPETRA SSO**:
+  - Menambahkan artisan command `php artisan sipetra:sync-mitra` untuk mendeteksi dan menyinkronkan seluruh mitra survei yang terdaftar di Puslah ke dalam database SIPETRA (`db_sipetra`).
+  - Berhasil menyinkronkan 864 mitra (termasuk seluruh petugas lapangan Sensus Ekonomi 2026) dengan role `mitra`, satker `3321`, status aktif, dan password default `3321`.
+  - Menambahkan konfigurasi koneksi database `sipetra` pada `config/database.php`.
+  - Mitra kini dapat langsung masuk (login) ke SIPETRA SSO melalui email masing-masing dan password default (`3321`) untuk mengakses Puslah.
+
 ### 2026-09-04
 - **Perbaikan Error Unduh Sertifikat & Dukungan Format Gambar Template (WebP to JPEG/PNG)**:
   - Mengatasi `ErrorException: imagecreatefromstring(): No WEBP support in this PHP build` saat mengunduh sertifikat di server yang PHP GD-nya tidak memiliki modul WebP.
