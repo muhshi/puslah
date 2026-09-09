@@ -234,24 +234,47 @@ class LaporanLemburResource extends Resource
     {
         $settings = app(\App\Settings\SystemSettings::class);
         $templatePath = $settings->laporan_lembur_template_path;
+        $fullTemplatePath = $templatePath ? storage_path('app/public/' . $templatePath) : null;
 
-        if (!$templatePath || !file_exists(storage_path('app/public/' . $templatePath))) {
-            \Filament\Notifications\Notification::make()
-                ->title('Template Laporan Lembur belum diupload di Pengaturan Sistem')
-                ->danger()
-                ->send();
-            return null;
+        // Auto fallback to standard built-in template if missing, invalid, or wrong template
+        $useDefault = false;
+        if (!$fullTemplatePath || !file_exists($fullTemplatePath) || str_contains($templatePath, '01KZSSYYMF4VEDS91B1AJQX71D')) {
+            $useDefault = true;
+        } else {
+            // Check if uploaded file contains lembur placeholder
+            $zip = new \ZipArchive();
+            if ($zip->open($fullTemplatePath) === true) {
+                $xml = $zip->getFromName('word/document.xml');
+                $zip->close();
+                if (!str_contains($xml, 'pekerjaan')) {
+                    $useDefault = true;
+                }
+            }
         }
 
-        $template = new \PhpOffice\PhpWord\TemplateProcessor(storage_path('app/public/' . $templatePath));
+        if ($useDefault) {
+            $defaultTemplate = resource_path('templates/template_daftar_hadir_lembur.docx');
+            if (file_exists($defaultTemplate)) {
+                $fullTemplatePath = $defaultTemplate;
+            } else {
+                \Filament\Notifications\Notification::make()
+                    ->title('Template Laporan Lembur belum tersedia')
+                    ->danger()
+                    ->send();
+                return null;
+            }
+        }
 
-        // Base Variables
-        $waktuFormat = \Carbon\Carbon::parse($record->waktu)->locale('id')->translatedFormat('l, d F Y');
-        $mulaiFormat = \Carbon\Carbon::parse($record->mulai)->format('H:i');
-        $selesaiFormat = \Carbon\Carbon::parse($record->selesai)->format('H:i');
-        
+        $template = new \PhpOffice\PhpWord\TemplateProcessor($fullTemplatePath);
+
+        // Format waktu: 'Jumat / 6 Maret 2026' (sesuai format dinas BPS)
+        $waktuFormat = $record->waktu ? \Carbon\Carbon::parse($record->waktu)->locale('id')->translatedFormat('l / j F Y') : '-';
+        $mulaiFormat = $record->mulai ? \Carbon\Carbon::parse($record->mulai)->format('H.i') . ' WIB' : '-';
+        $selesaiFormat = $record->selesai ? \Carbon\Carbon::parse($record->selesai)->format('H.i') . ' WIB' : '-';
+
         $template->setValue('waktu', $waktuFormat);
-        
+        $template->setValue('unit_kerja', $settings->default_office_name ?? 'BPS Kabupaten Demak');
+
         // Format Nama Pegawai: title case nama depan, pertahankan gelar akademik di belakang koma
         $user = $record->user;
         $profile = $user?->profile;
@@ -265,15 +288,20 @@ class LaporanLemburResource extends Resource
         $template->setValue('nip_pegawai', $profile?->nip ?? '-');
         $template->setValue('jabatan', $profile?->jabatan ?? '-');
         $template->setValue('pangkat_golongan', $profile?->pangkat_golongan ?? '-');
-        $template->setValue('unit_kerja', $settings->default_office_name ?? 'BPS Kabupaten Demak');
 
+        // Waktu mulai & selesai
         $template->setValue('mulai', $mulaiFormat);
         $template->setValue('selesai', $selesaiFormat);
-        
+
+        // Pejabat Penandatangan (Kepala)
+        $template->setValue('jabatan_kepala', $settings->cert_signer_title ?? 'Kepala BPS Kab. Demak');
+        $template->setValue('nama_kepala', $settings->cert_signer_name ?? 'Khomarudin, S. ST');
+        $template->setValue('nip_kepala', $settings->cert_signer_nip ?? '197512091999011001');
+
         // Convert rich text HTML to OpenXML preserving bold, italic, underline, nested lists and paragraphs
-        $pekerjaanXml = \App\Services\HtmlToWordXmlConverter::convert($record->pekerjaan, 'Aptos Display', 24);
+        $pekerjaanXml = \App\Services\HtmlToWordXmlConverter::convert($record->pekerjaan, 'Arial', 20);
         $template->setValue('pekerjaan', $pekerjaanXml);
-        
+
         // Pictures with try-catch error handling & aspect ratio
         for ($i = 1; $i <= 4; $i++) {
             $fotoField = "foto_{$i}";
@@ -285,7 +313,7 @@ class LaporanLemburResource extends Resource
                     $template->setImageValue($fotoField, [
                         'path' => $fullPath,
                         'width' => 280,
-                        'height' => 210,
+                        'height' => 320,
                         'ratio' => true
                     ]);
                 } catch (\Exception $e) {
@@ -302,7 +330,7 @@ class LaporanLemburResource extends Resource
         $prefix = $isBulk ? 'temp_bulk_lembur_' : 'temp_lembur_';
         $tempPath = storage_path("app/{$prefix}" . $namaFile);
         $template->saveAs($tempPath);
-        
+
         return ['path' => $tempPath, 'name' => $namaFile];
     }
 

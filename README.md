@@ -61,7 +61,8 @@ composer dev
   - Menambahkan dukungan variabel profil tambahan pada template Word lembur: `${nip_pegawai}`, `${jabatan}`, `${pangkat_golongan}`, dan `${unit_kerja}`.
   - Menambahkan proteksi *try-catch* dan pengecekan file foto dokumentasi untuk mencegah error saat proses unduh dokumen jika terjadi kendala pada file foto.
   - Menambahkan filter tabel daftar laporan lembur berdasarkan **Nama Pegawai** (khusus Super Admin / Atasan) dan **Status** (Pending, Approved, Rejected), serta mengurutkan data terbaru di posisi teratas (`defaultSort`).
-  - Mengintegrasikan Activity Log (`spatie/laravel-activitylog`) pada modul Laporan Lembur lengkap dengan tombol dan halaman riwayat **History** aktivitas.
+  - Menghadirkan template bawaan resmi **Daftar Hadir Lembur** (`resources/templates/template_daftar_hadir_lembur.docx`) yang otomatis digunakan sistem sebagai fallback cerdas: memuat header Unit & Hari/Tanggal, tabel terstruktur (No, Nama Pegawai, Jam Mulai & Selesai berformat WIB, Uraian Pekerjaan/Output, baris tanda tangan kehadiran), blok tanda tangan Kepala BPS Kab. Demak, serta penempatan foto dokumentasi lembur sehingga pengguna tidak perlu repot membuat dan mengunggah template manual lagi.
+  - Memperbaiki penamaan file saat proses unduh agar langsung menyajikan nama file dokumen resmi yang bersih tanpa awalan temporary `temp_lembur_`.
   - Memastikan keandalan input `user_id` pada formulir pembuatan lembur agar selalu terisi secara benar saat disubmit oleh pegawai non-admin.
 
 ### 2026-09-07
