@@ -351,7 +351,7 @@ class LaporanPerjalananDinasResource extends Resource
                     ->action(function (LaporanPerjalananDinas $record) {
                         $file = self::processWordDocument($record);
                         if ($file) {
-                            return response()->download($file['path'])->deleteFileAfterSend();
+                            return response()->download($file['path'], $file['name'])->deleteFileAfterSend();
                         }
                     }),
 

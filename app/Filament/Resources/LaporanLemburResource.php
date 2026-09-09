@@ -178,7 +178,7 @@ class LaporanLemburResource extends Resource
                     ->action(function (LaporanLembur $record) {
                         $file = self::processWordDocument($record);
                         if ($file) {
-                            return response()->download($file['path'])->deleteFileAfterSend();
+                            return response()->download($file['path'], $file['name'])->deleteFileAfterSend();
                         }
                     }),
                 Tables\Actions\Action::make('activities')
