@@ -209,7 +209,7 @@ class SystemSettingsPage extends Page implements HasForms
                         ])->columns(1),
 
                     Section::make('Template Laporan Lembur (.docx)')
-                        ->description('Upload file .docx untuk laporan lembur. Variabel: ${waktu}, ${nama_pegawai}, ${mulai}, ${selesai}, ${pekerjaan}, ${foto_1} s/d ${foto_4}')
+                        ->description('Upload file .docx untuk laporan lembur. Variabel: ${waktu}, ${nama_pegawai}, ${nip_pegawai}, ${pangkat_golongan}, ${jabatan}, ${unit_kerja}, ${mulai}, ${selesai}, ${pekerjaan}, ${foto_1} s/d ${foto_4}')
                         ->schema([
                             FileUpload::make('laporan_lembur_template_path')
                                 ->label('File Template')

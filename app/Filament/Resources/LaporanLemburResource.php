@@ -34,8 +34,8 @@ class LaporanLemburResource extends Resource
                             ->required()
                             ->searchable()
                             ->preload()
-                            // If not admin, restrict to themselves, but let's just keep it simple or use hidden if needed.
-                            ->disabled(fn() => !auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag'])),
+                            ->disabled(fn() => !auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag']))
+                            ->dehydrated(),
                         Forms\Components\DatePicker::make('waktu')
                             ->label('Hari/Tanggal')
                             ->required()
@@ -58,12 +58,23 @@ class LaporanLemburResource extends Resource
 
                 Forms\Components\Section::make('Uraian Pekerjaan')
                     ->schema([
-                        Forms\Components\Textarea::make('pekerjaan')
-                            ->label('Uraian Pekerjaan/Output')
+                        Forms\Components\RichEditor::make('pekerjaan')
+                            ->label('Uraian Pekerjaan / Output')
                             ->required()
-                            ->rows(5)
-                            ->columnSpanFull()
-                            ->helperText('Tuliskan daftar pekerjaan. Jika lebih dari satu, gunakan nomor (1, 2, ...). Enter untuk baris baru.'),
+                            ->toolbarButtons([
+                                'bold',
+                                'italic',
+                                'underline',
+                                'strike',
+                                'bulletList',
+                                'orderedList',
+                                'h2',
+                                'h3',
+                                'redo',
+                                'undo',
+                            ])
+                            ->helperText('Gunakan bullets, numbering (1, 2, ...), atau format teks tebal/miring.')
+                            ->columnSpanFull(),
                     ]),
 
                 Forms\Components\Section::make('Dokumentasi Foto')
@@ -73,24 +84,32 @@ class LaporanLemburResource extends Resource
                             ->label('Foto 1')
                             ->image()
                             ->directory('lembur_photos')
+                            ->disk('public')
                             ->visibility('public')
+                            ->maxSize(5120)
                             ->required(),
                         Forms\Components\FileUpload::make('foto_2')
                             ->label('Foto 2')
                             ->image()
                             ->directory('lembur_photos')
+                            ->disk('public')
                             ->visibility('public')
+                            ->maxSize(5120)
                             ->required(),
                         Forms\Components\FileUpload::make('foto_3')
                             ->label('Foto 3 (Opsional)')
                             ->image()
                             ->directory('lembur_photos')
-                            ->visibility('public'),
+                            ->disk('public')
+                            ->visibility('public')
+                            ->maxSize(5120),
                         Forms\Components\FileUpload::make('foto_4')
                             ->label('Foto 4 (Opsional)')
                             ->image()
                             ->directory('lembur_photos')
-                            ->visibility('public'),
+                            ->disk('public')
+                            ->visibility('public')
+                            ->maxSize(5120),
                     ])->columns(2),
             ]);
     }
@@ -98,6 +117,7 @@ class LaporanLemburResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('created_at', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Pegawai')
@@ -127,7 +147,19 @@ class LaporanLemburResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('user')
+                    ->relationship('user', 'name')
+                    ->label('Nama Pegawai')
+                    ->searchable()
+                    ->preload()
+                    ->visible(fn () => auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag'])),
+                Tables\Filters\SelectFilter::make('status')
+                    ->label('Status')
+                    ->options([
+                        'pending' => 'Pending',
+                        'approved' => 'Approved',
+                        'rejected' => 'Rejected',
+                    ]),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -140,7 +172,7 @@ class LaporanLemburResource extends Resource
                     })
                     ->action(fn(LaporanLembur $record) => $record->update(['status' => 'approved'])),
                 Tables\Actions\Action::make('word')
-                    ->label('Download Word')
+                    ->label('Word')
                     ->icon('heroicon-o-document-arrow-down')
                     ->color('info')
                     ->action(function (LaporanLembur $record) {
@@ -149,6 +181,11 @@ class LaporanLemburResource extends Resource
                             return response()->download($file['path'])->deleteFileAfterSend();
                         }
                     }),
+                Tables\Actions\Action::make('activities')
+                    ->label('History')
+                    ->icon('heroicon-o-clock')
+                    ->color('info')
+                    ->url(fn ($record) => LaporanLemburResource::getUrl('activities', ['record' => $record])),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -214,32 +251,54 @@ class LaporanLemburResource extends Resource
         $selesaiFormat = \Carbon\Carbon::parse($record->selesai)->format('H:i');
         
         $template->setValue('waktu', $waktuFormat);
-        $template->setValue('nama_pegawai', $record->user->profile->full_name ?? $record->user->name);
+        
+        // Format Nama Pegawai: title case nama depan, pertahankan gelar akademik di belakang koma
+        $user = $record->user;
+        $profile = $user?->profile;
+        $rawName = $profile?->full_name ?? $user?->name ?? '-';
+        $nameParts = explode(',', $rawName);
+        $nameParts[0] = \Illuminate\Support\Str::title($nameParts[0]);
+        $nama_pegawai = implode(',', $nameParts);
+        $template->setValue('nama_pegawai', $nama_pegawai);
+
+        // Variabel profil tambahan
+        $template->setValue('nip_pegawai', $profile?->nip ?? '-');
+        $template->setValue('jabatan', $profile?->jabatan ?? '-');
+        $template->setValue('pangkat_golongan', $profile?->pangkat_golongan ?? '-');
+        $template->setValue('unit_kerja', $settings->default_office_name ?? 'BPS Kabupaten Demak');
+
         $template->setValue('mulai', $mulaiFormat);
         $template->setValue('selesai', $selesaiFormat);
         
-        // Newlines for text
-        // Use physical paragraphs (hard returns) instead of soft breaks <w:br/> to avoid justification stretching
-        $pekerjaanFormatted = str_replace("\n", '</w:t></w:r></w:p><w:p><w:r><w:t>', htmlspecialchars($record->pekerjaan));
-        $template->setValue('pekerjaan', $pekerjaanFormatted);
+        // Convert rich text HTML to OpenXML preserving bold, italic, underline, nested lists and paragraphs
+        $pekerjaanXml = \App\Services\HtmlToWordXmlConverter::convert($record->pekerjaan, 'Aptos Display', 24);
+        $template->setValue('pekerjaan', $pekerjaanXml);
         
-        // Pictures
+        // Pictures with try-catch error handling & aspect ratio
         for ($i = 1; $i <= 4; $i++) {
             $fotoField = "foto_{$i}";
-            if ($record->{$fotoField} && file_exists(storage_path('app/public/' . $record->{$fotoField}))) {
-                $template->setImageValue($fotoField, [
-                    'path' => storage_path('app/public/' . $record->{$fotoField}),
-                    'width' => 250,
-                    'height' => 250,
-                    'ratio' => true
-                ]);
+            $fotoRelPath = $record->{$fotoField};
+            $fullPath = $fotoRelPath ? storage_path('app/public/' . $fotoRelPath) : null;
+
+            if ($fullPath && file_exists($fullPath)) {
+                try {
+                    $template->setImageValue($fotoField, [
+                        'path' => $fullPath,
+                        'width' => 280,
+                        'height' => 210,
+                        'ratio' => true
+                    ]);
+                } catch (\Exception $e) {
+                    $template->setValue($fotoField, '[Error format foto]');
+                }
             } else {
                 $template->setValue($fotoField, '');
             }
         }
 
-        $waktuFile = \Carbon\Carbon::parse($record->waktu)->format('Ymd');
-        $namaFile = "Laporan_Lembur_" . str_replace(' ', '_', $record->user->name) . "_{$waktuFile}.docx";
+        $waktuFile = \Carbon\Carbon::parse($record->waktu)->format('Y_m_d');
+        $safeName = preg_replace('/[^a-zA-Z0-9]/', '_', $user?->name ?? 'Pegawai');
+        $namaFile = "Laporan_Lembur_{$safeName}_{$waktuFile}.docx";
         $prefix = $isBulk ? 'temp_bulk_lembur_' : 'temp_lembur_';
         $tempPath = storage_path("app/{$prefix}" . $namaFile);
         $template->saveAs($tempPath);
@@ -273,6 +332,7 @@ class LaporanLemburResource extends Resource
             'index' => Pages\ListLaporanLemburs::route('/'),
             'create' => Pages\CreateLaporanLembur::route('/create'),
             'edit' => Pages\EditLaporanLembur::route('/{record}/edit'),
+            'activities' => Pages\ListLaporanLemburActivities::route('/{record}/activities'),
         ];
     }
 }

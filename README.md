@@ -53,6 +53,17 @@ composer dev
 
 ## Changelog
 
+### 2026-09-09
+- **Penyempurnaan Fitur Laporan Lembur (Parity dengan Laporan Perjalanan Dinas)**:
+  - Mengubah input uraian pekerjaan/output lembur dari Textarea biasa menjadi **RichEditor** dengan dukungan formatting teks (**bold**, *italic*, underline, strike) serta daftar berpoin/bernomor (bullet list & ordered list).
+  - Mengintegrasikan service `HtmlToWordXmlConverter` pada generator dokumen Word (.docx) Laporan Lembur agar hasil unduhan rapi, font seragam (Aptos Display), list terindentasi bertingkat secara presisi, dan bebas dari distorsi spasi justify (*justification stretching*).
+  - Merapikan penulisan nama pegawai pada cetakan dokumen lembur dengan standar Title Case nama depan tanpa merusak penulisan gelar akademik di belakang tanda koma.
+  - Menambahkan dukungan variabel profil tambahan pada template Word lembur: `${nip_pegawai}`, `${jabatan}`, `${pangkat_golongan}`, dan `${unit_kerja}`.
+  - Menambahkan proteksi *try-catch* dan pengecekan file foto dokumentasi untuk mencegah error saat proses unduh dokumen jika terjadi kendala pada file foto.
+  - Menambahkan filter tabel daftar laporan lembur berdasarkan **Nama Pegawai** (khusus Super Admin / Atasan) dan **Status** (Pending, Approved, Rejected), serta mengurutkan data terbaru di posisi teratas (`defaultSort`).
+  - Mengintegrasikan Activity Log (`spatie/laravel-activitylog`) pada modul Laporan Lembur lengkap dengan tombol dan halaman riwayat **History** aktivitas.
+  - Memastikan keandalan input `user_id` pada formulir pembuatan lembur agar selalu terisi secara benar saat disubmit oleh pegawai non-admin.
+
 ### 2026-09-07
 - **Sinkronisasi Akun Mitra Survei (Sensus Ekonomi & Survei Lainnya) ke Database SIPETRA SSO**:
   - Menambahkan artisan command `php artisan sipetra:sync-mitra` untuk mendeteksi dan menyinkronkan seluruh mitra survei yang terdaftar di Puslah ke dalam database SIPETRA (`db_sipetra`).
