@@ -55,6 +55,12 @@ composer dev
 ## Changelog
 
 ### 2026-09-18
+- **Dukungan Multi-LPD per Surat Tugas & Validasi Rentang Tanggal**:
+  - Mengubah relasi `SuratTugas` ke `LaporanPerjalananDinas` menjadi `HasMany` sehingga 1 Surat Tugas dapat memiliki lebih dari 1 LPD pada tanggal penugasan yang berbeda.
+  - Membatasi input tanggal kunjungan (`tanggal_kunjungan`) dengan `minDate`, `maxDate`, dan validasi backend agar wajib berada dalam rentang tanggal surat tugas atau survei yang bersangkutan.
+  - Menghapus pembatasan `whereDoesntHave('laporanPerjalananDinas')` pada dropdown pilihan Surat Tugas dan Survei, serta menyematkan indikator jumlah LPD yang sudah dibuat (`[N LPD]`) dan status `⚠️ (Semua tgl terisi LPD)`.
+  - Menyesuaikan tombol aksi pada tabel Surat Tugas: tombol **Buat LPD** tetap muncul selama masih ada tanggal lowong dalam rentang tugas, serta tombol **Lihat LPD (N)** yang langsung mengarahkan ke dokumen atau daftar LPD terkait.
+  - Menambahkan metode penentuan tanggal lowong pertama secara pintar (`determineAvailableDate` dan `getDateRangeForSuratTugas`) serta validasi duplikasi tanggal antar-LPD untuk pegawai yang sama.
 - **Refactoring Arsitektur Resource & Controller ke Dedicated Service Layer**:
   - Mengekstrak logika bisnis, pemrosesan dokumen Word/PDF, dan penomoran dari Filament Resources ke kelas layanan mandiri (`app/Services/`):
     - `SppdService`: Menangani pembuatan SPPD (single & bulk), formatting nomor SPPD, nominal terbilang bahasa Indonesia, dan pembuatan file Word SPPD dari template.

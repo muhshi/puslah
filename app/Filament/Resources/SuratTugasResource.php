@@ -507,14 +507,26 @@ class SuratTugasResource extends Resource
                     ->label('Buat LPD')
                     ->icon('heroicon-o-document-plus')
                     ->color('info')
-                    ->visible(fn(SuratTugas $record) => !$record->laporanPerjalananDinas()->exists())
+                    ->visible(fn(SuratTugas $record) => \App\Models\LaporanPerjalananDinas::determineAvailableDate($record) !== null)
                     ->url(fn(SuratTugas $record) => LaporanPerjalananDinasResource::getUrl('create', ['surat_tugas_id' => $record->id])),
                 Tables\Actions\Action::make('view_lpd')
-                    ->label('Lihat LPD')
+                    ->label(fn(SuratTugas $record) => $record->laporanPerjalananDinas()->count() > 1
+                        ? 'Lihat LPD (' . $record->laporanPerjalananDinas()->count() . ')'
+                        : 'Lihat LPD')
                     ->icon('heroicon-o-document-check')
                     ->color('success')
                     ->visible(fn(SuratTugas $record) => $record->laporanPerjalananDinas()->exists())
-                    ->url(fn(SuratTugas $record) => LaporanPerjalananDinasResource::getUrl('edit', ['record' => $record->laporanPerjalananDinas->id])),
+                    ->url(function (SuratTugas $record) {
+                        $lpds = $record->laporanPerjalananDinas;
+                        if ($lpds->count() === 1) {
+                            return LaporanPerjalananDinasResource::getUrl('edit', ['record' => $lpds->first()->id]);
+                        }
+                        return LaporanPerjalananDinasResource::getUrl('index', [
+                            'tableFilters' => [
+                                'survey' => ['value' => $record->survey_id],
+                            ],
+                        ]);
+                    }),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\Action::make('activities')
                     ->label('History')

@@ -239,6 +239,79 @@ class LaporanPerjalananDinasValidationTest extends TestCase
         $this->assertEquals('2026-09-22', $lpd->tanggal_kunjungan->toDateString());
         $this->assertStringContainsString('Updated uraian kegiatan', $lpd->uraian_kegiatan);
     }
+
+    /** @test */
+    public function it_allows_multiple_lpds_for_same_surat_tugas_on_different_dates()
+    {
+        $user = User::factory()->create();
+        $user->assignRole('super_admin');
+        $survey = Survey::create([
+            'name' => 'Survei Multiday',
+            'start_date' => '2026-09-25',
+            'end_date' => '2026-09-28',
+        ]);
+
+        $st = $this->createSuratTugas($user, $survey, '2026-09-25 08:00:00', '2026-09-28 16:00:00', 1);
+
+        // Create first LPD for 2026-09-25
+        $this->createLpd($st, '2026-09-25');
+
+        // Create second LPD for 2026-09-26 for the SAME Surat Tugas
+        $this->actingAs($user);
+
+        \Livewire\Livewire::test(\App\Filament\Resources\LaporanPerjalananDinasResource\Pages\CreateLaporanPerjalananDinas::class)
+            ->fillForm([
+                'surat_tugas_id' => $st->id,
+                'nomor_surat_tugas' => $st->nomor_surat,
+                'tujuan' => $st->keperluan,
+                'tanggal_kunjungan' => '2026-09-26', // Different date within range!
+                'uraian_kegiatan' => 'Kegiatan hari ke-2 pada surat tugas yang sama',
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertEquals(2, $st->laporanPerjalananDinas()->count());
+    }
+
+    /** @test */
+    public function it_fails_validation_when_tanggal_kunjungan_is_outside_range()
+    {
+        $user = User::factory()->create();
+        $user->assignRole('super_admin');
+        $survey = Survey::create([
+            'name' => 'Survei Range Test',
+            'start_date' => '2026-09-25',
+            'end_date' => '2026-09-28',
+        ]);
+
+        $st = $this->createSuratTugas($user, $survey, '2026-09-25 08:00:00', '2026-09-28 16:00:00', 1);
+
+        $this->actingAs($user);
+
+        // Date before range: 2026-09-24
+        \Livewire\Livewire::test(\App\Filament\Resources\LaporanPerjalananDinasResource\Pages\CreateLaporanPerjalananDinas::class)
+            ->fillForm([
+                'surat_tugas_id' => $st->id,
+                'nomor_surat_tugas' => $st->nomor_surat,
+                'tujuan' => $st->keperluan,
+                'tanggal_kunjungan' => '2026-09-24', // Before range!
+                'uraian_kegiatan' => 'Test sebelum rentang',
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['tanggal_kunjungan']);
+
+        // Date after range: 2026-09-29
+        \Livewire\Livewire::test(\App\Filament\Resources\LaporanPerjalananDinasResource\Pages\CreateLaporanPerjalananDinas::class)
+            ->fillForm([
+                'surat_tugas_id' => $st->id,
+                'nomor_surat_tugas' => $st->nomor_surat,
+                'tujuan' => $st->keperluan,
+                'tanggal_kunjungan' => '2026-09-29', // After range!
+                'uraian_kegiatan' => 'Test setelah rentang',
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['tanggal_kunjungan']);
+    }
 }
 
 

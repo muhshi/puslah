@@ -46,14 +46,7 @@ class LaporanPerjalananDinasResource extends Resource
                         ->formatStateUsing(fn (?LaporanPerjalananDinas $record) => $record?->suratTugas?->user_id ?? Auth::id())
                         ->options(function (?LaporanPerjalananDinas $record) {
                             return \App\Models\User::where('name', 'not like', '%Terlampir%')
-                                ->whereHas('suratTugas', function ($q) use ($record) {
-                                    $q->where(function ($sub) use ($record) {
-                                        $sub->whereDoesntHave('laporanPerjalananDinas');
-                                        if ($record?->surat_tugas_id) {
-                                            $sub->orWhere('id', $record->surat_tugas_id);
-                                        }
-                                    });
-                                })
+                                ->whereHas('suratTugas')
                                 ->pluck('name', 'id');
                         })
                         ->afterStateUpdated(function (Forms\Set $set) {
@@ -82,18 +75,12 @@ class LaporanPerjalananDinasResource extends Resource
                             $isSuperAdmin = Auth::user()?->hasRole('super_admin') ?? false;
                             $userId = $isSuperAdmin ? ($get('user_id_temp') ?? Auth::id()) : Auth::id();
 
-                            $query = \App\Models\Survey::whereHas('suratTugas', function ($q) use ($userId, $record) {
+                            $query = \App\Models\Survey::whereHas('suratTugas', function ($q) use ($userId) {
                                 if ($userId) {
                                     $q->where('user_id', $userId);
                                 } else {
                                     $q->whereHas('user', fn($u) => $u->where('name', 'not like', '%Terlampir%'));
                                 }
-                                $q->where(function ($sub) use ($record) {
-                                    $sub->whereDoesntHave('laporanPerjalananDinas');
-                                    if ($record?->surat_tugas_id) {
-                                        $sub->orWhere('id', $record->surat_tugas_id);
-                                    }
-                                });
                             });
 
                             return $query->pluck('name', 'id');
@@ -103,13 +90,13 @@ class LaporanPerjalananDinasResource extends Resource
                                 $isSuperAdmin = Auth::user()?->hasRole('super_admin') ?? false;
                                 $userId = $isSuperAdmin ? ($get('user_id_temp') ?? Auth::id()) : Auth::id();
 
-                                $stQuery = SuratTugas::where('survey_id', $state)
-                                    ->whereDoesntHave('laporanPerjalananDinas');
+                                $stQuery = SuratTugas::where('survey_id', $state);
                                 if ($userId) {
                                     $stQuery->where('user_id', $userId);
                                 }
 
-                                $st = $stQuery->first();
+                                $stList = $stQuery->get();
+                                $st = $stList->first(fn ($item) => LaporanPerjalananDinas::determineAvailableDate($item) !== null) ?? $stList->first();
 
                                 if ($st) {
                                     $set('surat_tugas_id', $st->id);
@@ -173,21 +160,13 @@ class LaporanPerjalananDinasResource extends Resource
                             $userId = $isSuperAdmin ? ($get('user_id_temp') ?? Auth::id()) : Auth::id();
                             $surveyId = $get('survey_id_temp');
 
-                            $query = SuratTugas::with('user', 'survey');
+                            $query = SuratTugas::with(['user', 'survey', 'laporanPerjalananDinas']);
 
                             if ($userId) {
                                 $query->where('user_id', $userId);
                             } else {
                                 $query->whereHas('user', fn($u) => $u->where('name', 'not like', '%Terlampir%'));
                             }
-
-                            // Filter: ONLY Surat Tugas that DO NOT have an LPD created yet (unless editing current record)
-                            $query->where(function ($q) use ($record) {
-                                $q->whereDoesntHave('laporanPerjalananDinas');
-                                if ($record?->surat_tugas_id) {
-                                    $q->orWhere('id', $record->surat_tugas_id);
-                                }
-                            });
 
                             if ($surveyId) {
                                 $query->where('survey_id', $surveyId);
@@ -211,12 +190,15 @@ class LaporanPerjalananDinasResource extends Resource
                                 $survey = $st->survey ? " [{$st->survey->name}]" : '';
                                 $user = $st->user ? " - {$st->user->name}" : '';
 
+                                $lpdCount = $st->laporanPerjalananDinas->count();
+                                $lpdNote = $lpdCount > 0 ? " [{$lpdCount} LPD]" : '';
+
                                 $statusNote = '';
                                 if ($userId && !LaporanPerjalananDinas::determineAvailableDate($st, $record?->id)) {
                                     $statusNote = ' ⚠️ (Semua tgl terisi LPD)';
                                 }
 
-                                return [$st->id => "{$st->nomor_surat}{$tglStr}{$survey}{$user}{$statusNote}"];
+                                return [$st->id => "{$st->nomor_surat}{$tglStr}{$survey}{$user}{$lpdNote}{$statusNote}"];
                             });
                         })
                         ->required(),
@@ -247,6 +229,34 @@ class LaporanPerjalananDinasResource extends Resource
                         ->native(false)
                         ->displayFormat('d/m/Y')
                         ->closeOnDateSelection()
+                        ->minDate(function (Forms\Get $get, ?LaporanPerjalananDinas $record) {
+                            $stId = $get('surat_tugas_id') ?? request()->query('surat_tugas_id');
+                            if (!$stId && $record) {
+                                $stId = $record->surat_tugas_id;
+                            }
+                            if ($stId) {
+                                $st = SuratTugas::with('survey')->find($stId);
+                                if ($st) {
+                                    $range = LaporanPerjalananDinas::getDateRangeForSuratTugas($st);
+                                    return $range['start']?->toDateString();
+                                }
+                            }
+                            return null;
+                        })
+                        ->maxDate(function (Forms\Get $get, ?LaporanPerjalananDinas $record) {
+                            $stId = $get('surat_tugas_id') ?? request()->query('surat_tugas_id');
+                            if (!$stId && $record) {
+                                $stId = $record->surat_tugas_id;
+                            }
+                            if ($stId) {
+                                $st = SuratTugas::with('survey')->find($stId);
+                                if ($st) {
+                                    $range = LaporanPerjalananDinas::getDateRangeForSuratTugas($st);
+                                    return $range['end']?->toDateString();
+                                }
+                            }
+                            return null;
+                        })
                         ->disabledDates(function (Forms\Get $get, ?LaporanPerjalananDinas $record) {
                             $stId = $get('surat_tugas_id') ?? request()->query('surat_tugas_id');
                             $userId = null;
@@ -271,10 +281,13 @@ class LaporanPerjalananDinasResource extends Resource
                                 }
 
                                 $stId = $get('surat_tugas_id') ?? request()->query('surat_tugas_id');
-                                $userId = null;
-                                if ($stId) {
-                                    $userId = SuratTugas::find($stId)?->user_id;
+                                if (!$stId && $record) {
+                                    $stId = $record->surat_tugas_id;
                                 }
+
+                                $st = $stId ? SuratTugas::with(['survey', 'user'])->find($stId) : null;
+                                $userId = $st?->user_id;
+
                                 if (!$userId) {
                                     $isSuperAdmin = Auth::user()?->hasRole('super_admin') ?? false;
                                     $userId = $isSuperAdmin ? ($get('user_id_temp') ?? Auth::id()) : Auth::id();
@@ -284,9 +297,25 @@ class LaporanPerjalananDinasResource extends Resource
                                     return;
                                 }
 
+                                // 1. Validasi tanggal harus berada di dalam rentang surat tugas / survei
+                                if ($st) {
+                                    $range = LaporanPerjalananDinas::getDateRangeForSuratTugas($st);
+                                    $dateVal = \Carbon\Carbon::parse($value)->startOfDay();
+
+                                    if ($range['start'] && $dateVal->lt($range['start'])) {
+                                        $fail("Tanggal kunjungan tidak boleh sebelum rentang tugas/survei (" . $range['start']->translatedFormat('d F Y') . ").");
+                                        return;
+                                    }
+                                    if ($range['end'] && $dateVal->gt($range['end'])) {
+                                        $fail("Tanggal kunjungan tidak boleh setelah rentang tugas/survei (" . $range['end']->translatedFormat('d F Y') . ").");
+                                        return;
+                                    }
+                                }
+
+                                // 2. Validasi duplikasi tanggal pada pegawai yang sama
                                 $conflict = LaporanPerjalananDinas::getDuplicateForUser($userId, $value, $record?->id);
                                 if ($conflict) {
-                                    $userName = \App\Models\User::find($userId)?->name ?? 'Pegawai';
+                                    $userName = $st?->user?->name ?? \App\Models\User::find($userId)?->name ?? 'Pegawai';
                                     $tglFormatted = \Carbon\Carbon::parse($value)->translatedFormat('d F Y');
                                     $fail("Pegawai {$userName} sudah memiliki kegiatan LPD pada tanggal {$tglFormatted} (Surat Tugas: {$conflict->nomor_surat_tugas}). Satu tanggal hanya diperbolehkan untuk 1 kegiatan LPD.");
                                 }
@@ -302,7 +331,25 @@ class LaporanPerjalananDinasResource extends Resource
                             }
                             return null;
                         })
-                        ->helperText('Satu tanggal hanya boleh untuk 1 kegiatan LPD. Tanggal yang sudah memiliki LPD otomatis dinonaktifkan di kalender.')
+                        ->helperText(function (Forms\Get $get, ?LaporanPerjalananDinas $record) {
+                            $stId = $get('surat_tugas_id') ?? request()->query('surat_tugas_id');
+                            if (!$stId && $record) {
+                                $stId = $record->surat_tugas_id;
+                            }
+                            if ($stId) {
+                                $st = SuratTugas::with('survey')->find($stId);
+                                if ($st) {
+                                    $range = LaporanPerjalananDinas::getDateRangeForSuratTugas($st);
+                                    if ($range['start'] && $range['end']) {
+                                        $startStr = $range['start']->translatedFormat('d M Y');
+                                        $endStr = $range['end']->translatedFormat('d M Y');
+                                        $rentang = ($startStr === $endStr) ? $startStr : "{$startStr} s/d {$endStr}";
+                                        return "Pilih tanggal dalam rentang tugas/survei ({$rentang}). Satu tanggal hanya boleh untuk 1 LPD.";
+                                    }
+                                }
+                            }
+                            return 'Pilih tanggal kunjungan sesuai rentang tugas/survei. Tanggal yang sudah memiliki LPD otomatis dinonaktifkan di kalender.';
+                        })
                         ->required(),
 
                     Forms\Components\RichEditor::make('uraian_kegiatan')
