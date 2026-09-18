@@ -24,7 +24,7 @@ class LaporanPerjalananDinasResource extends Resource
 
     public static function form(Form $form): Form
     {
-        $isSuperAdmin = Auth::user()?->roles[0]?->name === 'super_admin';
+        $isSuperAdmin = Auth::user()?->hasRole('super_admin') ?? false;
 
         return $form
             ->schema([
@@ -34,7 +34,7 @@ class LaporanPerjalananDinasResource extends Resource
                         ->searchable()
                         ->preload()
                         ->live()
-                        ->visible(fn () => Auth::user()->roles[0]->name === 'super_admin')
+                        ->visible(fn () => Auth::user()?->hasRole('super_admin') ?? false)
                         ->default(function () {
                             $stId = request()->query('surat_tugas_id');
                             if ($stId) {
@@ -60,6 +60,7 @@ class LaporanPerjalananDinasResource extends Resource
                             $set('surat_tugas_id', null);
                             $set('nomor_surat_tugas', '');
                             $set('tujuan', '');
+                            $set('tanggal_kunjungan', null);
                         })
                         ->helperText('Super Admin: Default terisi akun Anda. Pilih pegawai lain jika ingin membuat LPD pegawai tersebut.'),
 
@@ -77,7 +78,7 @@ class LaporanPerjalananDinasResource extends Resource
                         })
                         ->formatStateUsing(fn (?LaporanPerjalananDinas $record) => $record?->suratTugas?->survey_id)
                         ->options(function (Forms\Get $get, ?LaporanPerjalananDinas $record) {
-                            $isSuperAdmin = Auth::user()->roles[0]->name === 'super_admin';
+                            $isSuperAdmin = Auth::user()?->hasRole('super_admin') ?? false;
                             $userId = $isSuperAdmin ? ($get('user_id_temp') ?? Auth::id()) : Auth::id();
 
                             $query = \App\Models\Survey::whereHas('suratTugas', function ($q) use ($userId, $record) {
@@ -98,7 +99,7 @@ class LaporanPerjalananDinasResource extends Resource
                         })
                         ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
                             if ($state) {
-                                $isSuperAdmin = Auth::user()->roles[0]->name === 'super_admin';
+                                $isSuperAdmin = Auth::user()?->hasRole('super_admin') ?? false;
                                 $userId = $isSuperAdmin ? ($get('user_id_temp') ?? Auth::id()) : Auth::id();
 
                                 $stQuery = SuratTugas::where('survey_id', $state)
@@ -113,12 +114,27 @@ class LaporanPerjalananDinasResource extends Resource
                                     $set('surat_tugas_id', $st->id);
                                     $set('nomor_surat_tugas', $st->nomor_surat);
                                     $set('tujuan', $st->keperluan);
-                                    if ($st->waktu_mulai) {
-                                        $set('tanggal_kunjungan', $st->waktu_mulai->format('Y-m-d'));
-                                    } elseif ($st->tanggal) {
-                                        $set('tanggal_kunjungan', $st->tanggal->format('Y-m-d'));
+                                    $initialDate = LaporanPerjalananDinas::determineAvailableDate($st);
+                                    $set('tanggal_kunjungan', $initialDate);
+
+                                    if (!$initialDate) {
+                                        \Filament\Notifications\Notification::make()
+                                            ->warning()
+                                            ->title('Tanggal Tugas Sudah Terisi LPD')
+                                            ->body('Semua tanggal pada Surat Tugas ini sudah digunakan untuk LPD lain oleh pegawai ini. Silakan pilih tanggal kunjungan yang belum terisi.')
+                                            ->send();
                                     }
+                                } else {
+                                    $set('surat_tugas_id', null);
+                                    $set('nomor_surat_tugas', '');
+                                    $set('tujuan', '');
+                                    $set('tanggal_kunjungan', null);
                                 }
+                            } else {
+                                $set('surat_tugas_id', null);
+                                $set('nomor_surat_tugas', '');
+                                $set('tujuan', '');
+                                $set('tanggal_kunjungan', null);
                             }
                         })
                         ->helperText('Pilih survey untuk menyaring Surat Tugas'),
@@ -134,16 +150,25 @@ class LaporanPerjalananDinasResource extends Resource
                                 if ($st) {
                                     $set('nomor_surat_tugas', $st->nomor_surat);
                                     $set('tujuan', $st->keperluan);
-                                    if ($st->waktu_mulai) {
-                                        $set('tanggal_kunjungan', $st->waktu_mulai->format('Y-m-d'));
-                                    } elseif ($st->tanggal) {
-                                        $set('tanggal_kunjungan', $st->tanggal->format('Y-m-d'));
+                                    $initialDate = LaporanPerjalananDinas::determineAvailableDate($st);
+                                    $set('tanggal_kunjungan', $initialDate);
+
+                                    if (!$initialDate) {
+                                        \Filament\Notifications\Notification::make()
+                                            ->warning()
+                                            ->title('Tanggal Tugas Sudah Terisi LPD')
+                                            ->body('Semua tanggal pada Surat Tugas ini sudah digunakan untuk LPD lain oleh pegawai ini. Silakan pilih tanggal kunjungan yang belum terisi.')
+                                            ->send();
                                     }
                                 }
+                            } else {
+                                $set('nomor_surat_tugas', '');
+                                $set('tujuan', '');
+                                $set('tanggal_kunjungan', null);
                             }
                         })
                         ->options(function (Forms\Get $get, ?LaporanPerjalananDinas $record) {
-                            $isSuperAdmin = Auth::user()->roles[0]->name === 'super_admin';
+                            $isSuperAdmin = Auth::user()?->hasRole('super_admin') ?? false;
                             $userId = $isSuperAdmin ? ($get('user_id_temp') ?? Auth::id()) : Auth::id();
                             $surveyId = $get('survey_id_temp');
 
@@ -167,7 +192,7 @@ class LaporanPerjalananDinasResource extends Resource
                                 $query->where('survey_id', $surveyId);
                             }
 
-                            return $query->get()->mapWithKeys(function ($st) {
+                            return $query->get()->mapWithKeys(function ($st) use ($userId, $record) {
                                 // Format tanggal/periode keberangkatan
                                 $tglStr = '';
                                 if ($st->waktu_mulai && $st->waktu_selesai) {
@@ -184,7 +209,13 @@ class LaporanPerjalananDinasResource extends Resource
 
                                 $survey = $st->survey ? " [{$st->survey->name}]" : '';
                                 $user = $st->user ? " - {$st->user->name}" : '';
-                                return [$st->id => "{$st->nomor_surat}{$tglStr}{$survey}{$user}"];
+
+                                $statusNote = '';
+                                if ($userId && !LaporanPerjalananDinas::determineAvailableDate($st, $record?->id)) {
+                                    $statusNote = ' ⚠️ (Semua tgl terisi LPD)';
+                                }
+
+                                return [$st->id => "{$st->nomor_surat}{$tglStr}{$survey}{$user}{$statusNote}"];
                             });
                         })
                         ->required(),
@@ -212,14 +243,65 @@ class LaporanPerjalananDinasResource extends Resource
 
                     Forms\Components\DatePicker::make('tanggal_kunjungan')
                         ->label('Tanggal Kunjungan')
-                        ->default(function () {
-                            $stId = request()->query('surat_tugas_id');
+                        ->native(false)
+                        ->displayFormat('d/m/Y')
+                        ->closeOnDateSelection()
+                        ->disabledDates(function (Forms\Get $get, ?LaporanPerjalananDinas $record) {
+                            $stId = $get('surat_tugas_id') ?? request()->query('surat_tugas_id');
+                            $userId = null;
+                            if ($stId) {
+                                $userId = SuratTugas::find($stId)?->user_id;
+                            }
+                            if (!$userId) {
+                                $isSuperAdmin = Auth::user()?->hasRole('super_admin') ?? false;
+                                $userId = $isSuperAdmin ? ($get('user_id_temp') ?? Auth::id()) : Auth::id();
+                            }
+
+                            if (!$userId) {
+                                return [];
+                            }
+
+                            return LaporanPerjalananDinas::getExistingDatesForUser($userId, $record?->id);
+                        })
+                        ->rules([
+                            fn (Forms\Get $get, ?LaporanPerjalananDinas $record) => function (string $attribute, $value, \Closure $fail) use ($get, $record) {
+                                if (!$value) {
+                                    return;
+                                }
+
+                                $stId = $get('surat_tugas_id') ?? request()->query('surat_tugas_id');
+                                $userId = null;
+                                if ($stId) {
+                                    $userId = SuratTugas::find($stId)?->user_id;
+                                }
+                                if (!$userId) {
+                                    $isSuperAdmin = Auth::user()?->hasRole('super_admin') ?? false;
+                                    $userId = $isSuperAdmin ? ($get('user_id_temp') ?? Auth::id()) : Auth::id();
+                                }
+
+                                if (!$userId) {
+                                    return;
+                                }
+
+                                $conflict = LaporanPerjalananDinas::getDuplicateForUser($userId, $value, $record?->id);
+                                if ($conflict) {
+                                    $userName = \App\Models\User::find($userId)?->name ?? 'Pegawai';
+                                    $tglFormatted = \Carbon\Carbon::parse($value)->translatedFormat('d F Y');
+                                    $fail("Pegawai {$userName} sudah memiliki kegiatan LPD pada tanggal {$tglFormatted} (Surat Tugas: {$conflict->nomor_surat_tugas}). Satu tanggal hanya diperbolehkan untuk 1 kegiatan LPD.");
+                                }
+                            },
+                        ])
+                        ->default(function (Forms\Get $get) {
+                            $stId = request()->query('surat_tugas_id') ?? $get('surat_tugas_id');
                             if ($stId) {
                                 $st = SuratTugas::find($stId);
-                                return $st?->waktu_mulai?->format('Y-m-d') ?? $st?->tanggal?->format('Y-m-d');
+                                if ($st) {
+                                    return LaporanPerjalananDinas::determineAvailableDate($st);
+                                }
                             }
                             return null;
                         })
+                        ->helperText('Satu tanggal hanya boleh untuk 1 kegiatan LPD. Tanggal yang sudah memiliki LPD otomatis dinonaktifkan di kalender.')
                         ->required(),
 
                     Forms\Components\RichEditor::make('uraian_kegiatan')
@@ -279,7 +361,7 @@ class LaporanPerjalananDinasResource extends Resource
     {
         return $table
             ->modifyQueryUsing(function ($query) {
-                $isSuperAdmin = Auth::user()->roles[0]->name === 'super_admin';
+                $isSuperAdmin = Auth::user()?->hasRole('super_admin') ?? false;
 
                 if (!$isSuperAdmin) {
                     $query->whereHas('suratTugas', function ($q) {
@@ -342,7 +424,7 @@ class LaporanPerjalananDinasResource extends Resource
                     ->label('Nama Petugas')
                     ->searchable()
                     ->preload()
-                    ->visible(fn () => Auth::user()->roles[0]->name === 'super_admin'),
+                    ->visible(fn () => Auth::user()?->hasRole('super_admin') ?? false),
             ])
             ->actions([
                 Tables\Actions\Action::make('downloadWord')

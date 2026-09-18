@@ -84,6 +84,13 @@ composer dev
   - Mendesain ulang seluruh halaman verifikasi dokumen publik (`/verify` untuk Sertifikat dan `/surat-tugas/verify/{hash}` untuk Surat Tugas) menjadi portal verifikasi digital modern BPS yang mobile-responsive, elegan, dan profesional lengkap dengan branding resmi BPS Demak, kartu profil pegawai, rincian penugasan, tombol salin nomor dokumen, serta tautan dokumen PDF resmi.
   - Menambahkan command `php artisan certificates:fix-webp` untuk memeriksa dan memperbarui file template lama.
 
+### 2026-09-18
+- **Validasi Duplikasi Tanggal & Disable Kalender Laporan Perjalanan Dinas (LPD)** —
+  - Menambahkan fitur disabled dates pada date picker (`tanggal_kunjungan`) menggunakan kalender interaktif (`native(false)`): tanggal-tanggal yang sudah dibuatkan LPD untuk pegawai yang bersangkutan otomatis dinonaktifkan (abu-abu dan tidak dapat diklik).
+  - Menambahkan validasi form backend untuk mencegah pembuatan atau pengeditan LPD dengan tanggal duplikat untuk pegawai yang sama (1 pegawai hanya diperbolehkan 1 kegiatan LPD per tanggal), lengkap dengan pesan error yang informatif mencantumkan nomor Surat Tugas yang bentrok.
+  - Menambahkan metode penentuan tanggal awal otomatis (`determineAvailableDate`): jika tanggal mulai tugas sudah terisi LPD, sistem otomatis mencari tanggal berikutnya yang masih lowong dalam rentang surat tugas. Jika seluruh tanggal penugasan sudah memiliki LPD, dropdown surat tugas menampilkan indikator `[⚠️ Semua tgl terisi LPD]` dan memunculkan notifikasi peringatan.
+  - Memperbaiki pengecekan role super admin agar aman dari null error menggunakan `hasRole('super_admin')`.
+
 ### 2026-08-20
 - **Penyempurnaan Pesan Validasi Overlap Surat Tugas & Perbaikan Toggle Abaikan Validasi** — 
   - Memperjelas pesan error ketika terjadi bentrok (overlap) penugasan pegawai: kini pesan notifikasi secara detail mencantumkan nomor surat tugas, nama survei yang bertabrakan, serta rentang tanggal pelaksanaan tugas yang bentrok.
