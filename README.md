@@ -67,6 +67,7 @@ composer dev
   - Mengurangi ratusan baris kode pada Resource dan Page Filament tanpa merubah UI/UX maupun perilaku fungsional aplikasi.
   - Menambahkan unit test komprehensif `Tests\Unit\ServiceLayerRefactoringTest` untuk memastikan seluruh service layer terverifikasi 100%.
   - Menambahkan dokumentasi instalasi `php artisan passport:keys` untuk inisialisasi kunci enkripsi OAuth / Laravel Passport.
+  - Menyediakan template otorisasi OAuth (`resources/views/auth/oauth/authorize.blade.php`) serta konfigurasi `Passport::viewPrefix('auth.oauth')` pada `AppServiceProvider` untuk kompatibilitas Laravel Passport 13+ (headless) guna mencegah `BindingResolutionException: Target [AuthorizationViewResponse] is not instantiable`.
 
 ### 2026-09-09
 - **Penyempurnaan Fitur Laporan Lembur (Parity dengan Laporan Perjalanan Dinas)**:

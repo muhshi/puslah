@@ -49,5 +49,7 @@ class AppServiceProvider extends ServiceProvider
             $config = $app['config']['services.sipetra'];
             return $socialite->buildProvider(\App\Providers\SipetraSocialiteProvider::class, $config);
         });
+
+        \Laravel\Passport\Passport::viewPrefix('auth.oauth');
     }
 }
