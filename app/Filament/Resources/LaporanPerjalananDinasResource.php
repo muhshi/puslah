@@ -13,6 +13,7 @@ use Filament\Tables\Table;
 use PhpOffice\PhpWord\TemplateProcessor;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use App\Services\LpdExportService;
 
 class LaporanPerjalananDinasResource extends Resource
 {
@@ -430,12 +431,7 @@ class LaporanPerjalananDinasResource extends Resource
                 Tables\Actions\Action::make('downloadWord')
                     ->label('Word')
                     ->icon('heroicon-o-document-text')
-                    ->action(function (LaporanPerjalananDinas $record) {
-                        $file = self::processWordDocument($record);
-                        if ($file) {
-                            return response()->download($file['path'], $file['name'])->deleteFileAfterSend();
-                        }
-                    }),
+                    ->action(fn(LaporanPerjalananDinas $record) => app(LpdExportService::class)->downloadWord($record)),
 
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\Action::make('activities')
@@ -450,148 +446,15 @@ class LaporanPerjalananDinasResource extends Resource
                         ->label('Download Semua (ZIP)')
                         ->icon('heroicon-o-arrow-down-tray')
                         ->color('success')
-                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
-                            $zipFileName = 'Laporan_Dinas_Bulk_' . now()->format('YmdHis') . '.zip';
-                            $zipPath = storage_path('app/' . $zipFileName);
-                            $zip = new \ZipArchive();
-
-                            if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
-                                \Filament\Notifications\Notification::make()
-                                    ->title('Gagal membuat file ZIP')
-                                    ->danger()
-                                    ->send();
-                                return;
-                            }
-
-                            $tempFiles = [];
-                            foreach ($records as $record) {
-                                $file = self::processWordDocument($record, true);
-                                if ($file) {
-                                    $zip->addFile($file['path'], $file['name']);
-                                    $tempFiles[] = $file['path'];
-                                }
-                            }
-                            $zip->close();
-
-                            // Clean up temp files
-                            foreach ($tempFiles as $tempPath) {
-                                if (file_exists($tempPath)) {
-                                    unlink($tempPath);
-                                }
-                            }
-
-                            return response()->download($zipPath)->deleteFileAfterSend();
-                        }),
+                        ->action(fn(\Illuminate\Database\Eloquent\Collection $records) => app(LpdExportService::class)->downloadBulkZip($records)),
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }
 
-    protected static function processWordDocument(LaporanPerjalananDinas $record, $isBulk = false): ?array
+    public static function processWordDocument(LaporanPerjalananDinas $record, $isBulk = false): ?array
     {
-        $settings = app(\App\Settings\SystemSettings::class);
-        $templatePath = $settings->laporan_dinas_template_path;
-
-        if (!$templatePath || !file_exists(storage_path('app/public/' . $templatePath))) {
-            \Filament\Notifications\Notification::make()
-                ->title('Template Laporan Dinas belum diupload di Pengaturan Sistem')
-                ->danger()
-                ->send();
-            return null;
-        }
-
-        $template = new TemplateProcessor(storage_path('app/public/' . $templatePath));
-
-        $st = $record->suratTugas;
-        $user = $st->user;
-        $profile = $user->profile;
-        
-        $nameParts = explode(',', $user->name);
-        $nameParts[0] = \Illuminate\Support\Str::title($nameParts[0]);
-        $nama_pegawai = implode(',', $nameParts);
-        
-        $template->setValue('nama_pegawai', $nama_pegawai);
-        $template->setValue('nomor_surat_tugas', $record->nomor_surat_tugas);
-        $template->setValue('tujuan', $record->tujuan);
-        $template->setValue('tanggal_kunjungan', $record->tanggal_kunjungan->translatedFormat('d F Y'));
-        
-        // Surat Pernyataan Variables
-        $template->setValue('nip_pegawai', $profile->nip ?? '-');
-        $template->setValue('pangkat_golongan', $profile->pangkat_golongan ?? '-');
-        $template->setValue('jabatan', $profile->jabatan ?? '-');
-        $template->setValue('unit_kerja', $settings->default_office_name ?? 'BPS Kabupaten Demak');
-        $template->setValue('tanggal_pernyataan', $record->tanggal_kunjungan->translatedFormat('d F Y'));
-
-        // Convert rich text HTML to OpenXML preserving bold, italic, underline, nested lists and paragraphs
-        $uraianXml = \App\Services\HtmlToWordXmlConverter::convert($record->uraian_kegiatan, 'Aptos Display', 24);
-        $template->setValue('uraian_kegiatan', $uraianXml);
-
-        $template->setValue('nama_pejabat', $record->nama_pejabat ?? '-');
-        $template->setValue('desa_pejabat', $record->desa_pejabat ?? '-');
-
-        // Photos (max 10)
-        $fotos = $record->fotos()->orderBy('urutan')->take(10)->get();
-        $photoCount = $fotos->count();
-
-        // Dynamic sizing logic "Fit to Page"
-        // Base config: A4 (approx 600px usable width for standard margins)
-        // Scenario 1: 1-2 Photos -> Large (Full Width)
-        // Scenario 2: 3-4 Photos -> Medium (Half Page vertical or Grid)
-        // Scenario 3: 5+ Photos -> Small
-
-        $targetWidth = 600;
-        $targetHeight = 800;
-
-        if ($photoCount <= 1) {
-            $targetWidth = 600;
-            $targetHeight = 600;
-        } elseif ($photoCount <= 2) {
-            $targetWidth = 600;
-            $targetHeight = 400; // Restrict height to fit 2 vertically
-        } elseif ($photoCount <= 4) {
-            $targetWidth = 250;  // Assume user might want grid or smaller vertical
-            $targetHeight = 300;
-        } else {
-            $targetWidth = 250;
-            $targetHeight = 200;
-        }
-
-        for ($i = 1; $i <= 10; $i++) {
-            $foto = $fotos->get($i - 1);
-            if ($foto && Storage::exists('public/' . $foto->file_path)) {
-                try {
-                    $template->setImageValue("foto_{$i}", [
-                        'path' => storage_path('app/public/' . $foto->file_path),
-                        'width' => $targetWidth,
-                        'height' => $targetHeight,
-                        'ratio' => true // Maintain aspect ratio within target box
-                    ]);
-                    $template->setValue("keterangan_foto_{$i}", $foto->keterangan ?? '');
-                } catch (\Exception $e) {
-                    // Fallback if image fails (e.g. invalid format)
-                    $template->setValue("foto_{$i}", '[Error format foto]');
-                    $template->setValue("keterangan_foto_{$i}", '');
-                }
-            } else {
-                $template->setValue("foto_{$i}", '');
-                $template->setValue("keterangan_foto_{$i}", '');
-            }
-        }
-
-        // Save temp with safe filename
-        $namaPegawai = $st->user->name;
-        $namaSurvey = $st->survey ? $st->survey->name : 'Survey';
-        $tanggal = $record->tanggal_kunjungan->format('Y_m_d');
-        
-        $safeName = preg_replace('/[^a-zA-Z0-9]/', '_', $namaPegawai);
-        $safeSurvey = preg_replace('/[^a-zA-Z0-9]/', '_', $namaSurvey);
-        
-        $fileName = "{$safeName}_{$safeSurvey}_{$tanggal}.docx";
-        $prefix = $isBulk ? 'temp_bulk_laporan_' : 'temp_laporan_';
-        $tempPath = storage_path("app/{$prefix}" . $fileName);
-        $template->saveAs($tempPath);
-
-        return ['path' => $tempPath, 'name' => $fileName];
+        return app(LpdExportService::class)->processWordDocument($record, $isBulk);
     }
 
     public static function getRelations(): array

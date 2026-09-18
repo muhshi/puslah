@@ -22,6 +22,9 @@ use PhpOffice\PhpWord\TemplateProcessor;
 use App\Models\User;
 use App\Models\UserProfile;
 use App\Filament\Resources\LaporanPerjalananDinasResource;
+use App\Services\SppdService;
+use App\Services\SuratTugasPdfService;
+use App\Services\SuratTugasNumberingService;
 
 class SuratTugasResource extends Resource
 {
@@ -400,54 +403,7 @@ class SuratTugasResource extends Resource
                     ->label('PDF')
                     ->icon('heroicon-o-document-arrow-down')
                     ->color(fn(SuratTugas $record) => $record->status === 'approved' ? 'danger' : 'gray')
-                    ->action(function (SuratTugas $record) {
-                        // 1. Ensure Hash exists
-                        if (!$record->hash) {
-                            $record->update(['hash' => \Illuminate\Support\Str::random(32)]);
-                        }
-
-                        // 2. Load Logo Base64
-                        $logoBase64 = \Illuminate\Support\Facades\Cache::remember('logo_bps_static_base64', 86400, function () {
-                            $logoPath = public_path('images/logo_bps.png');
-                            if (file_exists($logoPath)) {
-                                return 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
-                            }
-                            return null;
-                        });
-
-                        // 3. Generate QR (ONLY IF APPROVED)
-                        $qrBase64 = null;
-                        if ($record->status === 'approved') {
-                            $verifyUrl = route('surat-tugas.verify', $record->hash);
-                            $qrSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(100)->margin(0)->generate($verifyUrl);
-                            $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
-                        }
-
-                        // 4. Prepare Data
-                        $periode = self::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
-
-                        // 5. Generate PDF
-                        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('surat-tugas.pdf_table_layout', [
-                            'surat' => $record,
-                            'logoBase64' => $logoBase64,
-                            'qrBase64' => $qrBase64,
-                            'periode' => $periode,
-                            'is_preview' => false,
-                        ])->setPaper('a4', 'portrait');
-
-                        // 6. Set Encryption if Master Password is set
-                        $settings = app(SystemSettings::class);
-                        if (!empty($settings->pdf_master_password)) {
-                            // User password null (open freely), Owner password set, Permissions: print only
-                            $pdf->setEncryption('', $settings->pdf_master_password, ['print']);
-                        }
-
-                        $surveyName = $record->survey ? str_replace(['/', '\\', ' '], ['_', '_', '_'], $record->survey->name) : 'NoSurvey';
-                        $userName = str_replace(['/', '\\', ' '], ['_', '_', '_'], $record->user->name);
-                        $nomorSurat = str_replace(['/', '\\'], '_', $record->nomor_surat);
-                        $fileName = "{$nomorSurat}-{$surveyName}-{$userName}.pdf";
-                        return response()->streamDownload(fn() => print ($pdf->output()), $fileName);
-                    }),
+                    ->action(fn(SuratTugas $record) => app(SuratTugasPdfService::class)->downloadPdf($record)),
 
                 Tables\Actions\Action::make('generate_sppd')
                     ->label('Buat SPPD')
@@ -538,23 +494,7 @@ class SuratTugasResource extends Resource
                             ->required(),
                     ])
                     ->action(function (SuratTugas $record, array $data) {
-                        $settings = app(SystemSettings::class);
-
-                        $record->sppd()->create([
-                            'nomor_sppd' => $data['nomor_sppd'],
-                            'nomor_urut_sppd' => $data['nomor_urut_sppd'],
-                            'kode_klasifikasi_sppd' => $data['kode_klasifikasi_sppd'] ?? 'KP.650',
-                            'tingkat_perjalanan_dinas' => $data['tingkat_perjalanan_dinas'],
-                            'alat_angkutan' => $data['alat_angkutan'],
-                            'mak' => $data['mak'],
-                            'maksud_perjalanan' => $data['maksud_perjalanan'],
-                            'tempat_berangkat' => $data['tempat_berangkat'],
-                            'tempat_tujuan' => $data['tempat_tujuan'],
-                            'biaya_transport' => $data['biaya_transport'],
-                            'ppk_name' => $settings->ppk_name,
-                            'ppk_nip' => $settings->ppk_nip,
-                            'ppk_title' => $settings->ppk_title,
-                        ]);
+                        app(SppdService::class)->createSppd($record, $data);
                         \Filament\Notifications\Notification::make()->title('SPPD Berhasil Dibuat')->success()->send();
                     }),
                 Tables\Actions\Action::make('word_sppd')
@@ -562,71 +502,7 @@ class SuratTugasResource extends Resource
                     ->icon('heroicon-o-document-text')
                     ->color('success')
                     ->visible(fn(SuratTugas $record) => $record->sppd()->exists())
-                    ->action(function (SuratTugas $record) {
-                        $settings = app(SystemSettings::class);
-                        $templatePath = $settings->sppd_template_path;
-
-                        if (!$templatePath || !file_exists(storage_path('app/public/' . $templatePath))) {
-                            \Filament\Notifications\Notification::make()
-                                ->title('Template SPPD belum diupload di Pengaturan Sistem')
-                                ->danger()
-                                ->send();
-                            return;
-                        }
-
-                        $template = new TemplateProcessor(storage_path('app/public/' . $templatePath));
-                        $sppd = $record->sppd;
-
-                        $template->setValue('nomor_sppd', $sppd->nomor_sppd);
-                        $ppkName = $sppd->ppk_name ?? $settings->ppk_name;
-                        $ppkNip = $sppd->ppk_nip ?? $settings->ppk_nip;
-
-                        $template->setValue('nama_ppk', $ppkName);
-                        $template->setValue('nip_ppk', $ppkNip);
-
-                        $template->setValue('nama_kepala', $record->signer_name ?? $settings->cert_signer_name);
-                        $template->setValue('nip_kepala', $record->signer_nip ?? $settings->cert_signer_nip);
-                        $template->setValue('nomor_surat', $record->nomor_surat);
-
-                        $template->setValue('nama_pegawai', $record->user->profile->full_name ?? $record->user->name);
-                        $template->setValue('nip_pegawai', $record->user->profile->nip ?? '-');
-                        $template->setValue('pangkat_golongan', $record->user->profile->pangkat_golongan ?? '-');
-                        $template->setValue('jabatan_pegawai', $record->user->profile->jabatan ?? '-');
-                        $template->setValue('jabatan', $record->user->profile->jabatan ?? '-');
-                        $template->setValue('unit_kerja', 'Badan Pusat Statistik Kabupaten Demak');
-
-                        $template->setValue('tingkat_perjalanan', $sppd->tingkat_perjalanan_dinas ?? '-');
-                        $template->setValue('maksud_perjalanan', $sppd->maksud_perjalanan ?? "Transport lokal dalam rangka {$record->keperluan}");
-                        $template->setValue('keperluan', $record->keperluan);
-                        $template->setValue('alat_angkutan', $sppd->alat_angkutan ?? '-');
-                        $template->setValue('tempat_berangkat', $sppd->tempat_berangkat ?? 'Demak');
-                        $template->setValue('tempat_tujuan', $sppd->tempat_tujuan ?? $record->tempat_tugas ?? '-');
-
-                        $start = \Carbon\Carbon::parse($record->waktu_mulai);
-                        $end = \Carbon\Carbon::parse($record->waktu_selesai);
-                        $lama = $start->diffInDays($end) + 1;
-                        $terbilang = [1 => 'satu', 2 => 'dua', 3 => 'tiga', 4 => 'empat', 5 => 'lima', 6 => 'enam', 7 => 'tujuh', 8 => 'delapan', 9 => 'sembilan', 10 => 'sepuluh', 11 => 'sebelas', 12 => 'dua belas', 13 => 'tiga belas', 14 => 'empat belas', 15 => 'lima belas', 30 => 'tiga puluh', 31 => 'tiga puluh satu'];
-                        $lamaText = $terbilang[$lama] ?? $lama;
-
-                        $template->setValue('lama_perjalanan', $lama . ' (' . $lamaText . ') hari');
-                        $template->setValue('tanggal_berangkat', $start->translatedFormat('d F Y'));
-                        $template->setValue('tanggal_kembali', $end->translatedFormat('d F Y'));
-                        $template->setValue('mak', $sppd->mak ?? '-');
-                        
-                        $biaya = $sppd->biaya_transport ?? 0;
-                        $template->setValue('biaya_transport', 'Rp ' . number_format($biaya, 0, ',', '.') . ',-');
-                        $template->setValue('terbilang_biaya', ucfirst(trim(self::terbilang($biaya))) . ' rupiah');
-                        
-                        $template->setValue('nomor_surat_tugas', $record->nomor_surat);
-                        $template->setValue('tanggal_surat', \Carbon\Carbon::parse($record->tanggal)->translatedFormat('d F Y'));
-                        $template->setValue('tanggal_pernyataan', \Carbon\Carbon::parse($record->tanggal)->translatedFormat('d F Y'));
-
-                        $safeFilename = str_replace(['/', '\\'], '_', $sppd->nomor_sppd);
-                        $fileName = "SPPD_{$safeFilename}.docx";
-                        $tempPath = storage_path('app/temp_' . $fileName);
-                        $template->saveAs($tempPath);
-                        return response()->download($tempPath)->deleteFileAfterSend();
-                    }),
+                    ->action(fn(SuratTugas $record) => app(SppdService::class)->downloadWord($record)),
                 Tables\Actions\Action::make('generate_lpd')
                     ->label('Buat LPD')
                     ->icon('heroicon-o-document-plus')
@@ -746,35 +622,7 @@ class SuratTugasResource extends Resource
                                 ->maxLength(255),
                         ])
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
-                            $settings = app(SystemSettings::class);
-                            $count = 0;
-                            $nextSppdUrut = $data['nomor_urut_sppd_mulai'] - 1;
-
-                            foreach ($records as $record) {
-                                if (!$record->sppd()->exists()) {
-                                    $year = \Carbon\Carbon::parse($record->tanggal)->year;
-                                    $nextSppdUrut++;
-                                    $urutSppdPad = str_pad($nextSppdUrut, 4, '0', STR_PAD_LEFT);
-                                    $nomorSppd = str_replace('{urut}', $urutSppdPad, $data['format_nomor_sppd']);
-
-                                    $record->sppd()->create([
-                                        'nomor_sppd' => $nomorSppd,
-                                        'nomor_urut_sppd' => $nextSppdUrut,
-                                        'kode_klasifikasi_sppd' => 'KP.650',
-                                        'tingkat_perjalanan_dinas' => $data['tingkat_perjalanan_dinas'],
-                                        'alat_angkutan' => $data['alat_angkutan'],
-                                        'mak' => $data['mak'],
-                                        'maksud_perjalanan' => $data['maksud_perjalanan'] ?: "Transport lokal dalam rangka {$record->keperluan}",
-                                        'tempat_berangkat' => $data['tempat_berangkat'] ?: 'Demak',
-                                        'tempat_tujuan' => $data['tempat_tujuan'] ?: $record->tempat_tugas,
-                                        'biaya_transport' => $data['biaya_transport'],
-                                        'ppk_name' => $settings->ppk_name,
-                                        'ppk_nip' => $settings->ppk_nip,
-                                        'ppk_title' => $settings->ppk_title,
-                                    ]);
-                                    $count++;
-                                }
-                            }
+                            $count = app(SppdService::class)->generateBulkSppd($records, $data);
 
                             \Filament\Notifications\Notification::make()
                                 ->title('Berhasil!')
@@ -910,87 +758,31 @@ class SuratTugasResource extends Resource
 
     protected static function updateNomorSurat(Get $get, Set $set): void
     {
-        $settings = app(SystemSettings::class);
-        $prefix = $settings->surat_prefix ?? 'B';
-        $office = $settings->office_code ?? '33210';
-
-        $urut = str_pad($get('nomor_urut') ?? 0, 4, '0', STR_PAD_LEFT);
-        $klasifikasi = $get('kode_klasifikasi') ?? 'KP.650';
-
-        // Use tanggal year if available, else current year
-        $tanggal = $get('tanggal');
-        $year = $tanggal ? \Carbon\Carbon::parse($tanggal)->year : now()->year;
-
-        $nomor = "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$year}";
+        $nomor = SuratTugasNumberingService::formatNomorSurat(
+            $get('nomor_urut') ?? 0,
+            $get('kode_klasifikasi') ?? 'KP.650',
+            $get('tanggal') ? \Carbon\Carbon::parse($get('tanggal'))->year : now()->year
+        );
         $set('nomor_surat', $nomor);
     }
 
     public static function formatPeriodeTugas($mulai, $selesai): string
     {
-        if (!$mulai || !$selesai) {
-            return '-';
-        }
-
-        $startDate = \Carbon\Carbon::parse($mulai);
-        $endDate = \Carbon\Carbon::parse($selesai);
-
-        // Case 1: Same date
-        if ($startDate->isSameDay($endDate)) {
-            return $startDate->translatedFormat('d F Y');
-        }
-
-        // Case 2: Same month and year
-        if ($startDate->month === $endDate->month && $startDate->year === $endDate->year) {
-            return $startDate->translatedFormat('d') . ' - ' . $endDate->translatedFormat('d F Y');
-        }
-
-        // Case 3: Same year, different month
-        if ($startDate->year === $endDate->year) {
-            return $startDate->translatedFormat('d F') . ' - ' . $endDate->translatedFormat('d F Y');
-        }
-
-        // Case 4: Different year
-        return $startDate->translatedFormat('d F Y') . ' - ' . $endDate->translatedFormat('d F Y');
+        return SuratTugasPdfService::formatPeriodeTugas($mulai, $selesai);
     }
 
     protected static function updateNomorSppd(Get $get, Set $set): void
     {
-        $settings = app(SystemSettings::class);
-        $prefix = $settings->surat_prefix ?? 'B';
-        $office = $settings->office_code ?? '33210';
-
-        $urut = str_pad($get('nomor_urut_sppd') ?? 0, 4, '0', STR_PAD_LEFT);
-        $klasifikasi = $get('kode_klasifikasi_sppd') ?? 'KP.650';
-
-        // Use tanggal year if available, else current year
-        $tanggal = $get('tanggal');
-        $year = $tanggal ? \Carbon\Carbon::parse($tanggal)->year : now()->year;
-
-        $nomor = "{$prefix}-{$urut}/{$office}/SE2026/{$klasifikasi}/{$year}";
+        $nomor = SppdService::formatNomorSppd(
+            $get('nomor_urut_sppd') ?? 0,
+            $get('kode_klasifikasi_sppd') ?? 'KP.650',
+            $get('tanggal') ? \Carbon\Carbon::parse($get('tanggal'))->year : now()->year
+        );
         $set('nomor_sppd', $nomor);
     }
 
-    public static function terbilang($angka) {
-        $angka = abs((int)$angka);
-        $baca = array("", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan", "sepuluh", "sebelas");
-        $terbilang = "";
-        if ($angka < 12) {
-            $terbilang = " " . $baca[$angka];
-        } else if ($angka < 20) {
-            $terbilang = self::terbilang($angka - 10) . " belas";
-        } else if ($angka < 100) {
-            $terbilang = self::terbilang($angka / 10) . " puluh" . self::terbilang($angka % 10);
-        } else if ($angka < 200) {
-            $terbilang = " seratus" . self::terbilang($angka - 100);
-        } else if ($angka < 1000) {
-            $terbilang = self::terbilang($angka / 100) . " ratus" . self::terbilang($angka % 100);
-        } else if ($angka < 2000) {
-            $terbilang = " seribu" . self::terbilang($angka - 1000);
-        } else if ($angka < 1000000) {
-            $terbilang = self::terbilang($angka / 1000) . " ribu" . self::terbilang($angka % 1000);
-        } else if ($angka < 1000000000) {
-            $terbilang = self::terbilang($angka / 1000000) . " juta" . self::terbilang($angka % 1000000);
-        }
-        return $terbilang;
+    public static function terbilang($angka): string
+    {
+        return SppdService::terbilang($angka);
     }
 }

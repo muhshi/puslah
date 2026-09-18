@@ -53,6 +53,19 @@ composer dev
 
 ## Changelog
 
+### 2026-09-18
+- **Refactoring Arsitektur Resource & Controller ke Dedicated Service Layer**:
+  - Mengekstrak logika bisnis, pemrosesan dokumen Word/PDF, dan penomoran dari Filament Resources ke kelas layanan mandiri (`app/Services/`):
+    - `SppdService`: Menangani pembuatan SPPD (single & bulk), formatting nomor SPPD, nominal terbilang bahasa Indonesia, dan pembuatan file Word SPPD dari template.
+    - `SuratTugasPdfService`: Menangani kompilasi dokumen PDF Surat Tugas via DomPDF, asset logo base64 ter-cache, SVG QR code, formatting rentang tanggal tugas bahasa Indonesia, serta proteksi enkripsi PDF.
+    - `LpdExportService`: Menangani export Word Laporan Perjalanan Dinas (LPD), konversi HTML RichEditor ke OpenXML, kalkulasi dimensi gambar/foto dokumentasi proporsional, dan unduh massal (bulk ZIP).
+    - `LemburExportService`: Menangani export Word Laporan Lembur, deteksi fallback template, formatting penandatangan, dan unduh massal (bulk ZIP).
+    - `SuratTugasNumberingService`: Sentralisasi penomoran surat tugas, format nomor surat, serta utilitas rentang tanggal.
+    - `CertificateIssuanceService`: Sentralisasi pembuatan sertifikat survei, penomoran urut tahunan, rendering PDF, dan hash verifikasi QR.
+  - Mengekstrak duplikasi form modal Surat Tugas dari nomor terblokir ke reusable factory class `SuratTugasFormFactory` yang dipakai bersama oleh `ManageBlockedNumbers` dan `SkippedNumbersInfoWidget`.
+  - Mengurangi ratusan baris kode pada Resource dan Page Filament tanpa merubah UI/UX maupun perilaku fungsional aplikasi.
+  - Menambahkan unit test komprehensif `Tests\Unit\ServiceLayerRefactoringTest` untuk memastikan seluruh service layer terverifikasi 100%.
+
 ### 2026-09-09
 - **Penyempurnaan Fitur Laporan Lembur (Parity dengan Laporan Perjalanan Dinas)**:
   - Mengubah input uraian pekerjaan/output lembur dari Textarea biasa menjadi **RichEditor** dengan dukungan formatting teks (**bold**, *italic*, underline, strike) serta daftar berpoin/bernomor (bullet list & ordered list).

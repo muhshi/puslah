@@ -391,9 +391,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
                         $currentUrut++;
                     }
 
-                    $urut = str_pad($currentUrut, 4, '0', STR_PAD_LEFT);
-                    
-                    $nomorSurat = "{$prefix}-{$urut}/{$office}/{$klasifikasi}/{$year}";
+                    $nomorSurat = \App\Services\SuratTugasNumberingService::formatNomorSurat($currentUrut, $klasifikasi, $year);
 
                     $jabatanPegawai = $jabatanManual;
                     if ($sumberJabatan === 'database') {
