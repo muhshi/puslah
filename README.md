@@ -40,6 +40,7 @@ npm install && npm run build
 # Setup environment
 cp .env.example .env
 php artisan key:generate
+php artisan passport:keys
 
 # Konfigurasi database di .env lalu:
 php artisan migrate
@@ -65,6 +66,7 @@ composer dev
   - Mengekstrak duplikasi form modal Surat Tugas dari nomor terblokir ke reusable factory class `SuratTugasFormFactory` yang dipakai bersama oleh `ManageBlockedNumbers` dan `SkippedNumbersInfoWidget`.
   - Mengurangi ratusan baris kode pada Resource dan Page Filament tanpa merubah UI/UX maupun perilaku fungsional aplikasi.
   - Menambahkan unit test komprehensif `Tests\Unit\ServiceLayerRefactoringTest` untuk memastikan seluruh service layer terverifikasi 100%.
+  - Menambahkan dokumentasi instalasi `php artisan passport:keys` untuk inisialisasi kunci enkripsi OAuth / Laravel Passport.
 
 ### 2026-09-09
 - **Penyempurnaan Fitur Laporan Lembur (Parity dengan Laporan Perjalanan Dinas)**:
