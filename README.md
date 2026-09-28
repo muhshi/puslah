@@ -54,6 +54,13 @@ composer dev
 
 ## Changelog
 
+### 2026-09-28
+- **Pembersihan File Temporary & Optimasi Resource Konfigurasi**:
+  - Membersihkan file-file temporer ekstraksi DOCX/ZIP (`temp.zip`, `temp_docx/`, `temp_out.zip`, `temp_out_docx/`, `test_out.docx`) serta menambahkan pola pengecualian ke `.gitignore` agar tidak mengotori repositori git.
+  - Memperbarui deskripsi variabel template laporan lembur pada `SystemSettingsPage` untuk menyertakan `${jabatan_kepala}`, `${nama_kepala}`, dan `${nip_kepala}`.
+  - Mengoptimasi limitasi resource memori di `docker-compose.yml` (`mem_limit`, PHP memory limit) dan worker max-jobs (`--max-jobs=500`).
+  - Menyesuaikan konfigurasi FrankenPHP pada `Caddyfile` (`num_threads 2`).
+
 ### 2026-09-18
 - **Dukungan Multi-LPD per Surat Tugas & Validasi Rentang Tanggal**:
   - Mengubah relasi `SuratTugas` ke `LaporanPerjalananDinas` menjadi `HasMany` sehingga 1 Surat Tugas dapat memiliki lebih dari 1 LPD pada tanggal penugasan yang berbeda.
