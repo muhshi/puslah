@@ -42,6 +42,8 @@ class Presensi extends Component
     public ?string $uiWarning = null;      // warning geolocation / di luar radius
 
     public string $defaultOfficeName = 'BPS Kabupaten Demak';
+    public string $todayFormatted = '';
+    public string $userRole = 'Mitra';
 
     public function render()
     {
@@ -50,6 +52,13 @@ class Presensi extends Component
 
     public function mount(SystemSettings $cfg): void
     {
+        Carbon::setLocale('id');
+        $this->todayFormatted = Carbon::now('Asia/Jakarta')->translatedFormat('l, d F Y');
+        
+        $user = Auth::user();
+        $roleName = $user?->roles?->pluck('name')->first();
+        $this->userRole = $roleName ? ucwords(str_replace('_', ' ', $roleName)) : 'Mitra';
+
         $userId = Auth::id();
         $today = Carbon::today('Asia/Jakarta')->toDateString();
 
@@ -121,13 +130,13 @@ class Presensi extends Component
 
         if ($approvedLeave) {
             session()->flash('error', 'Anda sedang cuti. Tidak bisa presensi.');
-            return redirect('presensi');
+            return redirect()->route('presensi');
         }
 
         // BANNED?
         if ($this->ruleBanned) {
             session()->flash('error', 'Anda diblokir presensi pada periode ini.');
-            return redirect('presensi');
+            return redirect()->route('presensi');
         }
 
         // Geofence (server authority) — bypass jika WFA
@@ -141,7 +150,7 @@ class Presensi extends Component
             $radius = $this->effectiveRadiusM ?: $this->radiusM;
             if ($dist > $radius) {
                 session()->flash('error', 'Di luar radius kantor.');
-                return redirect('presensi');
+                return redirect()->route('presensi');
             }
         }
 
@@ -164,15 +173,17 @@ class Presensi extends Component
 
             $att->save();
             $this->attendance = $att;
+            session()->flash('success', 'Presensi Masuk (Check-in) berhasil dicatat pada pukul ' . $nowStr . ' WIB.');
         } else {
             // CHECK-OUT (replace)
             $this->attendance->end_latitude = $this->latitude;
             $this->attendance->end_longitude = $this->longitude;
             $this->attendance->end_time = $nowStr;
             $this->attendance->save();
+            session()->flash('success', 'Presensi Pulang (Check-out) berhasil dicatat pada pukul ' . $nowStr . ' WIB.');
         }
 
-        return redirect('admin/attendances');
+        return redirect()->route('presensi');
     }
 
     // Haversine (meter)

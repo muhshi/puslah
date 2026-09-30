@@ -54,6 +54,12 @@ composer dev
 
 ## Changelog
 
+### 2026-09-30
+- **Pembaruan Halaman Presensi Online & Navigasi Dashboard**:
+  - Redesain antarmuka presensi online (`/presensi`) dengan tampilan modern, responsif, dan rapi sesuai identitas visual DINAMIT BPS Demak (Inter font, glassmorphism navbar, live clock, kartu status kehadiran, dan peta interaktif Leaflet dengan indikator radius).
+  - Mengubah alur redirect setelah presensi berhasil: pengguna tetap berada di halaman presensi (`/presensi`) dengan notifikasi sukses, menghindari error 403 bagi akun mitra yang sebelumnya dialihkan ke `/admin/attendances`.
+  - Menambahkan tombol akses cepat ke Halaman Dashboard (`/admin`) di navbar atas, notifikasi sukses, dan bagian kontrol presensi.
+
 ### 2026-09-28
 - **Pembersihan File Temporary & Optimasi Resource Konfigurasi**:
   - Membersihkan file-file temporer ekstraksi DOCX/ZIP (`temp.zip`, `temp_docx/`, `temp_out.zip`, `temp_out_docx/`, `test_out.docx`) serta menambahkan pola pengecualian ke `.gitignore` agar tidak mengotori repositori git.
