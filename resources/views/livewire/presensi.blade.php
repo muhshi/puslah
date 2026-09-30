@@ -398,12 +398,7 @@
 
             // Office Marker
             const officeMarker = L.marker(office).addTo(map);
-            officeMarker.bindPopup(`
-                <div class="text-xs">
-                    <p class="font-bold text-slate-800">{{ $schedule ? $schedule->office->name : $defaultOfficeName }}</p>
-                    <p class="text-slate-500 text-[11px] mt-0.5">Titik Kantor BPS Demak (Radius: ${radius}m)</p>
-                </div>
-            `);
+            officeMarker.bindPopup("Kantor: {{ $schedule ? $schedule->office->name : $defaultOfficeName }} (Radius: " + radius + " m)");
         });
 
         function tagLocation() {
@@ -431,12 +426,7 @@
 
                 // User Marker
                 marker = L.marker([lat, lng]).addTo(map);
-                marker.bindPopup(`
-                    <div class="text-xs">
-                        <p class="font-bold text-bps-blue">Posisi Anda</p>
-                        <p class="text-slate-500 text-[11px]">Akurasi GPS: &plusmn;${accuracy}m</p>
-                    </div>
-                `).openPopup();
+                marker.bindPopup("Posisi Anda (Akurasi: \u00B1" + accuracy + " m)").openPopup();
 
                 // User accuracy circle
                 userCircle = L.circle([lat, lng], {
@@ -476,7 +466,7 @@
                     component.set('longitude', lng);
                     component.set('uiWarning', null);
                 } else {
-                    component.set('uiWarning', `Lokasi Anda berada di luar radius kantor (${d} meter > batas ${radius} meter). Silakan mendekat ke area kantor.`);
+                    component.set('uiWarning', 'Lokasi Anda berada di luar radius kantor (' + d + ' meter, melebihi batas ' + radius + ' meter). Silakan mendekat ke area kantor.');
                 }
 
                 if (btnText) btnText.textContent = 'Perbarui Lokasi GPS';
