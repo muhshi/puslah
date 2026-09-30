@@ -55,6 +55,10 @@ composer dev
 ## Changelog
 
 ### 2026-09-30
+- **Optimasi Script Deployment (`deploy.sh`) Hanya Build Saat Diperlukan**:
+  - Memperbaiki logika deteksi build di `deploy.sh` yang sebelumnya memicu `NEED_BUILD=true` pada setiap deploy akibat pengecekan container yang keliru.
+  - Memastikan proses `docker compose build` hanya berjalan jika terdapat perubahan file konfigurasi Docker (`Dockerfile`, `docker-compose.yml`, `Caddyfile`, direktori `docker/`), dipicu secara eksplisit (`--build`), atau image Docker belum pernah dibuild sebelumnya.
+  - Jika hanya kode aplikasi (PHP, Blade, config) yang berubah, deploy berjalan secara instan (menggunakan image & container aktif dengan volume mount tanpa rebuild).
 - **Pembaruan Halaman Presensi Online & Navigasi Dashboard**:
   - Redesain antarmuka presensi online (`/presensi`) dengan tampilan modern, responsif, dan rapi sesuai identitas visual DINAMIT BPS Demak (Inter font, glassmorphism navbar, live clock, kartu status kehadiran, dan peta interaktif Leaflet dengan indikator radius).
   - Mengubah alur redirect setelah presensi berhasil: pengguna tetap berada di halaman presensi (`/presensi`) dengan notifikasi sukses, menghindari error 403 bagi akun mitra yang sebelumnya dialihkan ke `/admin/attendances`.

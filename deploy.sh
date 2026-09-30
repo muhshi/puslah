@@ -57,10 +57,14 @@ elif [ -n "$OLD_COMMIT" ] && [ "$OLD_COMMIT" != "$NEW_COMMIT" ]; then
     fi
 fi
 
-# Cek juga jika container belum berjalan
-if [ -z "$(docker ps -q -f name=^/${CONTAINER_NAME}$)" ]; then
-    echo "   ℹ️  Container belum berjalan. Menjalankan container..."
-    NEED_BUILD=true
+# Cek apakah image Docker untuk layanan utama sudah ada
+# Jika image belum ada sama sekali di sistem host, baru lakukan build
+if [ "$NEED_BUILD" = false ]; then
+    IMAGE_EXISTS=$(docker compose images -q "$CONTAINER_NAME" 2>/dev/null || docker images -q "$CONTAINER_NAME" 2>/dev/null || echo "")
+    if [ -z "$IMAGE_EXISTS" ]; then
+        echo "   ℹ️  Image Docker belum tersedia di sistem. Build pertama kali diperlukan."
+        NEED_BUILD=true
+    fi
 fi
 
 # 3. Build & Restart Container jika diperlukan
@@ -72,7 +76,7 @@ if [ "$NEED_BUILD" = true ]; then
     docker compose up -d --build
     echo "   ✅ Image berhasil di-build & container dinyalakan ulang."
 else
-    echo "⚡ [2/6] Lewati build Docker (menggunakan image & container aktif)..."
+    echo "⚡ [2/6] Lewati build Docker (image sudah tersedia & tidak ada perubahan Docker/Caddy)..."
     docker compose up -d --no-build
     echo "   ✅ Container aktif."
 fi
