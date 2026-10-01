@@ -21,16 +21,39 @@ class FileDownloadController extends Controller
         $name = $request->query('name');
         $disk = $request->query('disk', 'public');
 
-        if (!$path || str_contains($path, '..') || str_starts_with($path, '/') || str_starts_with($path, '\\')) {
+        if (!$path || str_contains($path, '..')) {
             abort(400, 'Path file tidak valid.');
         }
 
-        if (!Storage::disk($disk)->exists($path)) {
+        // Normalisasi path: decode URL, hilangkan slash awal dan prefix umum
+        $cleanPath = ltrim(urldecode($path), '/\\');
+        if (str_starts_with($cleanPath, 'storage/')) {
+            $cleanPath = substr($cleanPath, 8);
+        }
+        if (str_starts_with($cleanPath, 'public/')) {
+            $cleanPath = substr($cleanPath, 7);
+        }
+
+        $cleanPath = ltrim($cleanPath, '/\\');
+
+        $fullPath = null;
+        if (Storage::disk($disk)->exists($cleanPath)) {
+            $fullPath = Storage::disk($disk)->path($cleanPath);
+        } elseif (file_exists(storage_path('app/public/' . $cleanPath))) {
+            $fullPath = storage_path('app/public/' . $cleanPath);
+        } elseif (file_exists(public_path('storage/' . $cleanPath))) {
+            $fullPath = public_path('storage/' . $cleanPath);
+        } elseif (file_exists(storage_path('app/' . $cleanPath))) {
+            $fullPath = storage_path('app/' . $cleanPath);
+        } elseif (file_exists(public_path($cleanPath))) {
+            $fullPath = public_path($cleanPath);
+        }
+
+        if (!$fullPath || !file_exists($fullPath)) {
             abort(404, 'File tidak ditemukan di server.');
         }
 
-        $fullPath = Storage::disk($disk)->path($path);
-        $filename = $name ? basename($name) : basename($path);
+        $filename = $name ? basename($name) : basename($cleanPath);
 
         return response()->download($fullPath, $filename);
     }
