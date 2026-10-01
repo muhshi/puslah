@@ -169,4 +169,82 @@ class LpdExportService
 
         return response()->download($zipPath)->deleteFileAfterSend();
     }
+
+    /**
+     * Download seluruh foto dokumentasi LPD sebagai file ZIP.
+     */
+    public function downloadPhotosZip(LaporanPerjalananDinas $record): ?BinaryFileResponse
+    {
+        $fotos = $record->fotos()->orderBy('urutan')->get();
+        if ($fotos->isEmpty()) {
+            Notification::make()
+                ->title('Tidak ada foto pada laporan ini')
+                ->warning()
+                ->send();
+            return null;
+        }
+
+        $st = $record->suratTugas;
+        $user = $st?->user;
+        $namaPegawai = preg_replace('/[^a-zA-Z0-9]/', '_', $user?->name ?? 'Pegawai');
+        $nomorSurat = preg_replace('/[^a-zA-Z0-9]/', '_', $record->nomor_surat_tugas ?? 'ST');
+        $tanggal = $record->tanggal_kunjungan ? $record->tanggal_kunjungan->format('Y_m_d') : now()->format('Y_m_d');
+
+        $zipFileName = "Foto_LPD_{$namaPegawai}_{$nomorSurat}_{$tanggal}.zip";
+        $zipPath = storage_path('app/' . $zipFileName);
+        $zip = new ZipArchive();
+
+        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            Notification::make()
+                ->title('Gagal membuat file ZIP')
+                ->danger()
+                ->send();
+            return null;
+        }
+
+        $added = 0;
+        foreach ($fotos as $index => $foto) {
+            $path = storage_path('app/public/' . $foto->file_path);
+            if (file_exists($path)) {
+                $ext = pathinfo($path, PATHINFO_EXTENSION) ?: 'jpg';
+                $ket = $foto->keterangan ? '_' . Str::slug(Str::limit($foto->keterangan, 30, '')) : '';
+                $photoName = sprintf("Foto_%02d%s.%s", $index + 1, $ket, $ext);
+                $zip->addFile($path, $photoName);
+                $added++;
+            }
+        }
+        $zip->close();
+
+        if ($added === 0) {
+            if (file_exists($zipPath)) {
+                unlink($zipPath);
+            }
+            Notification::make()
+                ->title('File foto fisik tidak ditemukan di server')
+                ->danger()
+                ->send();
+            return null;
+        }
+
+        return response()->download($zipPath)->deleteFileAfterSend();
+    }
+
+    /**
+     * Download single foto dari LaporanFoto.
+     */
+    public function downloadSinglePhoto(\App\Models\LaporanFoto $foto): ?BinaryFileResponse
+    {
+        $path = storage_path('app/public/' . $foto->file_path);
+        if (!file_exists($path)) {
+            Notification::make()
+                ->title('File foto tidak ditemukan di server')
+                ->danger()
+                ->send();
+            return null;
+        }
+
+        $ext = pathinfo($path, PATHINFO_EXTENSION) ?: 'jpg';
+        $nama = 'Foto_' . ($foto->keterangan ? Str::slug(Str::limit($foto->keterangan, 30, '')) : $foto->id) . '.' . $ext;
+        return response()->download($path, $nama);
+    }
 }

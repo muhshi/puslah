@@ -87,6 +87,8 @@ class ProfileMe extends Page implements HasForms
                         ->directory('avatars')
                         ->visibility('public')
                         ->maxSize(2048)
+                        ->downloadable()
+                        ->openable()
                         ->columnSpanFull(),
                 ]),
                 Section::make('Informasi Pribadi')->schema([

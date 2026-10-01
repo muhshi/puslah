@@ -88,6 +88,8 @@ class LaporanLemburResource extends Resource
                             ->disk('public')
                             ->visibility('public')
                             ->maxSize(5120)
+                            ->downloadable()
+                            ->openable()
                             ->required(),
                         Forms\Components\FileUpload::make('foto_2')
                             ->label('Foto 2')
@@ -96,6 +98,8 @@ class LaporanLemburResource extends Resource
                             ->disk('public')
                             ->visibility('public')
                             ->maxSize(5120)
+                            ->downloadable()
+                            ->openable()
                             ->required(),
                         Forms\Components\FileUpload::make('foto_3')
                             ->label('Foto 3 (Opsional)')
@@ -103,14 +107,18 @@ class LaporanLemburResource extends Resource
                             ->directory('lembur_photos')
                             ->disk('public')
                             ->visibility('public')
-                            ->maxSize(5120),
+                            ->maxSize(5120)
+                            ->downloadable()
+                            ->openable(),
                         Forms\Components\FileUpload::make('foto_4')
                             ->label('Foto 4 (Opsional)')
                             ->image()
                             ->directory('lembur_photos')
                             ->disk('public')
                             ->visibility('public')
-                            ->maxSize(5120),
+                            ->maxSize(5120)
+                            ->downloadable()
+                            ->openable(),
                     ])->columns(2),
             ]);
     }
@@ -142,6 +150,27 @@ class LaporanLemburResource extends Resource
                         default => 'warning',
                     })
                     ->sortable(),
+                Tables\Columns\TextColumn::make('fotos_count')
+                    ->label('Foto')
+                    ->badge()
+                    ->getStateUsing(function (LaporanLembur $record) {
+                        $count = 0;
+                        foreach (['foto_1', 'foto_2', 'foto_3', 'foto_4'] as $f) {
+                            if (!empty($record->{$f})) $count++;
+                        }
+                        return $count;
+                    })
+                    ->color(fn(int $state): string => $state > 0 ? 'warning' : 'gray')
+                    ->action(
+                        Tables\Actions\Action::make('columnLemburPhotos')
+                            ->modalHeading(fn(LaporanLembur $record) => 'Dokumentasi Foto Lembur - ' . ($record->user?->name ?? 'Pegawai'))
+                            ->modalWidth(\Filament\Support\Enums\MaxWidth::FourExtraLarge)
+                            ->modalSubmitAction(false)
+                            ->modalCancelActionLabel('Tutup')
+                            ->modalContent(fn(LaporanLembur $record) => view('filament.resources.laporan-lembur.photos-modal', [
+                                'record' => $record,
+                            ]))
+                    ),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -177,6 +206,18 @@ class LaporanLemburResource extends Resource
                     ->icon('heroicon-o-document-arrow-down')
                     ->color('info')
                     ->action(fn(LaporanLembur $record) => app(LemburExportService::class)->downloadWord($record)),
+                Tables\Actions\Action::make('photos')
+                    ->label('Foto')
+                    ->icon('heroicon-o-camera')
+                    ->color('warning')
+                    ->visible(fn (LaporanLembur $record) => !empty($record->foto_1) || !empty($record->foto_2) || !empty($record->foto_3) || !empty($record->foto_4))
+                    ->modalHeading(fn (LaporanLembur $record) => 'Dokumentasi Foto Lembur - ' . ($record->user?->name ?? 'Pegawai'))
+                    ->modalWidth(\Filament\Support\Enums\MaxWidth::FourExtraLarge)
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Tutup')
+                    ->modalContent(fn (LaporanLembur $record) => view('filament.resources.laporan-lembur.photos-modal', [
+                        'record' => $record,
+                    ])),
                 Tables\Actions\Action::make('activities')
                     ->label('History')
                     ->icon('heroicon-o-clock')

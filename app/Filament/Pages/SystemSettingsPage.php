@@ -79,6 +79,8 @@ class SystemSettingsPage extends Page implements HasForms
                         ->directory('logos')
                         ->visibility('public')
                         ->maxSize(2048)
+                        ->downloadable()
+                        ->openable()
                         ->columnSpanFull(),
                 ])->columns(2),
             Group::make()->schema([ // ====== KOLOM KIRI
@@ -149,7 +151,8 @@ class SystemSettingsPage extends Page implements HasForms
                                 ->directory('templates')
                                 ->visibility('public')
                                 ->maxSize(5120) // 5MB
-                                ->downloadable(),
+                                ->downloadable()
+                                ->openable(),
                         ])->columns(1),
                 ])->columns(1), // End Section PPK
 
@@ -181,7 +184,9 @@ class SystemSettingsPage extends Page implements HasForms
                         ->image()
                         ->directory('signatures')
                         ->visibility('public')
-                        ->maxSize(2048),
+                        ->maxSize(2048)
+                        ->downloadable()
+                        ->openable(),
 
 
                     Section::make('Template Surat Tugas (.docx)')
@@ -193,7 +198,8 @@ class SystemSettingsPage extends Page implements HasForms
                                 ->directory('templates')
                                 ->visibility('public')
                                 ->maxSize(5120) // 5MB
-                                ->downloadable(),
+                                ->downloadable()
+                                ->openable(),
                         ])->columns(1),
 
                     Section::make('Template Laporan & Pernyataan (.docx)')
@@ -205,7 +211,8 @@ class SystemSettingsPage extends Page implements HasForms
                                 ->directory('templates')
                                 ->visibility('public')
                                 ->maxSize(5120) // 5MB
-                                ->downloadable(),
+                                ->downloadable()
+                                ->openable(),
                         ])->columns(1),
 
                     Section::make('Template Laporan Lembur (.docx)')
@@ -217,7 +224,8 @@ class SystemSettingsPage extends Page implements HasForms
                                 ->directory('templates')
                                 ->visibility('public')
                                 ->maxSize(5120) // 5MB
-                                ->downloadable(),
+                                ->downloadable()
+                                ->openable(),
                         ])->columns(1),
 
                 ])->columns(1), // End Section Pejabat

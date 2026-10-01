@@ -54,6 +54,20 @@ composer dev
 
 ## Changelog
 
+### 2026-10-01
+- **Fitur Download dan Buka Foto / Dokumen Terunggah**:
+  - Menambahkan kapabilitas download (`->downloadable()`) dan buka di tab baru (`->openable()`) pada seluruh komponen upload file, gambar, dan dokumen:
+    - **Laporan Dinas (LPD)**: Foto dokumentasi perjalanan dinas pada repeater form.
+    - **Laporan Lembur**: Seluruh field foto dokumentasi (`foto_1` s/d `foto_4`) pada form lembur.
+    - **Pengaturan Sistem**: File template SPPD, Surat Tugas, Laporan Dinas, Laporan Lembur, Logo BPS, dan Scan Tanda Tangan.
+    - **Template Sertifikat**: File Background dan Scan Gambar TTD/Cap pejabat.
+    - **Profil Pengguna**: Foto avatar profil di formulir admin maupun halaman Profil Saya (`ProfileMe`).
+  - Menambahkan aksi interaktif modal galeri foto pada tabel Laporan Dinas (`LaporanPerjalananDinasResource`) dan Laporan Lembur (`LaporanLemburResource`):
+    - Pengguna dapat melihat preview foto terlampir langsung dari tabel tanpa harus membuka halaman edit.
+    - Dilengkapi tombol unduh per foto ("Download") dan opsi "Download Semua Foto (ZIP)" untuk mengunduh seluruh dokumentasi foto sekaligus dalam satu arsip ZIP.
+    - Kolom badge jumlah foto di tabel kini dapat diklik langsung untuk membuka modal galeri foto tersebut.
+  - Menambahkan `FileDownloadController` dan rute unduh aman berbasis storage (`/storage/download-file`, `/laporan-perjalanan-dinas/{record}/download-photos`, `/laporan-lembur/{record}/download-photos`) dengan proteksi autentikasi dan pencegahan directory traversal.
+
 ### 2026-09-30
 - **Optimasi Script Deployment (`deploy.sh`) Hanya Build Saat Diperlukan**:
   - Memperbaiki logika deteksi build di `deploy.sh` yang sebelumnya memicu `NEED_BUILD=true` pada setiap deploy akibat pengecekan container yang keliru.

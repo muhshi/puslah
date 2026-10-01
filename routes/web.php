@@ -148,3 +148,10 @@ Route::get('/surat-tugas/preview/{id?}', function ($id = null) {
 Route::get('/templates/download/employee', function () {
     return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\EmployeeTemplateExport, 'employee_import_template.xlsx');
 })->name('download.employee.template');
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/storage/download-file', [\App\Http\Controllers\FileDownloadController::class, 'downloadStorageFile'])->name('storage.download-file');
+    Route::get('/laporan-perjalanan-dinas/{record}/download-photos', [\App\Http\Controllers\FileDownloadController::class, 'downloadLpdPhotosZip'])->name('lpd.download-photos-zip');
+    Route::get('/laporan-lembur/{record}/download-photos', [\App\Http\Controllers\FileDownloadController::class, 'downloadLemburPhotosZip'])->name('laporan-lembur.download-photos-zip');
+});
+

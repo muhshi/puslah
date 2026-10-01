@@ -50,7 +50,9 @@ class CertificateTemplateResource extends Resource
                     ->disk('public')
                     ->preserveFilenames()
                     ->required()
-                    ->imageEditor(),
+                    ->imageEditor()
+                    ->downloadable()
+                    ->openable(),
                 Forms\Components\Fieldset::make('Margin (px)')->schema([
                     Forms\Components\TextInput::make('margin_top')->numeric()->default(40)->minValue(0),
                     Forms\Components\TextInput::make('margin_right')->numeric()->default(40)->minValue(0),
@@ -80,7 +82,11 @@ class CertificateTemplateResource extends Resource
                     ->label('Gambar TTD/Cap (PNG transparan disarankan)')
                     ->image()
                     ->acceptedFileTypes(['image/png', 'image/jpeg'])
-                    ->directory('cert_templates/signs')->disk('public')->preserveFilenames(),
+                    ->directory('cert_templates/signs')
+                    ->disk('public')
+                    ->preserveFilenames()
+                    ->downloadable()
+                    ->openable(),
             ])->columns(2),
         ]);
     }

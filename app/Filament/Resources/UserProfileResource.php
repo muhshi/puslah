@@ -40,6 +40,8 @@ class UserProfileResource extends Resource
                     ->visibility('public')
                     ->imageEditor()
                     ->maxSize(2048)
+                    ->downloadable()
+                    ->openable()
                     ->helperText('JPG/PNG, maks 2MB'),
                 Forms\Components\TextInput::make('full_name')
                     ->label('Nama Lengkap')

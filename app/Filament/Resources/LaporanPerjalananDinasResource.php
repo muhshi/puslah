@@ -390,6 +390,8 @@ class LaporanPerjalananDinasResource extends Resource
                                 ->disk('public')
                                 ->visibility('public')
                                 ->maxSize(5120)
+                                ->downloadable()
+                                ->openable()
                                 ->required(),
                             Forms\Components\Textarea::make('keterangan')
                                 ->label('Keterangan Foto')
@@ -459,7 +461,19 @@ class LaporanPerjalananDinasResource extends Resource
                 Tables\Columns\TextColumn::make('fotos_count')
                     ->counts('fotos')
                     ->label('Foto')
-                    ->badge(),
+                    ->badge()
+                    ->color(fn(int $state): string => $state > 0 ? 'warning' : 'gray')
+                    ->action(
+                        Tables\Actions\Action::make('columnPhotos')
+                            ->modalHeading(fn(LaporanPerjalananDinas $record) => 'Dokumentasi Foto (' . $record->nomor_surat_tugas . ')')
+                            ->modalWidth(\Filament\Support\Enums\MaxWidth::FiveExtraLarge)
+                            ->modalSubmitAction(false)
+                            ->modalCancelActionLabel('Tutup')
+                            ->modalContent(fn(LaporanPerjalananDinas $record) => view('filament.resources.laporan-perjalanan-dinas.photos-modal', [
+                                'record' => $record,
+                                'fotos' => $record->fotos()->orderBy('urutan')->get(),
+                            ]))
+                    ),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('survey')
@@ -479,6 +493,20 @@ class LaporanPerjalananDinasResource extends Resource
                     ->label('Word')
                     ->icon('heroicon-o-document-text')
                     ->action(fn(LaporanPerjalananDinas $record) => app(LpdExportService::class)->downloadWord($record)),
+
+                Tables\Actions\Action::make('photos')
+                    ->label('Foto')
+                    ->icon('heroicon-o-camera')
+                    ->color('warning')
+                    ->visible(fn(LaporanPerjalananDinas $record) => $record->fotos()->exists())
+                    ->modalHeading(fn(LaporanPerjalananDinas $record) => 'Dokumentasi Foto (' . $record->nomor_surat_tugas . ')')
+                    ->modalWidth(\Filament\Support\Enums\MaxWidth::FiveExtraLarge)
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Tutup')
+                    ->modalContent(fn(LaporanPerjalananDinas $record) => view('filament.resources.laporan-perjalanan-dinas.photos-modal', [
+                        'record' => $record,
+                        'fotos' => $record->fotos()->orderBy('urutan')->get(),
+                    ])),
 
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\Action::make('activities')

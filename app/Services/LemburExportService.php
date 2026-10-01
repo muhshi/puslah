@@ -170,4 +170,59 @@ class LemburExportService
 
         return response()->download($zipPath)->deleteFileAfterSend();
     }
+
+    /**
+     * Download seluruh foto dokumentasi lembur sebagai file ZIP.
+     */
+    public function downloadPhotosZip(LaporanLembur $record): ?BinaryFileResponse
+    {
+        $photoFields = ['foto_1', 'foto_2', 'foto_3', 'foto_4'];
+        $photos = [];
+        foreach ($photoFields as $idx => $field) {
+            if (!empty($record->{$field})) {
+                $photos[] = [
+                    'field' => $field,
+                    'path' => storage_path('app/public/' . $record->{$field}),
+                    'name' => sprintf("Foto_%02d.%s", $idx + 1, pathinfo($record->{$field}, PATHINFO_EXTENSION) ?: 'jpg'),
+                ];
+            }
+        }
+
+        if (empty($photos)) {
+            Notification::make()->title('Tidak ada foto untuk didownload')->warning()->send();
+            return null;
+        }
+
+        $user = $record->user;
+        $namaPegawai = preg_replace('/[^a-zA-Z0-9]/', '_', $user?->name ?? 'Pegawai');
+        $waktu = $record->waktu ? Carbon::parse($record->waktu)->format('Y_m_d') : now()->format('Y_m_d');
+
+        $zipFileName = "Foto_Lembur_{$namaPegawai}_{$waktu}.zip";
+        $zipPath = storage_path('app/' . $zipFileName);
+        $zip = new ZipArchive();
+
+        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            Notification::make()->title('Gagal membuat file ZIP')->danger()->send();
+            return null;
+        }
+
+        $added = 0;
+        foreach ($photos as $p) {
+            if (file_exists($p['path'])) {
+                $zip->addFile($p['path'], $p['name']);
+                $added++;
+            }
+        }
+        $zip->close();
+
+        if ($added === 0) {
+            if (file_exists($zipPath)) {
+                unlink($zipPath);
+            }
+            Notification::make()->title('File foto fisik tidak ditemukan di server')->danger()->send();
+            return null;
+        }
+
+        return response()->download($zipPath)->deleteFileAfterSend();
+    }
 }
