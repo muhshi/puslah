@@ -405,39 +405,29 @@ class LaporanPerjalananDinasResource extends Resource
                                 )
                                 ->required(),
 
-                            Forms\Components\Actions::make([
-                                Forms\Components\Actions\Action::make('download_button')
-                                    ->label('Download Foto Ini')
-                                    ->icon('heroicon-o-arrow-down-tray')
-                                    ->color('success')
-                                    ->button()
-                                    ->size('sm')
-                                    ->visible(function (Forms\Get $get) {
-                                        $path = $get('file_path');
-                                        return !empty($path);
-                                    })
-                                    ->url(function (Forms\Get $get) {
-                                        $path = $get('file_path');
-                                        $val = is_array($path) ? (array_values($path)[0] ?? null) : $path;
-                                        return $val ? url('/download/file?path=' . urlencode($val)) : null;
-                                    }, shouldOpenInNewTab: false),
+                            Forms\Components\Placeholder::make('foto_actions')
+                                ->hiddenLabel()
+                                ->visible(fn (Forms\Get $get) => !empty($get('file_path')))
+                                ->content(function (Forms\Get $get) {
+                                    $path = $get('file_path');
+                                    $val = is_array($path) ? (array_values($path)[0] ?? null) : $path;
+                                    if (!$val) return null;
+                                    $downloadUrl = e(url('/download/file?path=' . urlencode($val)));
+                                    $viewUrl = e(Storage::disk('public')->url($val));
 
-                                Forms\Components\Actions\Action::make('open_button')
-                                    ->label('Buka Tab Baru')
-                                    ->icon('heroicon-o-arrow-top-right-on-square')
-                                    ->color('gray')
-                                    ->button()
-                                    ->size('sm')
-                                    ->visible(function (Forms\Get $get) {
-                                        $path = $get('file_path');
-                                        return !empty($path);
-                                    })
-                                    ->url(function (Forms\Get $get) {
-                                        $path = $get('file_path');
-                                        $val = is_array($path) ? (array_values($path)[0] ?? null) : $path;
-                                        return $val ? Storage::disk('public')->url($val) : null;
-                                    }, shouldOpenInNewTab: true),
-                            ]),
+                                    return new \Illuminate\Support\HtmlString("
+                                        <div class=\"flex items-center gap-2 -mt-2 mb-1\">
+                                            <a href=\"{$downloadUrl}\" class=\"inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-sm transition\">
+                                                <svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3\"/></svg>
+                                                Download Foto Ini
+                                            </a>
+                                            <a href=\"{$viewUrl}\" target=\"_blank\" class=\"inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition\">
+                                                <svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14\"/></svg>
+                                                Buka Tab Baru
+                                            </a>
+                                        </div>
+                                    ");
+                                }),
 
                             Forms\Components\Textarea::make('keterangan')
                                 ->label('Keterangan Foto')
