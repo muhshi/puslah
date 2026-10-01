@@ -57,8 +57,8 @@ composer dev
 ### 2026-10-01
 - **Fitur Download dan Buka Foto / Dokumen Terunggah**:
   - Menambahkan kapabilitas download (`->downloadable()`) dan buka di tab baru (`->openable()`) pada seluruh komponen upload file, gambar, dan dokumen:
-    - **Laporan Dinas (LPD)**: Foto dokumentasi perjalanan dinas pada repeater form.
-    - **Laporan Lembur**: Seluruh field foto dokumentasi (`foto_1` s/d `foto_4`) pada form lembur.
+    - **Laporan Dinas (LPD)**: Foto dokumentasi perjalanan dinas pada repeater form (dilengkapi tombol hijau 'Download Foto Ini' langsung di bawah preview gambar, tombol unduh di header kartu repeater, dan hint action di label Foto).
+    - **Laporan Lembur**: Seluruh field foto dokumentasi (`foto_1` s/d `foto_4`) pada form lembur (dilengkapi tombol 'Download Foto' di label foto).
     - **Pengaturan Sistem**: File template SPPD, Surat Tugas, Laporan Dinas, Laporan Lembur, Logo BPS, dan Scan Tanda Tangan.
     - **Template Sertifikat**: File Background dan Scan Gambar TTD/Cap pejabat.
     - **Profil Pengguna**: Foto avatar profil di formulir admin maupun halaman Profil Saya (`ProfileMe`).

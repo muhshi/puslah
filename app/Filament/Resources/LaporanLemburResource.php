@@ -90,6 +90,17 @@ class LaporanLemburResource extends Resource
                             ->maxSize(5120)
                             ->downloadable()
                             ->openable()
+                            ->hintAction(
+                                Forms\Components\Actions\Action::make('download_foto_1')
+                                    ->label('Download Foto')
+                                    ->icon('heroicon-o-arrow-down-tray')
+                                    ->color('success')
+                                    ->visible(fn ($state) => !empty($state))
+                                    ->url(function ($state) {
+                                        $path = is_array($state) ? (array_values($state)[0] ?? null) : $state;
+                                        return $path ? route('storage.download-file', ['path' => $path]) : null;
+                                    }, shouldOpenInNewTab: false)
+                            )
                             ->required(),
                         Forms\Components\FileUpload::make('foto_2')
                             ->label('Foto 2')
@@ -100,6 +111,17 @@ class LaporanLemburResource extends Resource
                             ->maxSize(5120)
                             ->downloadable()
                             ->openable()
+                            ->hintAction(
+                                Forms\Components\Actions\Action::make('download_foto_2')
+                                    ->label('Download Foto')
+                                    ->icon('heroicon-o-arrow-down-tray')
+                                    ->color('success')
+                                    ->visible(fn ($state) => !empty($state))
+                                    ->url(function ($state) {
+                                        $path = is_array($state) ? (array_values($state)[0] ?? null) : $state;
+                                        return $path ? route('storage.download-file', ['path' => $path]) : null;
+                                    }, shouldOpenInNewTab: false)
+                            )
                             ->required(),
                         Forms\Components\FileUpload::make('foto_3')
                             ->label('Foto 3 (Opsional)')
@@ -109,7 +131,18 @@ class LaporanLemburResource extends Resource
                             ->visibility('public')
                             ->maxSize(5120)
                             ->downloadable()
-                            ->openable(),
+                            ->openable()
+                            ->hintAction(
+                                Forms\Components\Actions\Action::make('download_foto_3')
+                                    ->label('Download Foto')
+                                    ->icon('heroicon-o-arrow-down-tray')
+                                    ->color('success')
+                                    ->visible(fn ($state) => !empty($state))
+                                    ->url(function ($state) {
+                                        $path = is_array($state) ? (array_values($state)[0] ?? null) : $state;
+                                        return $path ? route('storage.download-file', ['path' => $path]) : null;
+                                    }, shouldOpenInNewTab: false)
+                            ),
                         Forms\Components\FileUpload::make('foto_4')
                             ->label('Foto 4 (Opsional)')
                             ->image()
@@ -118,7 +151,18 @@ class LaporanLemburResource extends Resource
                             ->visibility('public')
                             ->maxSize(5120)
                             ->downloadable()
-                            ->openable(),
+                            ->openable()
+                            ->hintAction(
+                                Forms\Components\Actions\Action::make('download_foto_4')
+                                    ->label('Download Foto')
+                                    ->icon('heroicon-o-arrow-down-tray')
+                                    ->color('success')
+                                    ->visible(fn ($state) => !empty($state))
+                                    ->url(function ($state) {
+                                        $path = is_array($state) ? (array_values($state)[0] ?? null) : $state;
+                                        return $path ? route('storage.download-file', ['path' => $path]) : null;
+                                    }, shouldOpenInNewTab: false)
+                            ),
                     ])->columns(2),
             ]);
     }

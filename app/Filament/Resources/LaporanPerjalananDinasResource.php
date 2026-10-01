@@ -392,10 +392,73 @@ class LaporanPerjalananDinasResource extends Resource
                                 ->maxSize(5120)
                                 ->downloadable()
                                 ->openable()
+                                ->hintAction(
+                                    Forms\Components\Actions\Action::make('download_hint')
+                                        ->label('Download Foto')
+                                        ->icon('heroicon-o-arrow-down-tray')
+                                        ->color('success')
+                                        ->visible(fn ($state) => !empty($state))
+                                        ->url(function ($state) {
+                                            $path = is_array($state) ? (array_values($state)[0] ?? null) : $state;
+                                            return $path ? route('storage.download-file', ['path' => $path]) : null;
+                                        }, shouldOpenInNewTab: false)
+                                )
                                 ->required(),
+
+                            Forms\Components\Actions::make([
+                                Forms\Components\Actions\Action::make('download_button')
+                                    ->label('Download Foto Ini')
+                                    ->icon('heroicon-o-arrow-down-tray')
+                                    ->color('success')
+                                    ->button()
+                                    ->size('sm')
+                                    ->visible(function (Forms\Get $get) {
+                                        $path = $get('file_path');
+                                        return !empty($path);
+                                    })
+                                    ->url(function (Forms\Get $get) {
+                                        $path = $get('file_path');
+                                        $val = is_array($path) ? (array_values($path)[0] ?? null) : $path;
+                                        return $val ? route('storage.download-file', ['path' => $val]) : null;
+                                    }, shouldOpenInNewTab: false),
+
+                                Forms\Components\Actions\Action::make('open_button')
+                                    ->label('Buka Tab Baru')
+                                    ->icon('heroicon-o-arrow-top-right-on-square')
+                                    ->color('gray')
+                                    ->button()
+                                    ->size('sm')
+                                    ->visible(function (Forms\Get $get) {
+                                        $path = $get('file_path');
+                                        return !empty($path);
+                                    })
+                                    ->url(function (Forms\Get $get) {
+                                        $path = $get('file_path');
+                                        $val = is_array($path) ? (array_values($path)[0] ?? null) : $path;
+                                        return $val ? Storage::disk('public')->url($val) : null;
+                                    }, shouldOpenInNewTab: true),
+                            ]),
+
                             Forms\Components\Textarea::make('keterangan')
                                 ->label('Keterangan Foto')
                                 ->rows(2),
+                        ])
+                        ->extraItemActions([
+                            Forms\Components\Actions\Action::make('downloadItem')
+                                ->label('Download')
+                                ->icon('heroicon-o-arrow-down-tray')
+                                ->tooltip('Download Foto')
+                                ->color('success')
+                                ->visible(function (array $arguments, Forms\Components\Repeater $component) {
+                                    $itemData = $component->getRawItemState($arguments['item']);
+                                    return !empty($itemData['file_path']);
+                                })
+                                ->url(function (array $arguments, Forms\Components\Repeater $component) {
+                                    $itemData = $component->getRawItemState($arguments['item']);
+                                    $path = $itemData['file_path'] ?? null;
+                                    $val = is_array($path) ? (array_values($path)[0] ?? null) : $path;
+                                    return $val ? route('storage.download-file', ['path' => $val]) : null;
+                                }, shouldOpenInNewTab: false),
                         ])
                         ->reorderable('urutan')
                         ->collapsible()
