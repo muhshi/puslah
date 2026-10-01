@@ -49,7 +49,7 @@
                     $url = \Illuminate\Support\Facades\Storage::disk('public')->url($photo['path']);
                     $ext = pathinfo($photo['path'], PATHINFO_EXTENSION) ?: 'jpg';
                     $downloadName = 'Foto_Lembur_' . ($idx + 1) . '_' . ($record->waktu ? \Carbon\Carbon::parse($record->waktu)->format('Ymd') : 'lembur') . '.' . $ext;
-                    $downloadUrl = route('storage.download-file', ['path' => $photo['path'], 'name' => $downloadName]);
+                    $downloadUrl = url('/download/file') . '?' . http_build_query(['path' => $photo['path'], 'name' => $downloadName]);
                 @endphp
                 <div class="flex flex-col bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm hover:shadow transition">
                     <div class="relative group bg-gray-100 dark:bg-gray-900 aspect-video overflow-hidden flex items-center justify-center">

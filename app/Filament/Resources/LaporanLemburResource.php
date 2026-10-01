@@ -98,7 +98,7 @@ class LaporanLemburResource extends Resource
                                     ->visible(fn ($state) => !empty($state))
                                     ->url(function ($state) {
                                         $path = is_array($state) ? (array_values($state)[0] ?? null) : $state;
-                                        return $path ? route('storage.download-file', ['path' => $path]) : null;
+                                        return $path ? url('/download/file?path=' . urlencode($path)) : null;
                                     }, shouldOpenInNewTab: false)
                             )
                             ->required(),
@@ -119,7 +119,7 @@ class LaporanLemburResource extends Resource
                                     ->visible(fn ($state) => !empty($state))
                                     ->url(function ($state) {
                                         $path = is_array($state) ? (array_values($state)[0] ?? null) : $state;
-                                        return $path ? route('storage.download-file', ['path' => $path]) : null;
+                                        return $path ? url('/download/file?path=' . urlencode($path)) : null;
                                     }, shouldOpenInNewTab: false)
                             )
                             ->required(),
@@ -140,7 +140,7 @@ class LaporanLemburResource extends Resource
                                     ->visible(fn ($state) => !empty($state))
                                     ->url(function ($state) {
                                         $path = is_array($state) ? (array_values($state)[0] ?? null) : $state;
-                                        return $path ? route('storage.download-file', ['path' => $path]) : null;
+                                        return $path ? url('/download/file?path=' . urlencode($path)) : null;
                                     }, shouldOpenInNewTab: false)
                             ),
                         Forms\Components\FileUpload::make('foto_4')
@@ -160,7 +160,7 @@ class LaporanLemburResource extends Resource
                                     ->visible(fn ($state) => !empty($state))
                                     ->url(function ($state) {
                                         $path = is_array($state) ? (array_values($state)[0] ?? null) : $state;
-                                        return $path ? route('storage.download-file', ['path' => $path]) : null;
+                                        return $path ? url('/download/file?path=' . urlencode($path)) : null;
                                     }, shouldOpenInNewTab: false)
                             ),
                     ])->columns(2),

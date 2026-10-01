@@ -400,7 +400,7 @@ class LaporanPerjalananDinasResource extends Resource
                                         ->visible(fn ($state) => !empty($state))
                                         ->url(function ($state) {
                                             $path = is_array($state) ? (array_values($state)[0] ?? null) : $state;
-                                            return $path ? route('storage.download-file', ['path' => $path]) : null;
+                                            return $path ? url('/download/file?path=' . urlencode($path)) : null;
                                         }, shouldOpenInNewTab: false)
                                 )
                                 ->required(),
@@ -419,7 +419,7 @@ class LaporanPerjalananDinasResource extends Resource
                                     ->url(function (Forms\Get $get) {
                                         $path = $get('file_path');
                                         $val = is_array($path) ? (array_values($path)[0] ?? null) : $path;
-                                        return $val ? route('storage.download-file', ['path' => $val]) : null;
+                                        return $val ? url('/download/file?path=' . urlencode($val)) : null;
                                     }, shouldOpenInNewTab: false),
 
                                 Forms\Components\Actions\Action::make('open_button')
@@ -457,7 +457,7 @@ class LaporanPerjalananDinasResource extends Resource
                                     $itemData = $component->getRawItemState($arguments['item']);
                                     $path = $itemData['file_path'] ?? null;
                                     $val = is_array($path) ? (array_values($path)[0] ?? null) : $path;
-                                    return $val ? route('storage.download-file', ['path' => $val]) : null;
+                                    return $val ? url('/download/file?path=' . urlencode($val)) : null;
                                 }, shouldOpenInNewTab: false),
                         ])
                         ->reorderable('urutan')

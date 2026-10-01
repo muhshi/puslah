@@ -28,7 +28,7 @@
                     $url = \Illuminate\Support\Facades\Storage::disk('public')->url($foto->file_path);
                     $ext = pathinfo($foto->file_path, PATHINFO_EXTENSION) ?: 'jpg';
                     $downloadName = 'Foto_' . ($index + 1) . ($foto->keterangan ? '_' . \Illuminate\Support\Str::slug(\Illuminate\Support\Str::limit($foto->keterangan, 25, '')) : '') . '.' . $ext;
-                    $downloadUrl = route('storage.download-file', ['path' => $foto->file_path, 'name' => $downloadName]);
+                    $downloadUrl = url('/download/file') . '?' . http_build_query(['path' => $foto->file_path, 'name' => $downloadName]);
                 @endphp
                 <div class="flex flex-col bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm hover:shadow transition">
                     <div class="relative group bg-gray-100 dark:bg-gray-900 aspect-video overflow-hidden flex items-center justify-center">

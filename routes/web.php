@@ -150,7 +150,8 @@ Route::get('/templates/download/employee', function () {
 })->name('download.employee.template');
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('/storage/download-file', [\App\Http\Controllers\FileDownloadController::class, 'downloadStorageFile'])->name('storage.download-file');
+    Route::get('/download/file', [\App\Http\Controllers\FileDownloadController::class, 'downloadStorageFile'])->name('storage.download-file');
+    Route::get('/storage/download-file', [\App\Http\Controllers\FileDownloadController::class, 'downloadStorageFile']);
     Route::get('/laporan-perjalanan-dinas/{record}/download-photos', [\App\Http\Controllers\FileDownloadController::class, 'downloadLpdPhotosZip'])->name('lpd.download-photos-zip');
     Route::get('/laporan-lembur/{record}/download-photos', [\App\Http\Controllers\FileDownloadController::class, 'downloadLemburPhotosZip'])->name('laporan-lembur.download-photos-zip');
 });
