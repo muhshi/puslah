@@ -55,11 +55,15 @@ composer dev
 ## Changelog
 
 ### 2026-10-02
-- **Filter Kegiatan Aktif & Rekap Presensi Kegiatan (Manajemen Presensi)**:
+- **Filter Kegiatan Aktif & Rekap Presensi Kegiatan Datang & Pulang (Manajemen Presensi)**:
   - Menyederhanakan pemantauan presensi agar terfokus pada kegiatan/survei yang sedang berjalan dan membutuhkan presensi petugas (misal: "Pengolahan Pemutakhiran Kerangka Geospasial dan Muatan Wilkerstat Hasil Pendataan SE2026").
-  - Menambahkan filter dropdown "Kegiatan Aktif" pada tabel `AttendanceResource` yang hanya memuat kegiatan aktif yang memiliki peserta.
-  - Menambahkan Action Header "Rekap Presensi Kegiatan" di `ListAttendances` dengan badge status kehadiran otomatis (misal: "Lengkap (17)" jika sudah semua hadir, atau "X Belum Presensi" jika masih ada yang belum).
-  - Mengembangkan modal pemantauan harian yang simpel dan cepat: tab filter "Semua Petugas", "Sudah Presensi", "Belum Presensi", pencarian, jam kehadiran, tombol "Ingatkan WA" langsung ke kontak petugas yang belum presensi, serta tombol "Salin Format WA Group" untuk mengingatkan via grup chat WhatsApp.
+  - Menambahkan filter dropdown "Kegiatan Aktif" pada tabel `AttendanceResource` yang memuat kegiatan aktif yang memiliki peserta.
+  - Menambahkan Action Header "Rekap Presensi Kegiatan" di `ListAttendances` dengan badge status kehadiran dinamis: menampilkan "X Belum Datang" (pagi), "Y Belum Pulang" (sore), atau "Lengkap (17)" jika seluruhnya sudah selesai presensi datang dan pulang.
+  - Modal pemantauan kini melacak **Presensi Datang** dan **Presensi Pulang**:
+    - 4 Tab status: "Semua", "Belum Datang", "Belum Pulang", dan "Lengkap".
+    - Kolom Jam Datang dan Jam Pulang pada tabel petugas.
+    - Tombol "Ingatkan Datang" dan "Ingatkan Pulang" via WhatsApp dengan pesan otomatis yang sesuai waktu/kebutuhan.
+    - Tombol "Salin Format WA Group" yang otomatis menyusun daftar pengingat datang (pagi) atau pengingat pulang (sore) untuk di-broadcast ke grup WhatsApp.
   - Menghapus widget umum dashboard yang tidak relevan agar tampilan halaman presensi tetap bersih dan langsung pada sasaran.
 - **Filter Status Surat Tugas (Pending / Approved)**:
   - Menambahkan filter `SelectFilter` status (`pending`, `approved`, `rejected`) pada tabel `SuratTugasResource`.

@@ -28,19 +28,31 @@ class ListAttendances extends ListRecords
                 ->color('primary')
                 ->badge(function () {
                     $tableFilters = $this->tableFilters['survey_id']['value'] ?? null;
-                    $stats = self::getUnattendedCountToday($tableFilters ? (int) $tableFilters : null);
+                    $stats = self::getAttendanceStatusToday($tableFilters ? (int) $tableFilters : null);
                     if ($stats['total'] === 0) {
                         return null;
                     }
-                    return $stats['belum'] > 0 ? "{$stats['belum']} Belum Presensi" : "Lengkap ({$stats['total']})";
+                    if ($stats['belum_datang'] > 0) {
+                        return "{$stats['belum_datang']} Belum Datang";
+                    }
+                    if ($stats['belum_pulang'] > 0) {
+                        return "{$stats['belum_pulang']} Belum Pulang";
+                    }
+                    return "Lengkap ({$stats['total']})";
                 })
                 ->badgeColor(function () {
                     $tableFilters = $this->tableFilters['survey_id']['value'] ?? null;
-                    $stats = self::getUnattendedCountToday($tableFilters ? (int) $tableFilters : null);
-                    return $stats['belum'] > 0 ? 'danger' : 'success';
+                    $stats = self::getAttendanceStatusToday($tableFilters ? (int) $tableFilters : null);
+                    if ($stats['belum_datang'] > 0) {
+                        return 'danger';
+                    }
+                    if ($stats['belum_pulang'] > 0) {
+                        return 'warning';
+                    }
+                    return 'success';
                 })
                 ->modalHeading('Pemantauan Presensi Petugas Kegiatan')
-                ->modalDescription('Pantau kehadiran petugas survei/kegiatan aktif setiap pagi, dan ingatkan langsung via WhatsApp.')
+                ->modalDescription('Pantau presensi datang dan pulang petugas kegiatan setiap hari, dan ingatkan langsung via WhatsApp.')
                 ->modalWidth(MaxWidth::FourExtraLarge)
                 ->modalSubmitAction(false)
                 ->modalCancelActionLabel('Tutup')
@@ -58,7 +70,7 @@ class ListAttendances extends ListRecords
         ];
     }
 
-    public static function getUnattendedCountToday(?int $surveyId = null): array
+    public static function getAttendanceStatusToday(?int $surveyId = null): array
     {
         $today = Carbon::today('Asia/Jakarta')->toDateString();
 
@@ -74,33 +86,54 @@ class ListAttendances extends ListRecords
         }
 
         if (!$surveyId) {
-            return ['total' => 0, 'belum' => 0];
+            return ['total' => 0, 'belum_datang' => 0, 'belum_pulang' => 0, 'lengkap' => 0];
         }
 
         $survey = Survey::find($surveyId);
         if (!$survey) {
-            return ['total' => 0, 'belum' => 0];
+            return ['total' => 0, 'belum_datang' => 0, 'belum_pulang' => 0, 'lengkap' => 0];
         }
 
         $participantIds = $survey->participants()->pluck('users.id');
         if ($participantIds->isEmpty()) {
-            return ['total' => 0, 'belum' => 0];
+            return ['total' => 0, 'belum_datang' => 0, 'belum_pulang' => 0, 'lengkap' => 0];
         }
 
-        $attendedIds = Attendance::whereDate('created_at', $today)
+        $attendances = Attendance::whereDate('created_at', $today)
             ->whereIn('user_id', $participantIds)
-            ->pluck('user_id')
-            ->unique();
+            ->get()
+            ->keyBy('user_id');
 
-        $leaveIds = Leave::where('status', 'approved')
+        $leaves = Leave::where('status', 'approved')
             ->whereDate('start_date', '<=', $today)
             ->whereDate('end_date', '>=', $today)
             ->whereIn('user_id', $participantIds)
             ->pluck('user_id')
-            ->unique();
+            ->all();
 
-        $belum = $participantIds->diff($attendedIds)->diff($leaveIds)->count();
+        $belumDatang = 0;
+        $belumPulang = 0;
+        $lengkap = 0;
 
-        return ['total' => $participantIds->count(), 'belum' => $belum];
+        foreach ($participantIds as $uid) {
+            if (in_array($uid, $leaves)) {
+                continue;
+            }
+            $att = $attendances->get($uid);
+            if (!$att) {
+                $belumDatang++;
+            } elseif (empty($att->end_time)) {
+                $belumPulang++;
+            } else {
+                $lengkap++;
+            }
+        }
+
+        return [
+            'total' => $participantIds->count(),
+            'belum_datang' => $belumDatang,
+            'belum_pulang' => $belumPulang,
+            'lengkap' => $lengkap,
+        ];
     }
 }

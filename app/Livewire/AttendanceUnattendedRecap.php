@@ -12,7 +12,7 @@ class AttendanceUnattendedRecap extends Component
 {
     public string $date = '';
     public ?int $surveyId = null;
-    public string $activeTab = 'all'; // 'all', 'sudah', 'belum'
+    public string $activeTab = 'all'; // 'all', 'belum_datang', 'belum_pulang', 'lengkap'
     public string $search = '';
 
     public function mount(?int $surveyId = null, ?string $date = null): void
@@ -34,6 +34,12 @@ class AttendanceUnattendedRecap extends Component
             $this->surveyId = $activeWithAttendance?->id
                 ?? Survey::where('name', 'like', '%Pengolahan Pemutakhiran Kerangka Geospasial%')->value('id')
                 ?? Survey::where('is_active', true)->has('participants')->latest('id')->value('id');
+        }
+
+        // Jika waktu sekarang >= 15:00 WIB, default tab otomatis ke 'belum_pulang' bila ada yang belum pulang
+        $currentHour = (int) Carbon::now('Asia/Jakarta')->format('H');
+        if ($currentHour >= 15) {
+            $this->activeTab = 'belum_pulang';
         }
     }
 
@@ -69,8 +75,10 @@ class AttendanceUnattendedRecap extends Component
             return [
                 'survey_name' => '-',
                 'total_petugas' => 0,
-                'sudah_count' => 0,
-                'belum_count' => 0,
+                'sudah_datang_count' => 0,
+                'belum_datang_count' => 0,
+                'belum_pulang_count' => 0,
+                'lengkap_count' => 0,
                 'cuti_count' => 0,
                 'items' => collect(),
                 'copy_text' => '',
@@ -83,8 +91,10 @@ class AttendanceUnattendedRecap extends Component
             return [
                 'survey_name' => '-',
                 'total_petugas' => 0,
-                'sudah_count' => 0,
-                'belum_count' => 0,
+                'sudah_datang_count' => 0,
+                'belum_datang_count' => 0,
+                'belum_pulang_count' => 0,
+                'lengkap_count' => 0,
                 'cuti_count' => 0,
                 'items' => collect(),
                 'copy_text' => '',
@@ -117,21 +127,31 @@ class AttendanceUnattendedRecap extends Component
             $rawPhone = $p->profile?->phone;
             $waPhone = self::formatWaNumber($rawPhone);
 
-            $status = 'belum';
-            if ($att) {
-                $status = 'sudah';
-            } elseif ($leave) {
+            if ($leave) {
                 $status = 'cuti';
+            } elseif (!$att) {
+                $status = 'belum_datang';
+            } elseif (empty($att->end_time)) {
+                $status = 'belum_pulang';
+            } else {
+                $status = 'lengkap';
             }
 
-            $waMessage = "Halo {$p->name}, kami dari BPS Kabupaten Demak mengingatkan untuk segera melakukan presensi hari ini ({$tglIndo}) melalui aplikasi Puslah: {$presensiUrl} . Terima kasih 🙏";
+            // Pesan WA disesuaikan apakah belum datang atau belum pulang
+            if ($status === 'belum_datang') {
+                $waMessage = "Halo {$p->name}, kami dari BPS Kabupaten Demak mengingatkan untuk segera melakukan presensi datang hari ini ({$tglIndo}) melalui aplikasi Puslah: {$presensiUrl} . Terima kasih 🙏";
+            } elseif ($status === 'belum_pulang') {
+                $waMessage = "Halo {$p->name}, kami dari BPS Kabupaten Demak mengingatkan untuk jangan lupa melakukan presensi pulang hari ini ({$tglIndo}) melalui aplikasi Puslah: {$presensiUrl} . Terima kasih 🙏";
+            } else {
+                $waMessage = "";
+            }
 
             return [
                 'id' => $p->id,
                 'name' => $p->name,
                 'phone' => $rawPhone,
                 'wa_phone' => $waPhone,
-                'wa_url' => $waPhone ? "https://wa.me/{$waPhone}?text=" . urlencode($waMessage) : null,
+                'wa_url' => ($waPhone && $waMessage) ? "https://wa.me/{$waPhone}?text=" . urlencode($waMessage) : null,
                 'status' => $status,
                 'check_in_time' => $att?->start_time,
                 'check_out_time' => $att?->end_time,
@@ -140,14 +160,17 @@ class AttendanceUnattendedRecap extends Component
         });
 
         $totalPetugas = $mapped->count();
-        $sudahCount = $mapped->where('status', 'sudah')->count();
-        $belumCount = $mapped->where('status', 'belum')->count();
+        $belumDatangCount = $mapped->where('status', 'belum_datang')->count();
+        $belumPulangCount = $mapped->where('status', 'belum_pulang')->count();
+        $lengkapCount = $mapped->where('status', 'lengkap')->count();
+        $sudahDatangCount = $mapped->whereIn('status', ['belum_pulang', 'lengkap'])->count();
         $cutiCount = $mapped->where('status', 'cuti')->count();
 
         // Filter tab
         $filtered = match ($this->activeTab) {
-            'sudah' => $mapped->where('status', 'sudah'),
-            'belum' => $mapped->where('status', 'belum'),
+            'belum_datang' => $mapped->where('status', 'belum_datang'),
+            'belum_pulang' => $mapped->where('status', 'belum_pulang'),
+            'lengkap' => $mapped->where('status', 'lengkap'),
             default => $mapped,
         };
 
@@ -159,24 +182,48 @@ class AttendanceUnattendedRecap extends Component
 
         // Teks pengingat untuk copas ke WA group
         $copyLines = [];
-        $copyLines[] = "📢 *PENGINGAT PRESENSI PETUGAS*";
-        $copyLines[] = "📋 *Kegiatan:* {$survey->name}";
-        $copyLines[] = "📅 *Hari/Tanggal:* {$tglIndo}";
-        $copyLines[] = "";
-
-        $belumList = $mapped->where('status', 'belum')->values();
-        if ($belumList->isEmpty()) {
-            $copyLines[] = "✅ *Alhamdulillah, semua petugas sudah melakukan presensi hari ini.*";
-        } else {
-            $copyLines[] = "Berikut daftar rekan petugas yang *belum presensi*:";
-            foreach ($belumList as $idx => $row) {
-                $phoneStr = $row['phone'] ? " ({$row['phone']})" : "";
-                $copyLines[] = ($idx + 1) . ". {$row['name']}{$phoneStr}";
-            }
+        if ($this->activeTab === 'belum_pulang' || ($this->activeTab === 'all' && (int) Carbon::now('Asia/Jakarta')->format('H') >= 15)) {
+            // Format Pengingat Pulang
+            $copyLines[] = "📢 *PENGINGAT PRESENSI PULANG*";
+            $copyLines[] = "📋 *Kegiatan:* {$survey->name}";
+            $copyLines[] = "📅 *Hari/Tanggal:* {$tglIndo}";
             $copyLines[] = "";
-            $copyLines[] = "Total belum presensi: " . $belumList->count() . " orang.";
-            $copyLines[] = "Mohon rekan yang bersangkutan untuk segera melakukan presensi melalui:";
-            $copyLines[] = "🔗 {$presensiUrl}";
+
+            $belumPulangList = $mapped->where('status', 'belum_pulang')->values();
+            if ($belumPulangList->isEmpty()) {
+                $copyLines[] = "✅ *Alhamdulillah, seluruh petugas sudah melakukan presensi pulang hari ini.*";
+            } else {
+                $copyLines[] = "Berikut daftar rekan petugas yang *belum presensi pulang*:";
+                foreach ($belumPulangList as $idx => $row) {
+                    $phoneStr = $row['phone'] ? " ({$row['phone']})" : "";
+                    $copyLines[] = ($idx + 1) . ". {$row['name']}{$phoneStr}";
+                }
+                $copyLines[] = "";
+                $copyLines[] = "Total belum presensi pulang: " . $belumPulangList->count() . " orang.";
+                $copyLines[] = "Mohon rekan yang bersangkutan untuk melakukan presensi pulang melalui:";
+                $copyLines[] = "🔗 {$presensiUrl}";
+            }
+        } else {
+            // Format Pengingat Datang
+            $copyLines[] = "📢 *PENGINGAT PRESENSI DATANG*";
+            $copyLines[] = "📋 *Kegiatan:* {$survey->name}";
+            $copyLines[] = "📅 *Hari/Tanggal:* {$tglIndo}";
+            $copyLines[] = "";
+
+            $belumDatangList = $mapped->where('status', 'belum_datang')->values();
+            if ($belumDatangList->isEmpty()) {
+                $copyLines[] = "✅ *Alhamdulillah, semua petugas sudah melakukan presensi datang hari ini.*";
+            } else {
+                $copyLines[] = "Berikut daftar rekan petugas yang *belum presensi datang*:";
+                foreach ($belumDatangList as $idx => $row) {
+                    $phoneStr = $row['phone'] ? " ({$row['phone']})" : "";
+                    $copyLines[] = ($idx + 1) . ". {$row['name']}{$phoneStr}";
+                }
+                $copyLines[] = "";
+                $copyLines[] = "Total belum presensi datang: " . $belumDatangList->count() . " orang.";
+                $copyLines[] = "Mohon segera melakukan presensi melalui:";
+                $copyLines[] = "🔗 {$presensiUrl}";
+            }
         }
         $copyLines[] = "";
         $copyLines[] = "Terima kasih atas kerjasamanya 🙏";
@@ -184,8 +231,10 @@ class AttendanceUnattendedRecap extends Component
         return [
             'survey_name' => $survey->name,
             'total_petugas' => $totalPetugas,
-            'sudah_count' => $sudahCount,
-            'belum_count' => $belumCount,
+            'sudah_datang_count' => $sudahDatangCount,
+            'belum_datang_count' => $belumDatangCount,
+            'belum_pulang_count' => $belumPulangCount,
+            'lengkap_count' => $lengkapCount,
             'cuti_count' => $cutiCount,
             'items' => $filtered->values(),
             'copy_text' => implode("\n", $copyLines),
