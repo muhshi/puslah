@@ -61,6 +61,11 @@ class User extends Authenticatable implements FilamentUser
         ];
     }
 
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(Attendance::class);
+    }
+
     public function leaves(): HasMany
     {
         return $this->hasMany(Leave::class);

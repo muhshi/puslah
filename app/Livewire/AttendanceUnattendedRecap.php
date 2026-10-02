@@ -4,10 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Attendance;
 use App\Models\Leave;
-use App\Models\SuratTugas;
 use App\Models\Survey;
-use App\Models\SurveyUser;
-use App\Models\User;
 use Carbon\Carbon;
 use Livewire\Component;
 
@@ -15,14 +12,29 @@ class AttendanceUnattendedRecap extends Component
 {
     public string $date = '';
     public ?int $surveyId = null;
-    public string $userType = 'all'; // 'all', 'organik', 'mitra'
-    public string $statusFilter = 'unattended'; // 'all', 'unattended', 'leave'
+    public string $activeTab = 'all'; // 'all', 'sudah', 'belum'
     public string $search = '';
 
     public function mount(?int $surveyId = null, ?string $date = null): void
     {
         $this->date = $date ?: Carbon::today('Asia/Jakarta')->toDateString();
-        $this->surveyId = $surveyId;
+
+        if ($surveyId) {
+            $this->surveyId = $surveyId;
+        } else {
+            // Default ke survey aktif yang memiliki peserta dan presensi hari ini
+            $today = $this->date;
+            $activeWithAttendance = Survey::where('is_active', true)
+                ->whereHas('participants', function ($q) use ($today) {
+                    $q->whereHas('attendances', fn($aq) => $aq->whereDate('created_at', $today));
+                })
+                ->latest('id')
+                ->first();
+
+            $this->surveyId = $activeWithAttendance?->id
+                ?? Survey::where('name', 'like', '%Pengolahan Pemutakhiran Kerangka Geospasial%')->value('id')
+                ?? Survey::where('is_active', true)->has('participants')->latest('id')->value('id');
+        }
     }
 
     public static function formatWaNumber(?string $phone): ?string
@@ -44,6 +56,7 @@ class AttendanceUnattendedRecap extends Component
     public function getActiveSurveysProperty()
     {
         return Survey::where('is_active', true)
+            ->has('participants')
             ->orderBy('name')
             ->get(['id', 'name']);
     }
@@ -52,187 +65,131 @@ class AttendanceUnattendedRecap extends Component
     {
         $date = $this->date ?: Carbon::today('Asia/Jakarta')->toDateString();
 
-        if ($this->surveyId) {
-            $suIds = SurveyUser::where('survey_id', $this->surveyId)->pluck('user_id');
-            $stIds = SuratTugas::where('survey_id', $this->surveyId)->pluck('user_id');
-            $targetUserIds = $suIds->merge($stIds)->unique()->filter()->values();
-        } else {
-            $activeSurveyIds = Survey::where('is_active', true)->pluck('id');
-            $suIds = SurveyUser::whereIn('survey_id', $activeSurveyIds)->pluck('user_id');
-            $stIds = SuratTugas::whereIn('survey_id', $activeSurveyIds)->pluck('user_id');
-            $surveyUserIds = $suIds->merge($stIds);
-
-            $organikIds = User::whereHas('roles', function ($q) {
-                $q->whereIn('name', ['Organik', 'Kepala', 'Kasubag', 'Ketua Tim', 'Operator', 'IPDS', 'Pengolahan']);
-            })->pluck('id');
-
-            $targetUserIds = $surveyUserIds->merge($organikIds)->unique()->filter()->values();
-        }
-
-        if ($targetUserIds->isEmpty()) {
+        if (!$this->surveyId) {
             return [
-                'total_target' => 0,
-                'attended_count' => 0,
-                'leave_count' => 0,
-                'unattended_count' => 0,
+                'survey_name' => '-',
+                'total_petugas' => 0,
+                'sudah_count' => 0,
+                'belum_count' => 0,
+                'cuti_count' => 0,
                 'items' => collect(),
                 'copy_text' => '',
             ];
         }
 
-        $baseUsersQuery = User::with(['profile', 'roles'])
-            ->whereIn('users.id', $targetUserIds)
-            ->whereDoesntHave('profile', fn($q) => $q->where('employment_status', 'nonaktif'));
+        $survey = Survey::with(['participants.profile'])->find($this->surveyId);
 
-        if ($this->userType === 'organik') {
-            $baseUsersQuery->whereHas('roles', fn($q) => $q->whereIn('name', ['Organik', 'Kepala', 'Kasubag', 'Ketua Tim', 'Operator', 'IPDS', 'Pengolahan']));
-        } elseif ($this->userType === 'mitra') {
-            $baseUsersQuery->whereHas('roles', fn($q) => $q->where('name', 'Mitra'));
+        if (!$survey) {
+            return [
+                'survey_name' => '-',
+                'total_petugas' => 0,
+                'sudah_count' => 0,
+                'belum_count' => 0,
+                'cuti_count' => 0,
+                'items' => collect(),
+                'copy_text' => '',
+            ];
         }
 
-        $allTargetUsers = $baseUsersQuery->orderBy('name')->get();
-        $targetIds = $allTargetUsers->pluck('id');
+        $participants = $survey->participants()->orderBy('name')->get();
+        $participantIds = $participants->pluck('id')->all();
 
-        $attendedUserIds = Attendance::whereDate('created_at', $date)
-            ->whereIn('user_id', $targetIds)
-            ->pluck('user_id')
-            ->unique()
-            ->values()
-            ->all();
+        // Ambil data presensi hari ini untuk peserta
+        $attendances = Attendance::whereIn('user_id', $participantIds)
+            ->whereDate('created_at', $date)
+            ->get()
+            ->keyBy('user_id');
 
-        $leaveUsers = Leave::where('status', 'approved')
+        // Ambil data cuti hari ini untuk peserta
+        $leaves = Leave::where('status', 'approved')
+            ->whereIn('user_id', $participantIds)
             ->whereDate('start_date', '<=', $date)
             ->whereDate('end_date', '>=', $date)
-            ->whereIn('user_id', $targetIds)
-            ->pluck('reason', 'user_id')
-            ->all();
+            ->get()
+            ->keyBy('user_id');
 
-        $attendedCount = count($attendedUserIds);
-        $totalTarget = $allTargetUsers->count();
-
-        // Hanya yang belum presensi
-        $unattendedUsers = $allTargetUsers->reject(fn($u) => in_array($u->id, $attendedUserIds));
-
-        // Mapping data peserta
-        $processed = $unattendedUsers->map(function ($u) use ($leaveUsers, $date) {
-            $isOnLeave = isset($leaveUsers[$u->id]);
-            $leaveReason = $isOnLeave ? $leaveUsers[$u->id] : null;
-            $rawPhone = $u->profile?->phone;
-            $waPhone = self::formatWaNumber($rawPhone);
-
-            $activeSurveys = Survey::where('is_active', true)
-                ->where(function ($q) use ($u) {
-                    $q->whereHas('surveyUsers', fn($sq) => $sq->where('user_id', $u->id))
-                        ->orWhereHas('suratTugas', fn($sq) => $sq->where('user_id', $u->id));
-                })
-                ->pluck('name')
-                ->all();
-
-            $dateFormatted = Carbon::parse($date)->locale('id')->isoFormat('dddd, D MMMM Y');
-            $presensiUrl = url('/presensi');
-            $waMessage = "Halo {$u->name}, kami dari BPS Kabupaten Demak mengingatkan untuk melakukan presensi Puslah pada hari ini ({$dateFormatted}): {$presensiUrl} . Terima kasih 🙏";
-
-            return [
-                'id' => $u->id,
-                'name' => $u->name,
-                'email' => $u->email,
-                'phone' => $rawPhone,
-                'wa_phone' => $waPhone,
-                'wa_url' => $waPhone ? "https://wa.me/{$waPhone}?text=" . urlencode($waMessage) : null,
-                'roles' => $u->roles->pluck('name')->join(', '),
-                'jabatan' => $u->profile?->jabatan ?: $u->roles->pluck('name')->join(', '),
-                'is_leave' => $isOnLeave,
-                'leave_reason' => $leaveReason,
-                'active_surveys' => $activeSurveys,
-            ];
-        });
-
-        $leaveCount = $processed->where('is_leave', true)->count();
-        $unattendedWithoutLeaveCount = $processed->where('is_leave', false)->count();
-
-        if ($this->statusFilter === 'unattended') {
-            $filtered = $processed->where('is_leave', false);
-        } elseif ($this->statusFilter === 'leave') {
-            $filtered = $processed->where('is_leave', true);
-        } else {
-            $filtered = $processed;
-        }
-
-        if (!empty($this->search)) {
-            $searchTerm = strtolower($this->search);
-            $filtered = $filtered->filter(function ($item) use ($searchTerm) {
-                return str_contains(strtolower($item['name']), $searchTerm)
-                    || str_contains(strtolower($item['phone'] ?? ''), $searchTerm)
-                    || str_contains(strtolower($item['jabatan'] ?? ''), $searchTerm);
-            });
-        }
-
-        $surveyName = $this->surveyId ? Survey::find($this->surveyId)?->name : 'Seluruh Kegiatan Aktif / Pegawai';
         $tglIndo = Carbon::parse($date)->locale('id')->isoFormat('dddd, D MMMM Y');
         $presensiUrl = url('/presensi');
 
+        $mapped = $participants->map(function ($p) use ($attendances, $leaves, $tglIndo, $presensiUrl) {
+            $att = $attendances->get($p->id);
+            $leave = $leaves->get($p->id);
+            $rawPhone = $p->profile?->phone;
+            $waPhone = self::formatWaNumber($rawPhone);
+
+            $status = 'belum';
+            if ($att) {
+                $status = 'sudah';
+            } elseif ($leave) {
+                $status = 'cuti';
+            }
+
+            $waMessage = "Halo {$p->name}, kami dari BPS Kabupaten Demak mengingatkan untuk segera melakukan presensi hari ini ({$tglIndo}) melalui aplikasi Puslah: {$presensiUrl} . Terima kasih 🙏";
+
+            return [
+                'id' => $p->id,
+                'name' => $p->name,
+                'phone' => $rawPhone,
+                'wa_phone' => $waPhone,
+                'wa_url' => $waPhone ? "https://wa.me/{$waPhone}?text=" . urlencode($waMessage) : null,
+                'status' => $status,
+                'check_in_time' => $att?->start_time,
+                'check_out_time' => $att?->end_time,
+                'leave_reason' => $leave?->reason,
+            ];
+        });
+
+        $totalPetugas = $mapped->count();
+        $sudahCount = $mapped->where('status', 'sudah')->count();
+        $belumCount = $mapped->where('status', 'belum')->count();
+        $cutiCount = $mapped->where('status', 'cuti')->count();
+
+        // Filter tab
+        $filtered = match ($this->activeTab) {
+            'sudah' => $mapped->where('status', 'sudah'),
+            'belum' => $mapped->where('status', 'belum'),
+            default => $mapped,
+        };
+
+        // Filter search
+        if (!empty($this->search)) {
+            $term = strtolower($this->search);
+            $filtered = $filtered->filter(fn($i) => str_contains(strtolower($i['name']), $term) || str_contains(strtolower($i['phone'] ?? ''), $term));
+        }
+
+        // Teks pengingat untuk copas ke WA group
         $copyLines = [];
-        $copyLines[] = "📢 *PENGINGAT PRESENSI PUSLAH BPS KABUPATEN DEMAK*";
+        $copyLines[] = "📢 *PENGINGAT PRESENSI PETUGAS*";
+        $copyLines[] = "📋 *Kegiatan:* {$survey->name}";
         $copyLines[] = "📅 *Hari/Tanggal:* {$tglIndo}";
-        $copyLines[] = "📋 *Kegiatan:* {$surveyName}";
         $copyLines[] = "";
-        $copyLines[] = "Berikut daftar rekan yang *belum melakukan presensi* hari ini:";
 
-        $counter = 1;
-        foreach ($processed->where('is_leave', false) as $row) {
-            $phoneStr = $row['phone'] ? " ({$row['phone']})" : "";
-            $copyLines[] = "{$counter}. {$row['name']}{$phoneStr}";
-            $counter++;
+        $belumList = $mapped->where('status', 'belum')->values();
+        if ($belumList->isEmpty()) {
+            $copyLines[] = "✅ *Alhamdulillah, semua petugas sudah melakukan presensi hari ini.*";
+        } else {
+            $copyLines[] = "Berikut daftar rekan petugas yang *belum presensi*:";
+            foreach ($belumList as $idx => $row) {
+                $phoneStr = $row['phone'] ? " ({$row['phone']})" : "";
+                $copyLines[] = ($idx + 1) . ". {$row['name']}{$phoneStr}";
+            }
+            $copyLines[] = "";
+            $copyLines[] = "Total belum presensi: " . $belumList->count() . " orang.";
+            $copyLines[] = "Mohon rekan yang bersangkutan untuk segera melakukan presensi melalui:";
+            $copyLines[] = "🔗 {$presensiUrl}";
         }
-
-        if ($counter === 1) {
-            $copyLines[] = "*(Alhamdulillah, semua rekan sudah melakukan presensi / sedang cuti)*";
-        }
-
-        $copyLines[] = "";
-        $copyLines[] = "Total belum presensi: " . ($counter - 1) . " orang.";
-        $copyLines[] = "Bagi rekan-rekan di atas, mohon segera melakukan presensi melalui tautan:";
-        $copyLines[] = "🔗 {$presensiUrl}";
         $copyLines[] = "";
         $copyLines[] = "Terima kasih atas kerjasamanya 🙏";
 
-        $copyText = implode("\n", $copyLines);
-
         return [
-            'total_target' => $totalTarget,
-            'attended_count' => $attendedCount,
-            'leave_count' => $leaveCount,
-            'unattended_count' => $unattendedWithoutLeaveCount,
+            'survey_name' => $survey->name,
+            'total_petugas' => $totalPetugas,
+            'sudah_count' => $sudahCount,
+            'belum_count' => $belumCount,
+            'cuti_count' => $cutiCount,
             'items' => $filtered->values(),
-            'copy_text' => $copyText,
+            'copy_text' => implode("\n", $copyLines),
         ];
-    }
-
-    public function exportCsv()
-    {
-        $data = $this->getRecapDataProperty();
-        $items = $data['items'];
-        $dateStr = $this->date ?: date('Y-m-d');
-        $filename = "rekap-belum-presensi-{$dateStr}.csv";
-
-        return response()->streamDownload(function () use ($items) {
-            $out = fopen('php://output', 'w');
-            fputcsv($out, ['No', 'Nama', 'Jabatan / Role', 'No HP', 'Status', 'Kegiatan']);
-            $no = 1;
-            foreach ($items as $item) {
-                fputcsv($out, [
-                    $no++,
-                    $item['name'],
-                    $item['jabatan'],
-                    $item['phone'] ?? '-',
-                    $item['is_leave'] ? 'Sedang Cuti (' . $item['leave_reason'] . ')' : 'Belum Presensi',
-                    implode('; ', $item['active_surveys']),
-                ]);
-            }
-            fclose($out);
-        }, $filename, [
-            'Content-Type' => 'text/csv',
-        ]);
     }
 
     public function render()

@@ -118,6 +118,7 @@ class AttendanceResource extends Resource
                 Tables\Filters\SelectFilter::make('survey_id')
                     ->label('Kegiatan Aktif')
                     ->options(fn() => \App\Models\Survey::where('is_active', true)
+                        ->has('participants')
                         ->orderBy('name')
                         ->pluck('name', 'id'))
                     ->searchable()

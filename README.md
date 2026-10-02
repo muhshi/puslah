@@ -55,11 +55,12 @@ composer dev
 ## Changelog
 
 ### 2026-10-02
-- **Filter Kegiatan Aktif & Rekap Belum Presensi (Manajemen Presensi)**:
-  - Menambahkan filter dropdown "Kegiatan Aktif" pada tabel `AttendanceResource` untuk memfilter data presensi berdasarkan peserta survei/kegiatan yang sedang aktif.
-  - Menambahkan Action Header "Rekap Belum Presensi" di `ListAttendances` lengkap dengan badge counter otomatis yang menghitung siapa saja yang belum melakukan presensi hari ini (di luar pegawai yang sedang cuti).
-  - Mengembangkan komponen Livewire `AttendanceUnattendedRecap` di dalam modal interaktif dengan filter tanggal, pilihan kegiatan aktif, kategori pegawai (Organik/Mitra), status cuti, pencarian, tombol "Ingatkan WA" langsung ke nomor WhatsApp pegawai dengan format pesan otomatis, tombol "Salin Format WA Group" untuk broadcast cepat ke grup, serta export CSV.
-  - Menampilkan widget ringkasan statistik kehadiran hari ini (`TodayAttendanceStats`) pada bagian atas halaman presensi.
+- **Filter Kegiatan Aktif & Rekap Presensi Kegiatan (Manajemen Presensi)**:
+  - Menyederhanakan pemantauan presensi agar terfokus pada kegiatan/survei yang sedang berjalan dan membutuhkan presensi petugas (misal: "Pengolahan Pemutakhiran Kerangka Geospasial dan Muatan Wilkerstat Hasil Pendataan SE2026").
+  - Menambahkan filter dropdown "Kegiatan Aktif" pada tabel `AttendanceResource` yang hanya memuat kegiatan aktif yang memiliki peserta.
+  - Menambahkan Action Header "Rekap Presensi Kegiatan" di `ListAttendances` dengan badge status kehadiran otomatis (misal: "Lengkap (17)" jika sudah semua hadir, atau "X Belum Presensi" jika masih ada yang belum).
+  - Mengembangkan modal pemantauan harian yang simpel dan cepat: tab filter "Semua Petugas", "Sudah Presensi", "Belum Presensi", pencarian, jam kehadiran, tombol "Ingatkan WA" langsung ke kontak petugas yang belum presensi, serta tombol "Salin Format WA Group" untuk mengingatkan via grup chat WhatsApp.
+  - Menghapus widget umum dashboard yang tidak relevan agar tampilan halaman presensi tetap bersih dan langsung pada sasaran.
 - **Filter Status Surat Tugas (Pending / Approved)**:
   - Menambahkan filter `SelectFilter` status (`pending`, `approved`, `rejected`) pada tabel `SuratTugasResource`.
   - Menambahkan navigasi Tab cepat ("Semua", "Pending", "Approved") dengan badge counter jumlah surat tugas pending dan approved di `ListSuratTugas`.
