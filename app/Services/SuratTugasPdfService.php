@@ -23,8 +23,8 @@ class SuratTugasPdfService
             return '-';
         }
 
-        $startDate = Carbon::parse($mulai);
-        $endDate = Carbon::parse($selesai);
+        $startDate = Carbon::parse($mulai)->locale('id');
+        $endDate = Carbon::parse($selesai)->locale('id');
 
         // Kasus 1: Hari yang sama
         if ($startDate->isSameDay($endDate)) {

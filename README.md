@@ -65,9 +65,10 @@ composer dev
     - Tombol "Ingatkan Datang" dan "Ingatkan Pulang" via WhatsApp dengan pesan otomatis yang sesuai waktu/kebutuhan.
     - Tombol "Salin Format WA Group" yang otomatis menyusun daftar pengingat datang (pagi) atau pengingat pulang (sore) untuk di-broadcast ke grup WhatsApp.
   - Menghapus widget umum dashboard yang tidak relevan agar tampilan halaman presensi tetap bersih dan langsung pada sasaran.
-- **Filter Status Surat Tugas (Pending / Approved)**:
+- **Filter Status & Informasi Tanggal Pelaksanaan Surat Tugas**:
   - Menambahkan filter `SelectFilter` status (`pending`, `approved`, `rejected`) pada tabel `SuratTugasResource`.
   - Menambahkan navigasi Tab cepat ("Semua", "Pending", "Approved") dengan badge counter jumlah surat tugas pending dan approved di `ListSuratTugas`.
+  - Menambahkan deskripsi periode tanggal pelaksanaan tugas (berangkat s/d kembali/pulang) pada kolom `tanggal` di tabel `SuratTugasResource` (contoh: "Tugas: 01 - 10 Oktober 2026"), sehingga pengguna dapat langsung melihat tanggal tugas tanpa harus membuka detail surat.
 - **Optimasi Alokasi Resource Docker & Web Server (FrankenPHP & Caddy)**:
   - Meningkatkan `mem_limit` pada service `puslah-franken` dari 512MB menjadi 1024MB (1GB) dengan `mem_reservation: 384m` untuk mencegah OOM-Killed mendadak dari Linux Kernel saat traffic/render Filament tinggi.
   - Menambahkan environment `MAX_REQUESTS=500` pada FrankenPHP agar worker thread PHP di-recycle secara berkala untuk mencegah akumulasi memory leak.

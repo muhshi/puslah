@@ -359,8 +359,22 @@ class SuratTugasResource extends Resource
                         return $column->getState();
                     }),
                 Tables\Columns\TextColumn::make('tanggal')
-                    ->date()
-                    ->sortable(),
+                    ->label('Tanggal')
+                    ->date('d M Y')
+                    ->sortable()
+                    ->description(function (SuratTugas $record): ?string {
+                        if (!$record->waktu_mulai && !$record->waktu_selesai) {
+                            return null;
+                        }
+                        $periode = SuratTugasResource::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
+                        return "Tugas: {$periode}";
+                    })
+                    ->tooltip(function (SuratTugas $record): ?string {
+                        if (!$record->waktu_mulai && !$record->waktu_selesai) {
+                            return null;
+                        }
+                        return 'Pelaksanaan Tugas: ' . SuratTugasResource::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
+                    }),
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
