@@ -2,13 +2,15 @@ services:
   puslah-franken:
     container_name: puslah-franken
     restart: unless-stopped
-    mem_limit: 512m
+    mem_limit: 1024m
+    mem_reservation: 384m
     environment:
       - PUID=1000
       - PGID=1000
       - SERVER_NAME=:80
       - PHP_INI_MEMORY_LIMIT=256M
       - PHP_INI_MAX_EXECUTION_TIME=300
+      - MAX_REQUESTS=500
     build:
       context: .
       dockerfile: Dockerfile
@@ -25,7 +27,9 @@ services:
   puslah-worker:
     container_name: puslah-worker
     restart: unless-stopped
-    mem_limit: 256m
+    mem_limit: 512m
+    healthcheck:
+      disable: true
     build:
       context: .
       dockerfile: Dockerfile
@@ -39,7 +43,9 @@ services:
   puslah-scheduler:
     container_name: puslah-scheduler
     restart: unless-stopped
-    mem_limit: 128m
+    mem_limit: 256m
+    healthcheck:
+      disable: true
     build:
       context: .
       dockerfile: Dockerfile

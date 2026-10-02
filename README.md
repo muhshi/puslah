@@ -54,6 +54,14 @@ composer dev
 
 ## Changelog
 
+### 2026-10-02
+- **Optimasi Alokasi Resource Docker & Web Server (FrankenPHP & Caddy)**:
+  - Meningkatkan `mem_limit` pada service `puslah-franken` dari 512MB menjadi 1024MB (1GB) dengan `mem_reservation: 384m` untuk mencegah OOM-Killed mendadak dari Linux Kernel saat traffic/render Filament tinggi.
+  - Menambahkan environment `MAX_REQUESTS=500` pada FrankenPHP agar worker thread PHP di-recycle secara berkala untuk mencegah akumulasi memory leak.
+  - Menyesuaikan `Caddyfile` menjadi `:80` agar fleksibel melayani reverse proxy/Cloudflare tanpa kendala mismatch host atau automated HTTPS loop.
+  - Menambahkan `healthcheck: disable: true` pada service `puslah-worker` dan `puslah-scheduler` untuk mengeliminasi false positive status 'Unhealthy' di Portainer/Beszel.
+  - Menaikkan alokasi memori worker ke 512MB dan scheduler ke 256MB untuk keleluasaan eksekusi antrean background.
+
 ### 2026-10-01
 - **Fitur Download dan Buka Foto / Dokumen Terunggah**:
   - Menambahkan kapabilitas download (`->downloadable()`) dan buka di tab baru (`->openable()`) pada seluruh komponen upload file, gambar, dan dokumen:
