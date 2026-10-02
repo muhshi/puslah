@@ -6,11 +6,28 @@ use App\Filament\Resources\SuratTugasResource;
 use App\Models\SuratTugas;
 use App\Models\Survey;
 use Filament\Actions;
+use Filament\Resources\Components\Tab;
 use Filament\Resources\Pages\ListRecords;
+use Illuminate\Database\Eloquent\Builder;
 
 class ListSuratTugas extends ListRecords
 {
     protected static string $resource = SuratTugasResource::class;
+
+    public function getTabs(): array
+    {
+        return [
+            'all' => Tab::make('Semua'),
+            'pending' => Tab::make('Pending')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'pending'))
+                ->badge(fn () => SuratTugas::where('status', 'pending')->count())
+                ->badgeColor('warning'),
+            'approved' => Tab::make('Approved')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'approved'))
+                ->badge(fn () => SuratTugas::where('status', 'approved')->count())
+                ->badgeColor('success'),
+        ];
+    }
 
     protected function getHeaderActions(): array
     {

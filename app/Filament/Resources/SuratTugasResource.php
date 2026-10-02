@@ -381,6 +381,13 @@ class SuratTugasResource extends Resource
                     ->relationship('survey', 'name')
                     ->searchable()
                     ->preload(),
+                Tables\Filters\SelectFilter::make('status')
+                    ->label('Status')
+                    ->options([
+                        'pending' => 'Pending',
+                        'approved' => 'Approved',
+                        'rejected' => 'Rejected',
+                    ]),
             ])
             ->actions([
                 Tables\Actions\Action::make('preview')

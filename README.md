@@ -55,6 +55,14 @@ composer dev
 ## Changelog
 
 ### 2026-10-02
+- **Filter Kegiatan Aktif & Rekap Belum Presensi (Manajemen Presensi)**:
+  - Menambahkan filter dropdown "Kegiatan Aktif" pada tabel `AttendanceResource` untuk memfilter data presensi berdasarkan peserta survei/kegiatan yang sedang aktif.
+  - Menambahkan Action Header "Rekap Belum Presensi" di `ListAttendances` lengkap dengan badge counter otomatis yang menghitung siapa saja yang belum melakukan presensi hari ini (di luar pegawai yang sedang cuti).
+  - Mengembangkan komponen Livewire `AttendanceUnattendedRecap` di dalam modal interaktif dengan filter tanggal, pilihan kegiatan aktif, kategori pegawai (Organik/Mitra), status cuti, pencarian, tombol "Ingatkan WA" langsung ke nomor WhatsApp pegawai dengan format pesan otomatis, tombol "Salin Format WA Group" untuk broadcast cepat ke grup, serta export CSV.
+  - Menampilkan widget ringkasan statistik kehadiran hari ini (`TodayAttendanceStats`) pada bagian atas halaman presensi.
+- **Filter Status Surat Tugas (Pending / Approved)**:
+  - Menambahkan filter `SelectFilter` status (`pending`, `approved`, `rejected`) pada tabel `SuratTugasResource`.
+  - Menambahkan navigasi Tab cepat ("Semua", "Pending", "Approved") dengan badge counter jumlah surat tugas pending dan approved di `ListSuratTugas`.
 - **Optimasi Alokasi Resource Docker & Web Server (FrankenPHP & Caddy)**:
   - Meningkatkan `mem_limit` pada service `puslah-franken` dari 512MB menjadi 1024MB (1GB) dengan `mem_reservation: 384m` untuk mencegah OOM-Killed mendadak dari Linux Kernel saat traffic/render Filament tinggi.
   - Menambahkan environment `MAX_REQUESTS=500` pada FrankenPHP agar worker thread PHP di-recycle secara berkala untuk mencegah akumulasi memory leak.

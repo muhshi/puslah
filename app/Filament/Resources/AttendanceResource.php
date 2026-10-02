@@ -115,6 +115,26 @@ class AttendanceResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
+                Tables\Filters\SelectFilter::make('survey_id')
+                    ->label('Kegiatan Aktif')
+                    ->options(fn() => \App\Models\Survey::where('is_active', true)
+                        ->orderBy('name')
+                        ->pluck('name', 'id'))
+                    ->searchable()
+                    ->preload()
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (blank($data['value'] ?? null)) {
+                            return $query;
+                        }
+
+                        $surveyId = $data['value'];
+                        $suUserIds = \App\Models\SurveyUser::where('survey_id', $surveyId)->pluck('user_id');
+                        $stUserIds = \App\Models\SuratTugas::where('survey_id', $surveyId)->pluck('user_id');
+                        $userIds = $suUserIds->merge($stUserIds)->unique()->filter()->values();
+
+                        return $query->whereIn('attendances.user_id', $userIds);
+                    }),
+
                 Tables\Filters\SelectFilter::make('user_id')
                     ->label('Pegawai')
                     ->options(\App\Models\User::orderBy('name')->pluck('name', 'id'))
