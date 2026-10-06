@@ -55,8 +55,9 @@ composer dev
 ## Changelog
 
 ### 2026-10-06
-- **Bulk Aturan Presensi (WFA/BANNED) Berbasis Survei (`AttendanceRuleResource`)**:
+- **Bulk Aturan Presensi (WFA/BANNED) Berbasis Survei Aktif (`AttendanceRuleResource`)**:
   - Menambahkan pemilihan survei terlebih dahulu pada form pembuatan Aturan Presensi untuk memfilter ribuan pegawai menjadi peserta survei terkait secara otomatis.
+  - Membatasi daftar survei yang dapat dipilih hanya survei yang berstatus **aktif** (`is_active = true`) untuk menjaga performa dan relevansi kegiatan.
   - Auto-fill otomatis tanggal mulai, tanggal selesai, dan alasan penugasan berdasarkan rentang waktu survei terpilih.
   - Menambahkan aksi bulk selection cepat: "Pilih Semua Peserta", "Hanya Mitra", "Hanya Organik (BPS)", dan "Kosongkan Pilihan".
   - Memungkinkan admin memilih pegawai satu per satu secara multiple dari daftar peserta survei terpilih.

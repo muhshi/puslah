@@ -157,4 +157,23 @@ class AttendanceRuleTest extends TestCase
             'reason' => 'Updated Reason Banned',
         ]);
     }
+
+    public function test_only_active_surveys_are_available_in_options()
+    {
+        $this->actingAs($this->admin);
+
+        $inactiveSurvey = Survey::create([
+            'name' => 'Survei Lama Tidak Aktif',
+            'start_date' => '2025-01-01',
+            'end_date' => '2025-01-10',
+            'is_active' => false,
+        ]);
+
+        Livewire::test(CreateAttendanceRule::class)
+            ->assertFormFieldExists('survey_id', function ($field) use ($inactiveSurvey) {
+                $options = $field->getOptions();
+                return array_key_exists($this->survey->id, $options)
+                    && ! array_key_exists($inactiveSurvey->id, $options);
+            });
+    }
 }

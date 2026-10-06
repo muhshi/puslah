@@ -39,21 +39,20 @@ class AttendanceRuleResource extends Resource
                             Forms\Components\Group::make([
                                 Forms\Components\Select::make('survey_id')
                                     ->label('Pilih Survei')
-                                    ->placeholder('Pilih survei untuk memfilter peserta...')
+                                    ->placeholder('Pilih survei aktif untuk memfilter peserta...')
                                     ->prefixIcon('heroicon-m-clipboard-document-list')
                                     ->options(function () {
                                         return \App\Models\Survey::query()
-                                            ->orderByDesc('is_active')
+                                            ->where('is_active', true)
                                             ->orderByDesc('start_date')
                                             ->orderByDesc('id')
                                             ->get()
                                             ->mapWithKeys(function ($survey) {
-                                                $status = $survey->is_active ? 'Aktif' : 'Selesai';
                                                 $dates = '';
                                                 if ($survey->start_date && $survey->end_date) {
                                                     $dates = ' (' . $survey->start_date->format('d/m/Y') . ' - ' . $survey->end_date->format('d/m/Y') . ')';
                                                 }
-                                                return [$survey->id => "{$survey->name}{$dates} [{$status}]"];
+                                                return [$survey->id => "{$survey->name}{$dates}"];
                                             });
                                     })
                                     ->searchable()
@@ -80,7 +79,7 @@ class AttendanceRuleResource extends Resource
                                     ->validationMessages([
                                         'required' => 'Pilih survei terlebih dahulu.',
                                     ])
-                                    ->helperText('Pilih survei terlebih dahulu agar ribuan user difilter menjadi peserta survei terkait.')
+                                    ->helperText('Hanya menampilkan survei yang aktif. Pilih survei untuk memfilter daftar peserta.')
                                     ->columnSpanFull(),
 
                                 Forms\Components\Actions::make([
