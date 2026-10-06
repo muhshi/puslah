@@ -55,9 +55,19 @@ composer dev
 ## Changelog
 
 ### 2026-10-06
+- **Pembaruan Modul Cuti Menjadi IZIN & Redesain Form Premium (`LeaveResource`)**:
+  - Mengubah penamaan menu dan modul dari "Cuti" menjadi "IZIN" secara menyeluruh (label navigasi, model label, breadcrumbs, tombol cepat Dashboard "Persetujuan Izin", widget status presensi, chart pie presensi, dan notifikasi).
+  - Menyesuaikan bahasa dan istilah perizinan menjadi Bahasa Indonesia baku dan informatif (Status "Menunggu Verifikasi", "Disetujui", "Ditolak").
+  - Merancang ulang formulir permohonan izin sesuai panduan `filament-premium-forms`: container section full-width berikon, nested fieldset terstruktur ("Informasi Pegawai & Waktu Izin", "Status Verifikasi & Catatan"), pemilih tanggal `DatePicker` dengan prefix icon, textarea keperluan izin, serta segmented `ToggleButtons` status verifikasi interaktif.
+  - Menyesuaikan pesan alert pada antarmuka presensi saat pegawai sedang berstatus izin.
+- **Perbaikan Angka Rekap Presensi & Filter Survei Berbasis Aktivitas Presensi (`AttendanceRecap` & `Survey`)**:
+  - Memperbaiki kalkulasi angka rekap presensi pada halaman `AttendanceRecap` yang sebelumnya bernilai 0 akibat keterikatan closure survey statis dan pemilihan default survei rapat yang tidak memiliki catatan presensi.
+  - Memperbarui form filter `AttendanceRecap` menggunakan arsitektur reaktif Filament v3 (`->live()` dan `afterStateUpdated`) dengan state binding `data.surveyId`, sehingga tabel dan agregat rekap otomatis diperbarui secara realtime saat survei dipilih.
+  - Menambahkan scope `withAttendanceActivity()` pada model `Survey` untuk memfilter survei agar hanya menampilkan survei yang anggotanya benar-benar melakukan aktivitas presensi pada rentang pelaksanaan survei, sehingga pengguna tidak perlu menggulir ratusan kegiatan administrasi lainnya.
+  - Menerapkan filter survei dengan aktivitas presensi secara konsisten pada form Aturan Presensi (`AttendanceRuleResource`), halaman Rekap Presensi (`AttendanceRecap`), dan modal pemantauan presensi kegiatan (`AttendanceUnattendedRecap`).
 - **Bulk Aturan Presensi (WFA/BANNED) Berbasis Survei Aktif (`AttendanceRuleResource`)**:
   - Menambahkan pemilihan survei terlebih dahulu pada form pembuatan Aturan Presensi untuk memfilter ribuan pegawai menjadi peserta survei terkait secara otomatis.
-  - Membatasi daftar survei yang dapat dipilih hanya survei yang berstatus **aktif** (`is_active = true`) untuk menjaga performa dan relevansi kegiatan.
+  - Membatasi daftar survei yang dapat dipilih hanya survei yang berstatus **aktif** (`is_active = true`) dan anggotanya memiliki aktivitas presensi untuk menjaga performa dan relevansi kegiatan.
   - Auto-fill otomatis tanggal mulai, tanggal selesai, dan alasan penugasan berdasarkan rentang waktu survei terpilih.
   - Menambahkan aksi bulk selection cepat: "Pilih Semua Peserta", "Hanya Mitra", "Hanya Organik (BPS)", dan "Kosongkan Pilihan".
   - Memungkinkan admin memilih pegawai satu per satu secara multiple dari daftar peserta survei terpilih.

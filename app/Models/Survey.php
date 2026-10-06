@@ -53,4 +53,25 @@ class Survey extends Model
     {
         return $this->hasMany(SurveyUser::class);
     }
+
+    /**
+     * Scope untuk survei yang memiliki aktivitas presensi dari anggotanya
+     */
+    public function scopeWithAttendanceActivity(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query->whereExists(function ($sub) {
+            $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+                ->from('survey_users')
+                ->join('attendances', 'attendances.user_id', '=', 'survey_users.user_id')
+                ->whereColumn('survey_users.survey_id', 'surveys.id')
+                ->where(function ($q) {
+                    $q->whereNull('surveys.start_date')
+                      ->orWhereRaw('DATE(attendances.created_at) >= DATE(surveys.start_date)');
+                })
+                ->where(function ($q) {
+                    $q->whereNull('surveys.end_date')
+                      ->orWhereRaw('DATE(attendances.created_at) <= DATE(surveys.end_date)');
+                });
+        });
+    }
 }

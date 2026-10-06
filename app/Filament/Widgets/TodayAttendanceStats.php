@@ -49,12 +49,12 @@ class TodayAttendanceStats extends BaseWidget
                 ->url(AttendanceResource::getUrl()),
 
             Stat::make('Belum presensi', number_format($belum))
-                ->description('Tidak termasuk izin/cuti')
+                ->description('Tidak termasuk izin')
                 ->color('danger')
                 ->url(AttendanceResource::getUrl()),
 
-            Stat::make('Izin/Cuti', number_format($izin))
-                ->description('Approved yang aktif hari ini')
+            Stat::make('Izin', number_format($izin))
+                ->description('Disetujui untuk hari ini')
                 ->color('warning')
                 ->url(LeaveResource::getUrl()),
         ];

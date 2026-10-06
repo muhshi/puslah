@@ -22,17 +22,13 @@ class AttendanceUnattendedRecap extends Component
         if ($surveyId) {
             $this->surveyId = $surveyId;
         } else {
-            // Default ke survey aktif yang memiliki peserta dan presensi hari ini
-            $today = $this->date;
+            // Default ke survey aktif yang anggotanya memiliki aktivitas presensi
             $activeWithAttendance = Survey::where('is_active', true)
-                ->whereHas('participants', function ($q) use ($today) {
-                    $q->whereHas('attendances', fn($aq) => $aq->whereDate('created_at', $today));
-                })
+                ->withAttendanceActivity()
                 ->latest('id')
                 ->first();
 
             $this->surveyId = $activeWithAttendance?->id
-                ?? Survey::where('name', 'like', '%Pengolahan Pemutakhiran Kerangka Geospasial%')->value('id')
                 ?? Survey::where('is_active', true)->has('participants')->latest('id')->value('id');
         }
 
@@ -61,10 +57,19 @@ class AttendanceUnattendedRecap extends Component
 
     public function getActiveSurveysProperty()
     {
-        return Survey::where('is_active', true)
-            ->has('participants')
+        $surveys = Survey::where('is_active', true)
+            ->withAttendanceActivity()
             ->orderBy('name')
             ->get(['id', 'name']);
+
+        if ($surveys->isEmpty()) {
+            $surveys = Survey::where('is_active', true)
+                ->has('participants')
+                ->orderBy('name')
+                ->get(['id', 'name']);
+        }
+
+        return $surveys;
     }
 
     public function getRecapDataProperty(): array

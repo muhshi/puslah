@@ -31,7 +31,7 @@ class TodayPresencePie extends ChartWidget
         $tidak = max($total - $hadir - $izin, 0);
 
         return [
-            'labels' => ['Hadir', 'Izin/Cuti', 'Tidak Hadir'],
+            'labels' => ['Hadir', 'Izin', 'Tidak Hadir'],
             'datasets' => [
                 [
                     'data' => [$hadir, $izin, $tidak],

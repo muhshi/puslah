@@ -39,21 +39,31 @@ class AttendanceRuleResource extends Resource
                             Forms\Components\Group::make([
                                 Forms\Components\Select::make('survey_id')
                                     ->label('Pilih Survei')
-                                    ->placeholder('Pilih survei aktif untuk memfilter peserta...')
+                                    ->placeholder('Pilih survei aktif yang memiliki aktivitas presensi...')
                                     ->prefixIcon('heroicon-m-clipboard-document-list')
                                     ->options(function () {
-                                        return \App\Models\Survey::query()
+                                        $surveys = \App\Models\Survey::query()
                                             ->where('is_active', true)
+                                            ->withAttendanceActivity()
                                             ->orderByDesc('start_date')
                                             ->orderByDesc('id')
-                                            ->get()
-                                            ->mapWithKeys(function ($survey) {
-                                                $dates = '';
-                                                if ($survey->start_date && $survey->end_date) {
-                                                    $dates = ' (' . $survey->start_date->format('d/m/Y') . ' - ' . $survey->end_date->format('d/m/Y') . ')';
-                                                }
-                                                return [$survey->id => "{$survey->name}{$dates}"];
-                                            });
+                                            ->get();
+
+                                        if ($surveys->isEmpty()) {
+                                            $surveys = \App\Models\Survey::query()
+                                                ->where('is_active', true)
+                                                ->orderByDesc('start_date')
+                                                ->orderByDesc('id')
+                                                ->get();
+                                        }
+
+                                        return $surveys->mapWithKeys(function ($survey) {
+                                            $dates = '';
+                                            if ($survey->start_date && $survey->end_date) {
+                                                $dates = ' (' . $survey->start_date->format('d/m/Y') . ' - ' . $survey->end_date->format('d/m/Y') . ')';
+                                            }
+                                            return [$survey->id => "{$survey->name}{$dates}"];
+                                        });
                                     })
                                     ->searchable()
                                     ->preload()
@@ -79,7 +89,7 @@ class AttendanceRuleResource extends Resource
                                     ->validationMessages([
                                         'required' => 'Pilih survei terlebih dahulu.',
                                     ])
-                                    ->helperText('Hanya menampilkan survei yang aktif. Pilih survei untuk memfilter daftar peserta.')
+                                    ->helperText('Hanya menampilkan survei aktif yang anggotanya memiliki aktivitas presensi.')
                                     ->columnSpanFull(),
 
                                 Forms\Components\Actions::make([

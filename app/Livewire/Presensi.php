@@ -121,7 +121,7 @@ class Presensi extends Component
 
         $today = Carbon::today('Asia/Jakarta')->toDateString();
 
-        // Cuti?
+        // Izin?
         $approvedLeave = Leave::where('user_id', Auth::id())
             ->where('status', 'approved')
             ->whereDate('start_date', '<=', $today)
@@ -129,7 +129,7 @@ class Presensi extends Component
             ->exists();
 
         if ($approvedLeave) {
-            session()->flash('error', 'Anda sedang cuti. Tidak bisa presensi.');
+            session()->flash('error', 'Anda sedang berstatus izin hari ini. Tidak bisa presensi.');
             return redirect()->route('presensi');
         }
 

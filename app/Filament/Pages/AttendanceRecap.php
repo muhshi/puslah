@@ -37,35 +37,70 @@ class AttendanceRecap extends Page implements Tables\Contracts\HasTable, Forms\C
     protected static ?int $navigationSort = 10;
 
     public ?int $surveyId = null;
+    public ?array $data = [];
 
     public function mount(): void
     {
-        // default ambil survey aktif kalau ada
-        $active = Survey::query()->where('is_active', true)->latest('start_date')->first();
-        if ($active) {
-            $this->surveyId = $active->id;
+        // Default pilih survey aktif yang anggotanya memiliki aktivitas presensi
+        $activeWithAttendance = Survey::query()
+            ->where('is_active', true)
+            ->withAttendanceActivity()
+            ->latest('start_date')
+            ->first();
+
+        if ($activeWithAttendance) {
+            $this->surveyId = $activeWithAttendance->id;
+        } else {
+            $anyWithAttendance = Survey::query()
+                ->withAttendanceActivity()
+                ->latest('start_date')
+                ->first();
+            $this->surveyId = $anyWithAttendance?->id ?? Survey::query()->where('is_active', true)->latest('start_date')->first()?->id;
+        }
+
+        $this->form->fill([
+            'surveyId' => $this->surveyId,
+        ]);
+    }
+
+    public function updated($property): void
+    {
+        if ($property === 'data.surveyId' || $property === 'surveyId') {
+            $this->surveyId = (int) ($this->data['surveyId'] ?? $this->surveyId);
+            $this->resetTable();
         }
     }
 
-    protected function getFormSchema(): array
+    public function form(Forms\Form $form): Forms\Form
     {
-        return [
-            Group::make()
-                ->schema([
-                    Section::make('Filter')
-                        ->schema([
-                            Select::make('surveyId')
-                                ->label('Pilih Survey')
-                                ->options(fn() => $this->surveyOptions())
-                                ->searchable()
-                                ->reactive()
-                                ->required(),
-                        ])
-                        ->columns(1)
-                        ->collapsible(false),
-                ])
-                ->columnSpanFull(),
-        ];
+        return $form
+            ->schema([
+                Group::make()
+                    ->schema([
+                        Section::make('Filter Rekap Presensi')
+                            ->description('Pilih kegiatan / survei untuk melihat ringkasan rekap kehadiran petugas.')
+                            ->icon('heroicon-o-funnel')
+                            ->schema([
+                                Select::make('surveyId')
+                                    ->label('Pilih Kegiatan / Survei')
+                                    ->prefixIcon('heroicon-m-clipboard-document-check')
+                                    ->options(fn() => $this->surveyOptions())
+                                    ->searchable()
+                                    ->preload()
+                                    ->live()
+                                    ->afterStateUpdated(function ($state) {
+                                        $this->surveyId = $state ? (int) $state : null;
+                                        $this->resetTable();
+                                    })
+                                    ->required()
+                                    ->helperText('Hanya menampilkan kegiatan/survei yang memiliki aktivitas presensi dari anggotanya.'),
+                            ])
+                            ->columns(1)
+                            ->collapsible(false),
+                    ])
+                    ->columnSpanFull(),
+            ])
+            ->statePath('data');
     }
 
     /**
@@ -74,38 +109,61 @@ class AttendanceRecap extends Page implements Tables\Contracts\HasTable, Forms\C
     public function table(Table $table): Table
     {
         return $table
-            ->heading('Rekap per Individu')
-            ->defaultSort('name', 'asc') // pakai default sort di Table, bukan di query
+            ->heading('Rekap Presensi per Petugas')
+            ->defaultSort('name', 'asc')
             ->query(fn() => $this->baseQuery())
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Nama')
+                    ->label('Nama Pegawai')
+                    ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('present_count')->label('Hadir')
-                    ->sortable(query: fn($query, $direction) => $query->orderBy('present_count', $direction)),
+                Tables\Columns\TextColumn::make('present_count')
+                    ->label('Hadir')
+                    ->badge()
+                    ->color('success')
+                    ->sortable(),
 
                 Tables\Columns\TextColumn::make('late_count')
                     ->label('Terlambat')
+                    ->badge()
+                    ->color(fn ($state) => (int) $state > 0 ? 'warning' : 'gray')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('under_7h_count')
                     ->label('< 7 Jam')
+                    ->badge()
+                    ->color(fn ($state) => (int) $state > 0 ? 'warning' : 'gray')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('no_checkout_count')
                     ->label('Tidak Checkout')
+                    ->badge()
+                    ->color(fn ($state) => (int) $state > 0 ? 'danger' : 'gray')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('leave_approved_days')
-                    ->label('Cuti (approved)')
+                    ->label('Izin (Approved)')
+                    ->badge()
+                    ->color(fn ($state) => (int) $state > 0 ? 'info' : 'gray')
                     ->sortable(),
 
-                // alpa: sekarang sudah alias selectSub → bisa sortable biasa
                 Tables\Columns\TextColumn::make('alpa_days')
                     ->label('Alpa (tanpa izin)')
-                    ->tooltip('Perkiraan: Hari kerja − Hadir − Cuti')
-                    ->sortable(),
+                    ->tooltip('Perkiraan: Hari kerja − Hadir − Izin')
+                    ->badge()
+                    ->color(fn ($state) => (int) $state > 0 ? 'danger' : 'gray')
+                    ->getStateUsing(function ($record) {
+                        $today = now('Asia/Jakarta')->toDateString();
+                        $survey = $this->surveyId ? Survey::find($this->surveyId) : null;
+                        $start = $survey?->start_date;
+                        $end = $survey?->end_date;
+                        if ($end && $end->toDateString() > $today) {
+                            $end = Carbon::parse($today);
+                        }
+                        $workdays = $this->estimateWorkdays($start, $end);
+                        return max(0, $workdays - (int) $record->present_count - (int) $record->leave_approved_days);
+                    }),
             ])
             ->filters([])
             ->actions([])
@@ -115,8 +173,17 @@ class AttendanceRecap extends Page implements Tables\Contracts\HasTable, Forms\C
                     ->label('Export CSV')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->action(function () {
+                        $today = now('Asia/Jakarta')->toDateString();
+                        $survey = $this->surveyId ? Survey::find($this->surveyId) : null;
+                        $start = $survey?->start_date;
+                        $end = $survey?->end_date;
+                        if ($end && $end->toDateString() > $today) {
+                            $end = Carbon::parse($today);
+                        }
+                        $workdays = $this->estimateWorkdays($start, $end);
+
                         /** @var \Illuminate\Support\Collection<int,array<string,int|string>> $rows */
-                        $rows = $this->baseQuery()->get()->map(function ($u) {
+                        $rows = $this->baseQuery()->get()->map(function ($u) use ($workdays) {
                             return [
                                 'Nama' => $u->name,
                                 'Email' => $u->email,
@@ -124,8 +191,8 @@ class AttendanceRecap extends Page implements Tables\Contracts\HasTable, Forms\C
                                 'Terlambat' => (int) $u->late_count,
                                 '< 7 Jam' => (int) $u->under_7h_count,
                                 'Tidak Checkout' => (int) $u->no_checkout_count,
-                                'Cuti (approved)' => (int) $u->leave_approved_days,
-                                'Alpa' => (int) $u->alpa_days,
+                                'Izin (Approved)' => (int) $u->leave_approved_days,
+                                'Alpa' => max(0, $workdays - (int) $u->present_count - (int) $u->leave_approved_days),
                             ];
                         });
 
@@ -149,9 +216,7 @@ class AttendanceRecap extends Page implements Tables\Contracts\HasTable, Forms\C
     }
 
     /**
-     * Query rekap pakai tabel attendance_daily_recaps
-     * - Filter peserta dari survey + rentang tanggal survey (end dibatasi hari ini).
-     * - Super admin lihat semua, selain itu hanya dirinya sendiri.
+     * Query rekap realtime langsung dari tabel attendances dan leaves
      *
      * @return \Illuminate\Database\Eloquent\Builder<\App\Models\User>
      */
@@ -183,29 +248,64 @@ class AttendanceRecap extends Page implements Tables\Contracts\HasTable, Forms\C
             $participantIds = $participantIds->intersect([auth()->id()]);
         }
 
-        // query: SUM recap per user
-        $query = User::query()
+        $isSqlite = DB::getDriverName() === 'sqlite';
+        $timeDiffExpr = $isSqlite
+            ? "((strftime('%s', attendances.end_time) - strftime('%s', attendances.start_time)) / 60) < 420"
+            : "TIMESTAMPDIFF(MINUTE, attendances.start_time, attendances.end_time) < 420";
+
+        return User::query()
             ->whereIn('users.id', $participantIds)
-            ->leftJoin('attendance_daily_recaps as r', function ($join) use ($start, $end) {
-                $join->on('r.user_id', '=', 'users.id')
-                    ->whereBetween('r.work_date', [$start, $end]);
-            })
             ->select('users.*')
-            ->selectRaw('COALESCE(SUM(r.present),0)      as present_count')
-            ->selectRaw('COALESCE(SUM(r.late),0)         as late_count')
-            ->selectRaw('COALESCE(SUM(r.under_7h),0)     as under_7h_count')
-            ->selectRaw('COALESCE(SUM(r.no_checkout),0)  as no_checkout_count')
-            ->selectRaw('COALESCE(SUM(r.leave),0)        as leave_approved_days')
-            ->selectRaw('COALESCE(SUM(r.alpa),0)         as alpa_days')
-            ->groupBy('users.id');
-
-        return $query;
+            ->selectSub(function ($q) use ($start, $end) {
+                $q->from('attendances')
+                    ->whereColumn('attendances.user_id', 'users.id')
+                    ->when($start, fn($sq) => $sq->whereDate('attendances.created_at', '>=', $start))
+                    ->when($end, fn($sq) => $sq->whereDate('attendances.created_at', '<=', $end))
+                    ->selectRaw('COUNT(DISTINCT DATE(attendances.created_at))');
+            }, 'present_count')
+            ->selectSub(function ($q) use ($start, $end) {
+                $q->from('attendances')
+                    ->whereColumn('attendances.user_id', 'users.id')
+                    ->when($start, fn($sq) => $sq->whereDate('attendances.created_at', '>=', $start))
+                    ->when($end, fn($sq) => $sq->whereDate('attendances.created_at', '<=', $end))
+                    ->whereColumn('attendances.start_time', '>', 'attendances.schedule_start_time')
+                    ->selectRaw('COUNT(*)');
+            }, 'late_count')
+            ->selectSub(function ($q) use ($start, $end, $timeDiffExpr) {
+                $q->from('attendances')
+                    ->whereColumn('attendances.user_id', 'users.id')
+                    ->when($start, fn($sq) => $sq->whereDate('attendances.created_at', '>=', $start))
+                    ->when($end, fn($sq) => $sq->whereDate('attendances.created_at', '<=', $end))
+                    ->whereNotNull('attendances.end_time')
+                    ->whereRaw($timeDiffExpr)
+                    ->selectRaw('COUNT(*)');
+            }, 'under_7h_count')
+            ->selectSub(function ($q) use ($start, $end) {
+                $q->from('attendances')
+                    ->whereColumn('attendances.user_id', 'users.id')
+                    ->when($start, fn($sq) => $sq->whereDate('attendances.created_at', '>=', $start))
+                    ->when($end, fn($sq) => $sq->whereDate('attendances.created_at', '<=', $end))
+                    ->where(function ($sq) {
+                        $sq->whereNull('attendances.end_time')->orWhere('attendances.end_time', '');
+                    })
+                    ->selectRaw('COUNT(*)');
+            }, 'no_checkout_count')
+            ->selectSub(function ($q) use ($start, $end) {
+                $q->from('leaves')
+                    ->whereColumn('leaves.user_id', 'users.id')
+                    ->where('leaves.status', 'approved')
+                    ->when($start, fn($sq) => $sq->whereDate('leaves.end_date', '>=', $start))
+                    ->when($end, fn($sq) => $sq->whereDate('leaves.start_date', '<=', $end))
+                    ->selectRaw('COUNT(*)');
+            }, 'leave_approved_days');
     }
-
 
     protected function surveyOptions(): array
     {
-        $query = Survey::query()->orderBy('start_date', 'desc');
+        $query = Survey::query()
+            ->withAttendanceActivity()
+            ->orderByDesc('is_active')
+            ->orderByDesc('start_date');
 
         if (!isAdmin() && auth()->check()) {
             $userSurveyIds = SurveyUser::where('user_id', auth()->id())
@@ -213,7 +313,20 @@ class AttendanceRecap extends Page implements Tables\Contracts\HasTable, Forms\C
             $query->whereIn('id', $userSurveyIds);
         }
 
-        return $query->pluck('name', 'id')->toArray();
+        $surveys = $query->get();
+
+        if ($surveys->isEmpty()) {
+            $surveys = Survey::query()->where('is_active', true)->orderByDesc('start_date')->get();
+        }
+
+        return $surveys->mapWithKeys(function ($survey) {
+            $status = $survey->is_active ? 'Aktif' : 'Non-aktif';
+            $dates = '';
+            if ($survey->start_date && $survey->end_date) {
+                $dates = ' (' . $survey->start_date->format('d/m/Y') . ' - ' . $survey->end_date->format('d/m/Y') . ')';
+            }
+            return [$survey->id => "{$survey->name}{$dates} [{$status}]"];
+        })->toArray();
     }
 
     /**

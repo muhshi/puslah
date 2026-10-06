@@ -5,15 +5,14 @@ use Illuminate\Support\Facades\Auth;
 if (!function_exists('isAdmin')) {
     function isAdmin(): bool
     {
-        // super admin
-        return Auth::user()->roles[0]->name == 'super_admin';
+        return Auth::user()?->hasRole('super_admin') ?? false;
     }
 }
 
 if (!function_exists('isPegawai')) {
     function isPegawai(): bool
     {
-        return Auth::user()->roles[0]->name == 'Pegawai BPS';
+        return Auth::user()?->hasRole('Pegawai BPS') ?? false;
     }
 }
 
