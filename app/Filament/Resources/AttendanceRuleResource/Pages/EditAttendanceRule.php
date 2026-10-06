@@ -24,4 +24,9 @@ class EditAttendanceRule extends EditRecord
         $data['approved_by'] = Auth::id();
         return $data;
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

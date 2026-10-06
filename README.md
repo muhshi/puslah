@@ -54,6 +54,16 @@ composer dev
 
 ## Changelog
 
+### 2026-10-06
+- **Bulk Aturan Presensi (WFA/BANNED) Berbasis Survei (`AttendanceRuleResource`)**:
+  - Menambahkan pemilihan survei terlebih dahulu pada form pembuatan Aturan Presensi untuk memfilter ribuan pegawai menjadi peserta survei terkait secara otomatis.
+  - Auto-fill otomatis tanggal mulai, tanggal selesai, dan alasan penugasan berdasarkan rentang waktu survei terpilih.
+  - Menambahkan aksi bulk selection cepat: "Pilih Semua Peserta", "Hanya Mitra", "Hanya Organik (BPS)", dan "Kosongkan Pilihan".
+  - Memungkinkan admin memilih pegawai satu per satu secara multiple dari daftar peserta survei terpilih.
+  - Menerapkan layout form premium Filament (`filament-premium-forms`): single full-span container section, nested fieldsets, column grouping, rich iconography (prefix icons), dan segmented `ToggleButtons` untuk tipe aturan WFA / BANNED.
+  - Menyimpan aturan presensi secara massal (bulk create) dalam transaksi database dengan notifikasi informatif jumlah aturan yang dibuat.
+  - Menambahkan kolom radius override dan alasan pada tabel aturan presensi serta penyempurnaan query policy.
+
 ### 2026-10-02
 - **Filter Kegiatan Aktif & Rekap Presensi Kegiatan Datang & Pulang (Manajemen Presensi)**:
   - Menyederhanakan pemantauan presensi agar terfokus pada kegiatan/survei yang sedang berjalan dan membutuhkan presensi petugas (misal: "Pengolahan Pemutakhiran Kerangka Geospasial dan Muatan Wilkerstat Hasil Pendataan SE2026").
