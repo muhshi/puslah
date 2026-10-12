@@ -54,6 +54,20 @@ composer dev
 
 ## Changelog
 
+### 2026-10-12
+- **Pembatasan dan Validasi Kuota Laporan Perjalanan Dinas (LPD) Berdasarkan Rentang Surat Tugas**:
+  - **Penentuan Rentang Mandiri Surat Tugas**: Menghapus ekspansi rentang tanggal LPD ke rentang survei bulanan. Rentang tanggal LPD kini presisi mengikuti rentang tanggal penugasan pada Surat Tugas (`waktu_mulai` & `waktu_selesai` / `tanggal`).
+  - **Aturan Kuota Laporan (1 Hari vs Rentang Panjang)**:
+    - Surat Tugas 1 hari hanya diperbolehkan membuat maksimal 1 laporan LPD.
+    - Surat Tugas multi-hari (rentang panjang) diperbolehkan membuat beberapa laporan hingga maksimal sebanyak jumlah hari pada rentang surat tugas (1 laporan per tanggal kunjungan).
+  - **Validasi & Proteksi Form LPD**:
+    - Menambahkan validasi ketat pada pilihan `surat_tugas_id`: mencegah pembuatan LPD baru jika Surat Tugas sudah memenuhi kuota atau semua tanggal pada rentangnya sudah terisi.
+    - Menampilkan indikator kuota dan status pada dropdown Surat Tugas (misal `[1/1 LPD] ⚠️ (Sudah Selesai/Penuh)`).
+    - Memunculkan notifikasi peringatan saat form create dibuka dengan Surat Tugas yang kuotanya sudah habis.
+  - **Tampilan Tabel Surat Tugas**:
+    - Tombol action "Buat LPD" otomatis disembunyikan jika kuota LPD untuk Surat Tugas tersebut sudah terpenuhi.
+    - Tombol "Lihat LPD" menampilkan progres kuota LPD untuk tugas multi-hari (contoh: `Lihat LPD (2/3)`).
+
 ### 2026-10-06
 - **Pembaruan Modul Cuti Menjadi IZIN & Redesain Form Premium (`LeaveResource`)**:
   - Mengubah penamaan menu dan modul dari "Cuti" menjadi "IZIN" secara menyeluruh (label navigasi, model label, breadcrumbs, tombol cepat Dashboard "Persetujuan Izin", widget status presensi, chart pie presensi, dan notifikasi).

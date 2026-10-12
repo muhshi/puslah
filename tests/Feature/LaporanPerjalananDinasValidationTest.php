@@ -312,6 +312,116 @@ class LaporanPerjalananDinasValidationTest extends TestCase
             ->call('create')
             ->assertHasFormErrors(['tanggal_kunjungan']);
     }
+
+    /** @test */
+    public function it_restricts_single_day_surat_tugas_to_only_one_lpd()
+    {
+        $user = User::factory()->create();
+        $user->assignRole('super_admin');
+        $survey = Survey::create(['name' => 'Survei 1 Hari', 'start_date' => '2026-09-01', 'end_date' => '2026-09-30']);
+
+        // Surat Tugas rentang 1 hari
+        $st = $this->createSuratTugas($user, $survey, '2026-09-10 08:00:00', '2026-09-10 16:00:00', 1);
+
+        $this->assertEquals(1, LaporanPerjalananDinas::getMaxLpdCount($st));
+        $this->assertTrue(LaporanPerjalananDinas::canCreateLpd($st));
+
+        // Create 1st LPD
+        $this->createLpd($st, '2026-09-10');
+
+        $st->refresh();
+        $this->assertFalse(LaporanPerjalananDinas::canCreateLpd($st));
+        $this->assertNull(LaporanPerjalananDinas::determineAvailableDate($st));
+
+        // Attempting to create 2nd LPD should fail validation on surat_tugas_id
+        $this->actingAs($user);
+
+        \Livewire\Livewire::test(\App\Filament\Resources\LaporanPerjalananDinasResource\Pages\CreateLaporanPerjalananDinas::class)
+            ->fillForm([
+                'surat_tugas_id' => $st->id,
+                'nomor_surat_tugas' => $st->nomor_surat,
+                'tujuan' => $st->keperluan,
+                'tanggal_kunjungan' => '2026-09-10',
+                'uraian_kegiatan' => 'LPD kedua yang tidak boleh',
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['surat_tugas_id']);
+    }
+
+    /** @test */
+    public function it_restricts_multiday_surat_tugas_to_its_maximum_day_count()
+    {
+        $user = User::factory()->create();
+        $user->assignRole('super_admin');
+        $survey = Survey::create(['name' => 'Survei 2 Hari']);
+
+        // Surat Tugas rentang 2 hari
+        $st = $this->createSuratTugas($user, $survey, '2026-09-10 08:00:00', '2026-09-11 16:00:00', 1);
+
+        $this->assertEquals(2, LaporanPerjalananDinas::getMaxLpdCount($st));
+        $this->assertTrue(LaporanPerjalananDinas::canCreateLpd($st));
+
+        // Create 1st LPD (hari 1)
+        $this->createLpd($st, '2026-09-10');
+        $st->refresh();
+        $this->assertTrue(LaporanPerjalananDinas::canCreateLpd($st));
+        $this->assertEquals('2026-09-11', LaporanPerjalananDinas::determineAvailableDate($st));
+
+        // Create 2nd LPD (hari 2)
+        $this->createLpd($st, '2026-09-11');
+        $st->refresh();
+        $this->assertFalse(LaporanPerjalananDinas::canCreateLpd($st));
+        $this->assertNull(LaporanPerjalananDinas::determineAvailableDate($st));
+
+        // Attempting to create 3rd LPD should fail validation on surat_tugas_id
+        $this->actingAs($user);
+
+        \Livewire\Livewire::test(\App\Filament\Resources\LaporanPerjalananDinasResource\Pages\CreateLaporanPerjalananDinas::class)
+            ->fillForm([
+                'surat_tugas_id' => $st->id,
+                'nomor_surat_tugas' => $st->nomor_surat,
+                'tujuan' => $st->keperluan,
+                'tanggal_kunjungan' => '2026-09-11',
+                'uraian_kegiatan' => 'LPD ketiga yang melampaui batas kuota',
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['surat_tugas_id']);
+    }
+
+    /** @test */
+    public function it_does_not_expand_single_day_surat_tugas_range_to_full_survey_month()
+    {
+        $user = User::factory()->create();
+        $user->assignRole('super_admin');
+        $survey = Survey::create([
+            'name' => 'Survei Bulanan',
+            'start_date' => '2026-09-01',
+            'end_date' => '2026-09-30',
+        ]);
+
+        // Surat Tugas hanya 1 hari pada 2026-09-15
+        $st = $this->createSuratTugas($user, $survey, '2026-09-15 08:00:00', '2026-09-15 16:00:00', 1);
+
+        $range = LaporanPerjalananDinas::getDateRangeForSuratTugas($st);
+        $this->assertEquals('2026-09-15', $range['start']->toDateString());
+        $this->assertEquals('2026-09-15', $range['end']->toDateString());
+        $this->assertEquals(1, LaporanPerjalananDinas::getMaxLpdCount($st));
+
+        $this->actingAs($user);
+
+        // Attempting date outside ST range (e.g. 2026-09-16) even though within survey should fail
+        \Livewire\Livewire::test(\App\Filament\Resources\LaporanPerjalananDinasResource\Pages\CreateLaporanPerjalananDinas::class)
+            ->fillForm([
+                'surat_tugas_id' => $st->id,
+                'nomor_surat_tugas' => $st->nomor_surat,
+                'tujuan' => $st->keperluan,
+                'tanggal_kunjungan' => '2026-09-16',
+                'uraian_kegiatan' => 'Kegiatan di luar tgl surat tugas',
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['tanggal_kunjungan']);
+    }
 }
+
 
 

@@ -96,7 +96,7 @@ class LaporanPerjalananDinasResource extends Resource
                                 }
 
                                 $stList = $stQuery->get();
-                                $st = $stList->first(fn ($item) => LaporanPerjalananDinas::determineAvailableDate($item) !== null) ?? $stList->first();
+                                $st = $stList->first(fn ($item) => LaporanPerjalananDinas::canCreateLpd($item)) ?? $stList->first();
 
                                 if ($st) {
                                     $set('surat_tugas_id', $st->id);
@@ -105,11 +105,16 @@ class LaporanPerjalananDinasResource extends Resource
                                     $initialDate = LaporanPerjalananDinas::determineAvailableDate($st);
                                     $set('tanggal_kunjungan', $initialDate);
 
-                                    if (!$initialDate) {
+                                    if (!LaporanPerjalananDinas::canCreateLpd($st)) {
+                                        $max = LaporanPerjalananDinas::getMaxLpdCount($st);
+                                        $msg = $max === 1
+                                            ? 'Surat Tugas ini memiliki rentang 1 hari dan laporannya sudah dibuat.'
+                                            : "Semua kuota ({$max} hari) pada Surat Tugas ini sudah terisi LPD.";
+
                                         \Filament\Notifications\Notification::make()
                                             ->warning()
-                                            ->title('Tanggal Tugas Sudah Terisi LPD')
-                                            ->body('Semua tanggal pada Surat Tugas ini sudah digunakan untuk LPD lain oleh pegawai ini. Silakan pilih tanggal kunjungan yang belum terisi.')
+                                            ->title('Surat Tugas Sudah Selesai LPD')
+                                            ->body($msg)
                                             ->send();
                                     }
                                 } else {
@@ -141,11 +146,16 @@ class LaporanPerjalananDinasResource extends Resource
                                     $initialDate = LaporanPerjalananDinas::determineAvailableDate($st);
                                     $set('tanggal_kunjungan', $initialDate);
 
-                                    if (!$initialDate) {
+                                    if (!LaporanPerjalananDinas::canCreateLpd($st)) {
+                                        $max = LaporanPerjalananDinas::getMaxLpdCount($st);
+                                        $msg = $max === 1
+                                            ? 'Surat Tugas ini memiliki rentang 1 hari dan laporannya sudah dibuat.'
+                                            : "Semua kuota ({$max} hari) pada Surat Tugas ini sudah terisi LPD.";
+
                                         \Filament\Notifications\Notification::make()
                                             ->warning()
-                                            ->title('Tanggal Tugas Sudah Terisi LPD')
-                                            ->body('Semua tanggal pada Surat Tugas ini sudah digunakan untuk LPD lain oleh pegawai ini. Silakan pilih tanggal kunjungan yang belum terisi.')
+                                            ->title('Surat Tugas Sudah Selesai LPD')
+                                            ->body($msg)
                                             ->send();
                                     }
                                 }
@@ -190,17 +200,50 @@ class LaporanPerjalananDinasResource extends Resource
                                 $survey = $st->survey ? " [{$st->survey->name}]" : '';
                                 $user = $st->user ? " - {$st->user->name}" : '';
 
-                                $lpdCount = $st->laporanPerjalananDinas->count();
-                                $lpdNote = $lpdCount > 0 ? " [{$lpdCount} LPD]" : '';
+                                $max = LaporanPerjalananDinas::getMaxLpdCount($st);
+                                $currentLpdCount = $st->laporanPerjalananDinas
+                                    ->when($record?->id, fn ($col) => $col->where('id', '!=', $record->id))
+                                    ->count();
+
+                                $lpdNote = " [{$currentLpdCount}/{$max} LPD]";
 
                                 $statusNote = '';
-                                if ($userId && !LaporanPerjalananDinas::determineAvailableDate($st, $record?->id)) {
-                                    $statusNote = ' ⚠️ (Semua tgl terisi LPD)';
+                                if ($currentLpdCount >= $max) {
+                                    $statusNote = ' ⚠️ (Sudah Selesai/Penuh)';
+                                } elseif ($userId && !LaporanPerjalananDinas::determineAvailableDate($st, $record?->id)) {
+                                    $statusNote = ' ⚠️ (Semua tgl bentrok LPD)';
                                 }
 
                                 return [$st->id => "{$st->nomor_surat}{$tglStr}{$survey}{$user}{$lpdNote}{$statusNote}"];
                             });
                         })
+                        ->rules([
+                            fn (?LaporanPerjalananDinas $record) => function (string $attribute, $value, \Closure $fail) use ($record) {
+                                if (!$value) {
+                                    return;
+                                }
+                                $st = SuratTugas::find($value);
+                                if (!$st) {
+                                    return;
+                                }
+                                if (!LaporanPerjalananDinas::canCreateLpd($st, $record?->id)) {
+                                    $max = LaporanPerjalananDinas::getMaxLpdCount($st);
+                                    $currentCount = $st->laporanPerjalananDinas()
+                                        ->when($record?->id, fn ($q) => $q->where('id', '!=', $record->id))
+                                        ->count();
+
+                                    if ($currentCount >= $max) {
+                                        if ($max === 1) {
+                                            $fail("Surat Tugas ini hanya memiliki rentang 1 hari dan sudah memiliki 1 laporan LPD. Tidak dapat menambah laporan lagi.");
+                                        } else {
+                                            $fail("Surat Tugas ini memiliki rentang {$max} hari dan sudah mencapai batas maksimal {$max} laporan LPD.");
+                                        }
+                                    } else {
+                                        $fail("Semua tanggal pada rentang Surat Tugas ini sudah terisi oleh kegiatan LPD pegawai ini.");
+                                    }
+                                }
+                            },
+                        ])
                         ->required(),
                 ])->columns($isSuperAdmin ? 3 : 2),
 
@@ -297,17 +340,17 @@ class LaporanPerjalananDinasResource extends Resource
                                     return;
                                 }
 
-                                // 1. Validasi tanggal harus berada di dalam rentang surat tugas / survei
+                                // 1. Validasi tanggal harus berada di dalam rentang surat tugas
                                 if ($st) {
                                     $range = LaporanPerjalananDinas::getDateRangeForSuratTugas($st);
                                     $dateVal = \Carbon\Carbon::parse($value)->startOfDay();
 
                                     if ($range['start'] && $dateVal->lt($range['start'])) {
-                                        $fail("Tanggal kunjungan tidak boleh sebelum rentang tugas/survei (" . $range['start']->translatedFormat('d F Y') . ").");
+                                        $fail("Tanggal kunjungan tidak boleh sebelum rentang surat tugas (" . $range['start']->translatedFormat('d F Y') . ").");
                                         return;
                                     }
                                     if ($range['end'] && $dateVal->gt($range['end'])) {
-                                        $fail("Tanggal kunjungan tidak boleh setelah rentang tugas/survei (" . $range['end']->translatedFormat('d F Y') . ").");
+                                        $fail("Tanggal kunjungan tidak boleh setelah rentang surat tugas (" . $range['end']->translatedFormat('d F Y') . ").");
                                         return;
                                     }
                                 }
@@ -344,11 +387,13 @@ class LaporanPerjalananDinasResource extends Resource
                                         $startStr = $range['start']->translatedFormat('d M Y');
                                         $endStr = $range['end']->translatedFormat('d M Y');
                                         $rentang = ($startStr === $endStr) ? $startStr : "{$startStr} s/d {$endStr}";
-                                        return "Pilih tanggal dalam rentang tugas/survei ({$rentang}). Satu tanggal hanya boleh untuk 1 LPD.";
+                                        $max = LaporanPerjalananDinas::getMaxLpdCount($st);
+                                        $count = $st->laporanPerjalananDinas()->when($record?->id, fn ($q) => $q->where('id', '!=', $record->id))->count();
+                                        return "Rentang surat tugas: {$rentang} ({$max} hari). LPD terisi: {$count}/{$max}. Satu tanggal hanya boleh untuk 1 LPD.";
                                     }
                                 }
                             }
-                            return 'Pilih tanggal kunjungan sesuai rentang tugas/survei. Tanggal yang sudah memiliki LPD otomatis dinonaktifkan di kalender.';
+                            return 'Pilih tanggal kunjungan sesuai rentang tugas. Tanggal yang sudah memiliki LPD otomatis dinonaktifkan di kalender.';
                         })
                         ->required(),
 

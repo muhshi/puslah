@@ -87,39 +87,95 @@ class LaporanPerjalananDinas extends Model
 
     /**
      * Get valid date range for an LPD belonging to a Surat Tugas.
-     * Takes into account the Surat Tugas's dates and/or the Survey's dates.
+     * Takes into account the Surat Tugas's dates (waktu_mulai / waktu_selesai or tanggal).
+     * Only falls back to the Survey's dates if Surat Tugas has no date set.
      *
      * @return array{start: ?\Carbon\Carbon, end: ?\Carbon\Carbon}
      */
     public static function getDateRangeForSuratTugas(SuratTugas $st): array
     {
-        $stStart = $st->waktu_mulai ? \Carbon\Carbon::parse($st->waktu_mulai)->startOfDay() : ($st->tanggal ? \Carbon\Carbon::parse($st->tanggal)->startOfDay() : null);
-        $stEnd = $st->waktu_selesai ? \Carbon\Carbon::parse($st->waktu_selesai)->startOfDay() : $stStart;
+        $stStart = $st->waktu_mulai 
+            ? \Carbon\Carbon::parse($st->waktu_mulai)->startOfDay() 
+            : ($st->tanggal ? \Carbon\Carbon::parse($st->tanggal)->startOfDay() : null);
+        $stEnd = $st->waktu_selesai 
+            ? \Carbon\Carbon::parse($st->waktu_selesai)->startOfDay() 
+            : $stStart;
 
+        if ($stStart && $stEnd && $stEnd->lt($stStart)) {
+            $stEnd = $stStart->copy();
+        }
+
+        if ($stStart) {
+            return [
+                'start' => $stStart,
+                'end' => $stEnd ?? $stStart,
+            ];
+        }
+
+        // Fallback to survey only if Surat Tugas has no dates
         $survey = $st->survey ?? ($st->survey_id ? \App\Models\Survey::find($st->survey_id) : null);
         $surveyStart = $survey?->start_date ? \Carbon\Carbon::parse($survey->start_date)->startOfDay() : null;
-        $surveyEnd = $survey?->end_date ? \Carbon\Carbon::parse($survey->end_date)->startOfDay() : null;
+        $surveyEnd = $survey?->end_date ? \Carbon\Carbon::parse($survey->end_date)->startOfDay() : $surveyStart;
 
-        $starts = array_filter([$stStart, $surveyStart]);
-        $start = !empty($starts) ? min($starts) : null;
-
-        $ends = array_filter([$stEnd, $surveyEnd]);
-        $end = !empty($ends) ? max($ends) : $start;
+        if ($surveyStart && $surveyEnd && $surveyEnd->lt($surveyStart)) {
+            $surveyEnd = $surveyStart->copy();
+        }
 
         return [
-            'start' => $start,
-            'end' => $end,
+            'start' => $surveyStart,
+            'end' => $surveyEnd,
         ];
     }
 
     /**
+     * Get maximum allowed LPDs for a given Surat Tugas based on its date range.
+     * 1 day = 1 LPD.
+     * Multi-day = number of days in the range.
+     */
+    public static function getMaxLpdCount(SuratTugas $st): int
+    {
+        $range = self::getDateRangeForSuratTugas($st);
+        if (!$range['start'] || !$range['end']) {
+            return 1;
+        }
+
+        return (int) $range['start']->diffInDays($range['end']) + 1;
+    }
+
+    /**
+     * Check if a Surat Tugas can still receive another LPD.
+     */
+    public static function canCreateLpd(SuratTugas $st, ?int $excludeLpdId = null): bool
+    {
+        $max = self::getMaxLpdCount($st);
+        $currentCount = $st->laporanPerjalananDinas()
+            ->when($excludeLpdId, fn ($q) => $q->where('id', '!=', $excludeLpdId))
+            ->count();
+
+        if ($currentCount >= $max) {
+            return false;
+        }
+
+        return self::determineAvailableDate($st, $excludeLpdId) !== null;
+    }
+
+    /**
      * Determine the first available date for a SuratTugas that does not conflict with existing LPDs,
-     * within the valid date range of the Surat Tugas / Survey.
-     * Returns 'Y-m-d' or null if all dates in the range are already taken.
+     * within the valid date range of the Surat Tugas.
+     * Returns 'Y-m-d' or null if all dates in the range are already taken or quota reached.
      */
     public static function determineAvailableDate(SuratTugas $st, ?int $excludeLpdId = null): ?string
     {
         if (!$st->user_id) {
+            return null;
+        }
+
+        $max = self::getMaxLpdCount($st);
+        $currentCount = $st->laporanPerjalananDinas()
+            ->when($excludeLpdId, fn ($q) => $q->where('id', '!=', $excludeLpdId))
+            ->count();
+
+        if ($currentCount >= $max) {
             return null;
         }
 

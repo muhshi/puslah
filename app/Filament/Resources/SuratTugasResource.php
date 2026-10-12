@@ -528,12 +528,17 @@ class SuratTugasResource extends Resource
                     ->label('Buat LPD')
                     ->icon('heroicon-o-document-plus')
                     ->color('info')
-                    ->visible(fn(SuratTugas $record) => \App\Models\LaporanPerjalananDinas::determineAvailableDate($record) !== null)
+                    ->visible(fn(SuratTugas $record) => \App\Models\LaporanPerjalananDinas::canCreateLpd($record))
                     ->url(fn(SuratTugas $record) => LaporanPerjalananDinasResource::getUrl('create', ['surat_tugas_id' => $record->id])),
                 Tables\Actions\Action::make('view_lpd')
-                    ->label(fn(SuratTugas $record) => $record->laporanPerjalananDinas()->count() > 1
-                        ? 'Lihat LPD (' . $record->laporanPerjalananDinas()->count() . ')'
-                        : 'Lihat LPD')
+                    ->label(function (SuratTugas $record) {
+                        $count = $record->laporanPerjalananDinas()->count();
+                        $max = \App\Models\LaporanPerjalananDinas::getMaxLpdCount($record);
+                        if ($max > 1) {
+                            return "Lihat LPD ({$count}/{$max})";
+                        }
+                        return 'Lihat LPD';
+                    })
                     ->icon('heroicon-o-document-check')
                     ->color('success')
                     ->visible(fn(SuratTugas $record) => $record->laporanPerjalananDinas()->exists())
