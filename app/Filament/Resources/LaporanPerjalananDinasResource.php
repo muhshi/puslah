@@ -411,24 +411,15 @@ class LaporanPerjalananDinasResource extends Resource
                                 ->modalSubmitActionLabel('Buat Narasi')
                                 ->fillForm(fn (Forms\Get $get) => [
                                     'poin_kegiatan' => trim(strip_tags($get('uraian_kegiatan') ?? '')),
-                                    'format_gaya' => 'paragraf',
                                     'mode_pengisian' => 'replace',
                                 ])
                                 ->form([
                                     Forms\Components\Textarea::make('poin_kegiatan')
                                         ->label('Catatan Singkat / Poin Lapangan')
-                                        ->placeholder('Contoh: jam 9 koordinasi kades pak parwoto izin tugas, jam 10 wawancara responden bu eka petani bawang, kendala sampel pak dwi pindah alamat, jam 12.30 selesai balik kantor.')
+                                        ->placeholder('Contoh: jam 8 jalan ke morodemak jam 9 ketemu sekdes pak mufna\'am, lanjut briefing taskforce, cek RT dan wawancara warga yang terlewat, istirahat, lanjut lagi sampai sore balik kantor.')
                                         ->rows(4)
                                         ->required()
-                                        ->helperText('Tulis kata kunci, waktu, nama orang/responden, atau temuan lapangan.'),
-                                    Forms\Components\Radio::make('format_gaya')
-                                        ->label('Format Narasi')
-                                        ->options([
-                                            'paragraf' => 'Paragraf Naratif Terpadu (Mengalir & Padat)',
-                                            'kronologis' => 'Kronologis Poin per Jam (Pukul 08.00 WIB ...)',
-                                        ])
-                                        ->default('paragraf')
-                                        ->inline(),
+                                        ->helperText('Tulis kata kunci atau poin kegiatan. AI akan menyusunnya menjadi paragraf narasi dinas yang rapi dan mengalir lengkap dengan estimasi jam, istirahat, dan waktu tiba di kantor.'),
                                     Forms\Components\Radio::make('mode_pengisian')
                                         ->label('Metode Pengisian')
                                         ->options([
@@ -449,7 +440,7 @@ class LaporanPerjalananDinasResource extends Resource
                                             'desa_pejabat' => $get('desa_pejabat'),
                                             'user_id' => $get('user_id_temp') ?? Auth::id(),
                                             'catatan' => $data['poin_kegiatan'],
-                                            'gaya' => $data['format_gaya'],
+                                            'gaya' => 'paragraf',
                                         ]);
 
                                         if (($data['mode_pengisian'] ?? 'replace') === 'append') {

@@ -167,21 +167,17 @@ INFORMASI TUGAS YANG SEDANG DILAKSANAKAN:
 CATATAN SINGKAT DARI PEGAWAI (KATA KUNCI / DRAFT LAPANGAN):
 "{$catatanKasar}"
 
-PETUNJUK FORMAT & GAYA BAHASA (SANGAT PENTING):
-1. Bahasa: Bahasa Indonesia resmi kedinasan BPS yang formal, tertib, dan akuntabel.
-2. WAJIB LENGKAPI ESTIMASI JAM PADA SETIAP TAHAPAN (REALISTIS DARI PAGI SAMPAI KEMBALI KE KANTOR):
-   - Pegawai mungkin hanya menyebut beberapa jam atau tidak menyebut jam pada beberapa kegiatan. ANDA WAJIB MENG-ESTIMASI DAN MENYUSUN JAM YANG REALISTIS DAN LOGIS UNTUK SETIAP AKTIVITAS DARI AWAL BERANGKAT SAMPAI SELESAI SORE HARI.
-   - Jangan ada langkah kegiatan yang "menggantung" tanpa kejelasan waktu.
-   - WAJIB SERTAKAN WAKTU ISTIRAHAT (ISHOMA): Cantumkan sekitar Pukul 12.00–13.00 WIB untuk istirahat, salat, dan makan siang.
-   - WAJIB SERTAKAN WAKTU KEPULANGAN DAN TIBA KEMBALI DI KANTOR BPS:
-     * Cantumkan jam saat seluruh rangkaian kegiatan di lapangan selesai dan petugas memulai perjalanan pulang menuju Kantor BPS Kabupaten Demak (sekitar Pukul 15.00 / 15.30 / 16.00 WIB).
-     * Cantumkan jam saat tiba kembali di Kantor BPS Kabupaten Demak dan mengakhiri pelaksanaan tugas (sekitar Pukul 16.00 / 16.30 WIB).
-3. Jika Gaya Penulisan adalah 'kronologis':
-   - Format WAJIB menggunakan tag `<ol><li>...</li></ol>`.
-   - SETIAP butir `<li>` WAJIB DIAWALI KETERANGAN WAKTU LENGKAP (Contoh: "<li>Pukul 08.00 WIB, ...</li>", "<li>Pukul 09.00–09.45 WIB, ...</li>", "<li>Pukul 09.45–10.30 WIB, ...</li>", "<li>Pukul 10.30–12.00 WIB, ...</li>", "<li>Pukul 12.00–13.00 WIB, melaksanakan istirahat (ISHOMA).</li>", "<li>Pukul 13.00–15.30 WIB, ...</li>", "<li>Pukul 15.30 WIB, seluruh rangkaian kegiatan lapangan selesai dan melakukan perjalanan pulang menuju Kantor BPS Kabupaten Demak.</li>", "<li>Pukul 16.30 WIB, tiba kembali di Kantor BPS Kabupaten Demak dan mengakhiri pelaksanaan tugas perjalanan dinas.</li>").
-   - DILARANG MEMBUAT BUTIR `<li>` TANPA AWALAN KETERANGAN WAKTU / JAM!
-4. Jika Gaya Penulisan adalah 'paragraf':
-   - Buat 2 paragraf naratif utuh yang runtut kronologis mengalir dengan menyebutkan estimasi jam lengkap (keberangkatan pagi jam 08.00, koordinasi pagi, wawancara/pencacahan pagi, istirahat jam 12.00, lanjutan kegiatan siang jam 13.00, kepulangan sore jam 15.30, hingga jam tiba kembali di Kantor BPS Kabupaten Demak).
+PETUNJUK FORMAT & GAYA BAHASA (MUTLAK):
+1. JANGAN PERNAH MENGGUNAKAN NOMOR ATAU ANGKA PENOMORAN (1, 2, 3, DST MAUPUN TAG <ol><li>)! Pengguna TIDAK INGIN format nomor.
+2. Format output HARUS berupa 2 sampai 3 paragraf narasi mengalir yang utuh dan rapi menggunakan tag <p>.
+3. RANGKAI ESTIMASI JAM SECARA REALISTIS DAN LOGIS DARI PAGI SAMPAI PULANG:
+   - Sebutkan jam keberangkatan dari Kantor BPS Kabupaten Demak (pukul 08.00 WIB) dan jam tiba di lokasi/desa sasaran.
+   - Sebutkan jam koordinasi dengan aparat desa setempat, jam briefing lapangan, dan jam pelaksanaan wawancara/pemeriksaan responden pagi hari.
+   - WAJIB sertakan waktu istirahat, salat, dan makan siang (ISHOMA) sekitar pukul 12.00–13.00 WIB.
+   - Sebutkan kelanjutan kegiatan siang hari (pukul 13.00–15.30 WIB).
+   - WAJIB sebutkan jam saat seluruh rangkaian kegiatan lapangan selesai dan petugas memulai perjalanan pulang menuju Kantor BPS Kabupaten Demak (sekitar pukul 15.30 WIB).
+   - WAJIB sebutkan jam saat tiba kembali di Kantor BPS Kabupaten Demak (sekitar pukul 16.30 WIB) dan mengakhiri pelaksanaan tugas perjalanan dinas.
+4. Bahasa: Bahasa Indonesia resmi kedinasan BPS yang formal, tertib, dan akuntabel.
 5. Istilah BPS: Pertahankan dan gunakan secara tepat istilah teknis survei statistik bila relevan (misal: responden, sampel, komoditas, PPL, PML, Koseka, Task Force, INNAS, Fasih, CAPI, PAPI, blok sensus, dll.).
 6. Deteksi Pejabat & Desa:
    - Jika pada catatan pegawai terdeteksi nama pejabat/tokoh (misal kades, sekdes, ketua RT/RW, responden utama), ekstrak ke field "nama_pejabat" beserta jabatannya (misal: "Bapak Mufna'am (Sekretaris Desa Morodemak)").
@@ -189,7 +185,7 @@ PETUNJUK FORMAT & GAYA BAHASA (SANGAT PENTING):
 
 HASIL HARUS DALAM FORMAT JSON BERSIH BERIKUT (tanpa markdown backticks):
 {
-  "narasi": "<p>Teks narasi HTML di sini...</p>",
+  "narasi": "<p>Teks paragraf narasi di sini...</p>",
   "nama_pejabat": "Nama pejabat terdeteksi atau null jika tidak ada",
   "desa_pejabat": "Desa/lokasi terdeteksi atau null jika tidak ada"
 }
