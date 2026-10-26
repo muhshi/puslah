@@ -55,6 +55,11 @@ composer dev
 ## Changelog
 
 ### 2026-10-26
+- **Perbaikan Model Default Gemini & Pencegahan Kehilangan Teks Input AI**:
+  - **Pembaruan Model Gemini Aktif**: Mengganti model default ke `gemini-3.5-flash` dan menambahkan opsi `gemini-3.1-flash-lite` serta `gemini-3.8-flash` (model lama `gemini-1.5-flash` sudah tidak didukung Google API).
+  - **Mekanisme Auto-Fallback Cerdas**: Jika model yang dipilih mengalami error 404 (not found) atau 503 (high demand spike), backend otomatis mencoba model alternatif (`gemini-3.5-flash` / `gemini-3.1-flash-lite`) tanpa gagal.
+  - **Perlindungan Input Pengguna**: Menambahkan `$action->halt()` pada penanganan exception modal sehingga jika terjadi kendala jaringan/API, modal tidak akan tertutup dan catatan yang telah diketik tidak hilang.
+  - **Metode Pengisian Fleksibel**: Menambahkan opsi apakah ingin mengganti (*replace*) atau menambahkan (*append*) narasi AI ke teks yang sudah ada pada Uraian Kegiatan.
 - **Asisten AI Penulisan Narasi Laporan Perjalanan Dinas (LPD) & Integrasi Gemini**:
   - **Asisten Penulisan Narasi Otomatis (`LpdAiService`)**: Menyediakan fitur penyusunan narasi kegiatan LPD formal dari catatan singkat/draft kasar pegawai lapangan menggunakan Google Gemini AI.
   - **Few-Shot In-Context Learning**: Sistem secara otomatis membaca 3 contoh LPD nyata dari database (diprioritaskan yang sejenis dengan survei yang sedang dikerjakan) sebagai acuan gaya bahasa resmi dan istilah statistik BPS (PPL, PML, Koseka, INNAS, responden, sampel, dsb.).

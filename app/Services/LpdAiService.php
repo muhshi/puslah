@@ -41,7 +41,7 @@ class LpdAiService
             return trim($settingsModel);
         }
 
-        return config('services.gemini.model', 'gemini-1.5-flash');
+        return config('services.gemini.model', 'gemini-3.5-flash');
     }
 
     /**
@@ -188,31 +188,51 @@ HASIL HARUS DALAM FORMAT JSON BERSIH BERIKUT (tanpa markdown backticks):
 }
 EOT;
 
-        // 4. Panggil Gemini API
-        $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
+        // 4. Panggil Gemini API dengan automatic fallback jika model 404/503
+        $model = $this->getModel();
+        $modelsToTry = array_unique([$model, 'gemini-3.5-flash', 'gemini-3.1-flash-lite']);
 
-        $response = Http::withHeaders([
-            'Content-Type' => 'application/json',
-        ])->timeout(30)->post($endpoint, [
-            'contents' => [
-                [
-                    'role' => 'user',
-                    'parts' => [
-                        ['text' => $prompt]
-                    ]
-                ]
-            ],
-            'generationConfig' => [
-                'responseMimeType' => 'application/json',
-                'temperature' => 0.3,
-            ],
-        ]);
+        $response = null;
+        $lastError = null;
 
-        if ($response->failed()) {
-            $errorJson = $response->json();
-            $errorMessage = $errorJson['error']['message'] ?? $response->body() ?? 'Gagal menghubungi Gemini API';
-            Log::error('Gemini API Error', ['status' => $response->status(), 'response' => $response->body()]);
-            throw new Exception("Gemini API Error: " . $errorMessage);
+        foreach ($modelsToTry as $currentModel) {
+            $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$currentModel}:generateContent?key={$apiKey}";
+
+            try {
+                $res = Http::withHeaders([
+                    'Content-Type' => 'application/json',
+                ])->timeout(25)->post($endpoint, [
+                    'contents' => [
+                        [
+                            'role' => 'user',
+                            'parts' => [
+                                ['text' => $prompt]
+                            ]
+                        ]
+                    ],
+                    'generationConfig' => [
+                        'responseMimeType' => 'application/json',
+                        'temperature' => 0.3,
+                    ],
+                ]);
+
+                if ($res->successful()) {
+                    $response = $res;
+                    break;
+                }
+
+                $status = $res->status();
+                $errBody = $res->json('error.message') ?? $res->body();
+                $lastError = "Model {$currentModel} (HTTP {$status}): {$errBody}";
+                Log::warning("Gemini model {$currentModel} gagal, mencoba model alternatif...", ['error' => $lastError]);
+            } catch (\Exception $e) {
+                $lastError = "Model {$currentModel}: " . $e->getMessage();
+                Log::warning("Gemini model {$currentModel} exception, mencoba model alternatif...", ['error' => $lastError]);
+            }
+        }
+
+        if (!$response || !$response->successful()) {
+            throw new Exception("Gemini API Error: " . ($lastError ?: "Gagal menghubungi Gemini API. Silakan periksa koneksi internet atau API key."));
         }
 
         $rawText = $response->json('candidates.0.content.parts.0.text');

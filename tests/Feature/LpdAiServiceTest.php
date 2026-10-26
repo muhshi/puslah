@@ -43,7 +43,7 @@ class LpdAiServiceTest extends TestCase
     {
         SystemSettings::fake([
             'gemini_api_key' => 'test-gemini-key',
-            'gemini_model' => 'gemini-1.5-flash',
+            'gemini_model' => 'gemini-3.5-flash',
         ]);
 
         Http::fake([
@@ -81,7 +81,7 @@ class LpdAiServiceTest extends TestCase
     {
         SystemSettings::fake([
             'gemini_api_key' => 'test-gemini-key',
-            'gemini_model' => 'gemini-1.5-flash',
+            'gemini_model' => 'gemini-3.5-flash',
         ]);
 
         $user = User::factory()->create();

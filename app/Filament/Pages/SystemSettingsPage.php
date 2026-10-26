@@ -63,7 +63,7 @@ class SystemSettingsPage extends Page implements HasForms
             'ppk_nip' => $s->ppk_nip ?? '-',
             'ppk_title' => $s->ppk_title ?? 'Pejabat Pembuat Komitmen',
             'gemini_api_key' => $s->gemini_api_key,
-            'gemini_model' => $s->gemini_model ?? 'gemini-1.5-flash',
+            'gemini_model' => $s->gemini_model ?? 'gemini-3.5-flash',
         ]);
     }
 
@@ -242,11 +242,11 @@ class SystemSettingsPage extends Page implements HasForms
                             Forms\Components\Select::make('gemini_model')
                                 ->label('Model AI Gemini')
                                 ->options([
-                                    'gemini-1.5-flash' => 'Gemini 1.5 Flash (Sangat Cepat & Stabil - Rekomendasi)',
-                                    'gemini-2.0-flash' => 'Gemini 2.0 Flash (Generasi Baru, Cepat)',
-                                    'gemini-1.5-pro' => 'Gemini 1.5 Pro (Kemampuan Analisis Tinggi)',
+                                    'gemini-3.5-flash' => 'Gemini 3.5 Flash (Sangat Cepat & Cerdas - Rekomendasi)',
+                                    'gemini-3.1-flash-lite' => 'Gemini 3.1 Flash Lite (Ringan & Cepat)',
+                                    'gemini-3.8-flash' => 'Gemini 3.8 Flash (Model Terbaru)',
                                 ])
-                                ->default('gemini-1.5-flash')
+                                ->default('gemini-3.5-flash')
                                 ->required(),
                         ])->columns(1),
 

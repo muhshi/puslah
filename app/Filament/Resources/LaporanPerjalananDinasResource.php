@@ -410,8 +410,9 @@ class LaporanPerjalananDinasResource extends Resource
                                 ->modalDescription('Cukup masukkan catatan singkat atau poin-poin kegiatan lapangan Anda. AI akan menyusunnya menjadi narasi resmi standar BPS berdasarkan contoh laporan dinas yang ada.')
                                 ->modalSubmitActionLabel('Buat Narasi')
                                 ->fillForm(fn (Forms\Get $get) => [
-                                    'poin_kegiatan' => strip_tags($get('uraian_kegiatan') ?? ''),
+                                    'poin_kegiatan' => trim(strip_tags($get('uraian_kegiatan') ?? '')),
                                     'format_gaya' => 'paragraf',
+                                    'mode_pengisian' => 'replace',
                                 ])
                                 ->form([
                                     Forms\Components\Textarea::make('poin_kegiatan')
@@ -428,8 +429,17 @@ class LaporanPerjalananDinasResource extends Resource
                                         ])
                                         ->default('paragraf')
                                         ->inline(),
+                                    Forms\Components\Radio::make('mode_pengisian')
+                                        ->label('Metode Pengisian')
+                                        ->options([
+                                            'replace' => 'Ganti teks Uraian Kegiatan',
+                                            'append' => 'Tambahkan di bawah teks yang ada saat ini',
+                                        ])
+                                        ->default('replace')
+                                        ->visible(fn (Forms\Get $get) => !empty(trim(strip_tags($get('uraian_kegiatan') ?? ''))))
+                                        ->inline(),
                                 ])
-                                ->action(function (Forms\Set $set, Forms\Get $get, array $data, LpdAiService $aiService) {
+                                ->action(function (Forms\Set $set, Forms\Get $get, array $data, LpdAiService $aiService, Forms\Components\Actions\Action $action) {
                                     try {
                                         $result = $aiService->generateNarasi([
                                             'surat_tugas_id' => $get('surat_tugas_id'),
@@ -442,7 +452,12 @@ class LaporanPerjalananDinasResource extends Resource
                                             'gaya' => $data['format_gaya'],
                                         ]);
 
-                                        $set('uraian_kegiatan', $result['narasi']);
+                                        if (($data['mode_pengisian'] ?? 'replace') === 'append') {
+                                            $existing = $get('uraian_kegiatan') ?? '';
+                                            $set('uraian_kegiatan', $existing . '<p></p>' . $result['narasi']);
+                                        } else {
+                                            $set('uraian_kegiatan', $result['narasi']);
+                                        }
 
                                         if (!empty($result['nama_pejabat']) && empty($get('nama_pejabat'))) {
                                             $set('nama_pejabat', $result['nama_pejabat']);
@@ -458,10 +473,12 @@ class LaporanPerjalananDinasResource extends Resource
                                     } catch (\Exception $e) {
                                         \Filament\Notifications\Notification::make()
                                             ->title('Gagal memproses AI')
-                                            ->body($e->getMessage())
+                                            ->body($e->getMessage() . '. Catatan Anda tidak hilang dan tetap ada di jendela ini.')
                                             ->danger()
                                             ->persistent()
                                             ->send();
+
+                                        $action->halt();
                                     }
                                 })
                         )

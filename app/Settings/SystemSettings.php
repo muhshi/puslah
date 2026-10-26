@@ -67,7 +67,7 @@ class SystemSettings extends Settings
             'ppk_nip' => '-',
             'ppk_title' => 'Pejabat Pembuat Komitmen',
             'gemini_api_key' => null,
-            'gemini_model' => 'gemini-1.5-flash',
+            'gemini_model' => 'gemini-3.5-flash',
         ];
     }
 
