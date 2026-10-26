@@ -167,18 +167,25 @@ INFORMASI TUGAS YANG SEDANG DILAKSANAKAN:
 CATATAN SINGKAT DARI PEGAWAI (KATA KUNCI / DRAFT LAPANGAN):
 "{$catatanKasar}"
 
-PETUNJUK FORMAT & GAYA BAHASA:
-1. Bahasa: Bahasa Indonesia resmi kedinasan, santun, lugas, dan mencerminkan pelaksanaan tugas BPS yang akuntabel.
-2. Jika Gaya Penulisan adalah 'paragraf':
-   - Buat 1 atau 2 paragraf naratif utuh yang runtut kronologis mengalir (diawali jam keberangkatan dari kantor, koordinasi/izin dengan aparat setempat bila ada, proses pencacahan/wawancara responden sampel/supervisi petugas, kendala/temuan bila dicatat, hingga waktu kepulangan kembali ke kantor).
-   - Format HTML yang dihasilkan harus menggunakan tag `<p>` dan bila perlu `<strong>` untuk penekanan.
+PETUNJUK FORMAT & GAYA BAHASA (SANGAT PENTING):
+1. Bahasa: Bahasa Indonesia resmi kedinasan BPS yang formal, tertib, dan akuntabel.
+2. WAJIB LENGKAPI ESTIMASI JAM PADA SETIAP TAHAPAN (REALISTIS DARI PAGI SAMPAI KEMBALI KE KANTOR):
+   - Pegawai mungkin hanya menyebut beberapa jam atau tidak menyebut jam pada beberapa kegiatan. ANDA WAJIB MENG-ESTIMASI DAN MENYUSUN JAM YANG REALISTIS DAN LOGIS UNTUK SETIAP AKTIVITAS DARI AWAL BERANGKAT SAMPAI SELESAI SORE HARI.
+   - Jangan ada langkah kegiatan yang "menggantung" tanpa kejelasan waktu.
+   - WAJIB SERTAKAN WAKTU ISTIRAHAT (ISHOMA): Cantumkan sekitar Pukul 12.00–13.00 WIB untuk istirahat, salat, dan makan siang.
+   - WAJIB SERTAKAN WAKTU KEPULANGAN DAN TIBA KEMBALI DI KANTOR BPS:
+     * Cantumkan jam saat seluruh rangkaian kegiatan di lapangan selesai dan petugas memulai perjalanan pulang menuju Kantor BPS Kabupaten Demak (sekitar Pukul 15.00 / 15.30 / 16.00 WIB).
+     * Cantumkan jam saat tiba kembali di Kantor BPS Kabupaten Demak dan mengakhiri pelaksanaan tugas (sekitar Pukul 16.00 / 16.30 WIB).
 3. Jika Gaya Penulisan adalah 'kronologis':
-   - Buat format poin berurutan menggunakan tag `<ol><li>...</li></ol>`.
-   - Tiap item diawali dengan keterangan waktu (misalnya: "Pukul 08.30 WIB, melakukan perjalanan...").
-4. Istilah BPS: Pertahankan dan gunakan secara tepat istilah teknis survei statistik bila relevan (misal: responden, sampel, komoditas, PPL, PML, Koseka, INNAS, Fasih, CAPI, PAPI, blok sensus, dll.).
-5. Deteksi Pejabat & Desa:
-   - Jika pada catatan pegawai terdeteksi nama pejabat/tokoh (misal kades, sekdes, ketua RT/RW, responden utama) dan di form belum terisi, ekstrak nilainya.
-   - Jika terdeteksi nama desa/kecamatan/lokasi dan di form belum terisi, ekstrak nilainya.
+   - Format WAJIB menggunakan tag `<ol><li>...</li></ol>`.
+   - SETIAP butir `<li>` WAJIB DIAWALI KETERANGAN WAKTU LENGKAP (Contoh: "<li>Pukul 08.00 WIB, ...</li>", "<li>Pukul 09.00–09.45 WIB, ...</li>", "<li>Pukul 09.45–10.30 WIB, ...</li>", "<li>Pukul 10.30–12.00 WIB, ...</li>", "<li>Pukul 12.00–13.00 WIB, melaksanakan istirahat (ISHOMA).</li>", "<li>Pukul 13.00–15.30 WIB, ...</li>", "<li>Pukul 15.30 WIB, seluruh rangkaian kegiatan lapangan selesai dan melakukan perjalanan pulang menuju Kantor BPS Kabupaten Demak.</li>", "<li>Pukul 16.30 WIB, tiba kembali di Kantor BPS Kabupaten Demak dan mengakhiri pelaksanaan tugas perjalanan dinas.</li>").
+   - DILARANG MEMBUAT BUTIR `<li>` TANPA AWALAN KETERANGAN WAKTU / JAM!
+4. Jika Gaya Penulisan adalah 'paragraf':
+   - Buat 2 paragraf naratif utuh yang runtut kronologis mengalir dengan menyebutkan estimasi jam lengkap (keberangkatan pagi jam 08.00, koordinasi pagi, wawancara/pencacahan pagi, istirahat jam 12.00, lanjutan kegiatan siang jam 13.00, kepulangan sore jam 15.30, hingga jam tiba kembali di Kantor BPS Kabupaten Demak).
+5. Istilah BPS: Pertahankan dan gunakan secara tepat istilah teknis survei statistik bila relevan (misal: responden, sampel, komoditas, PPL, PML, Koseka, Task Force, INNAS, Fasih, CAPI, PAPI, blok sensus, dll.).
+6. Deteksi Pejabat & Desa:
+   - Jika pada catatan pegawai terdeteksi nama pejabat/tokoh (misal kades, sekdes, ketua RT/RW, responden utama), ekstrak ke field "nama_pejabat" beserta jabatannya (misal: "Bapak Mufna'am (Sekretaris Desa Morodemak)").
+   - Jika terdeteksi nama desa/kecamatan/lokasi, ekstrak ke field "desa_pejabat" (misal: "Desa Morodemak").
 
 HASIL HARUS DALAM FORMAT JSON BERSIH BERIKUT (tanpa markdown backticks):
 {
@@ -190,7 +197,7 @@ EOT;
 
         // 4. Panggil Gemini API dengan automatic fallback jika model 404/503
         $model = $this->getModel();
-        $modelsToTry = array_unique([$model, 'gemini-3.5-flash', 'gemini-3.1-flash-lite']);
+        $modelsToTry = array_unique([$model, 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-3.8-flash']);
 
         $response = null;
         $lastError = null;

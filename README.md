@@ -55,6 +55,10 @@ composer dev
 ## Changelog
 
 ### 2026-10-26
+- **Penyempurnaan AI Auto-Generate Jam Kronologis & Jam Pulang LPD**:
+  - Mewajibkan AI meng-generate estimasi jam logis pada setiap tahapan kegiatan lapangan (keberangkatan, koordinasi, briefing, wawancara pagi, jam istirahat/ISHOMA 12.00–13.00 WIB, kegiatan siang, selesai & perjalanan pulang 15.30 WIB, hingga tiba kembali di kantor BPS 16.30 WIB).
+  - Melarang butir kegiatan tanpa awalan jam pada format kronologis.
+  - Memperluas fallback model Gemini ke `gemini-3.1-flash-lite`, `gemini-3.5-flash`, dan `gemini-3.8-flash`.
 - **Perbaikan Model Default Gemini & Pencegahan Kehilangan Teks Input AI**:
   - **Pembaruan Model Gemini Aktif**: Mengganti model default ke `gemini-3.5-flash` dan menambahkan opsi `gemini-3.1-flash-lite` serta `gemini-3.8-flash` (model lama `gemini-1.5-flash` sudah tidak didukung Google API).
   - **Mekanisme Auto-Fallback Cerdas**: Jika model yang dipilih mengalami error 404 (not found) atau 503 (high demand spike), backend otomatis mencoba model alternatif (`gemini-3.5-flash` / `gemini-3.1-flash-lite`) tanpa gagal.
