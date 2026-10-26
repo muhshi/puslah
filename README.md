@@ -55,10 +55,10 @@ composer dev
 ## Changelog
 
 ### 2026-10-26
-- **Format Narasi LPD Mengalir Tanpa Nomor (`LpdAiService`)**:
-  - Menghilangkan format penomoran (angka 1, 2, 3 atau `<ol><li>`) sesuai preferensi laporan dinas resmi BPS.
-  - Narasi disajikan dalam bentuk 2–3 paragraf utuh yang mengalir rapi (`<p>...</p>`) dengan merangkaikan estimasi jam perjalanan, koordinasi, kegiatan lapangan, istirahat ISHOMA, hingga perjalanan pulang dan waktu tiba kembali di kantor BPS secara kronologis dan profesional.
-  - Menyederhanakan modal pop-up AI dengan menghapus opsi radio button format agar pengguna cukup memasukkan poin kasar saja.
+- **Format Narasi LPD Rapi Per Jam Tanpa Bullet & Numbering (`LpdAiService`)**:
+  - Menyajikan narasi terstruktur per tahapan jam tanpa penomoran (angka 1, 2, 3) dan tanpa simbol bullet (`•`, `-`, atau `<ul><li>`).
+  - Setiap tahapan waktu ditampilkan dalam baris/paragraf tersendiri dengan jam ditebalkan (`<p><strong>Pukul HH.MM–HH.MM WIB:</strong> Deskripsi kegiatan...</p>`).
+  - Menghasilkan alur kegiatan logis yang runtut dari keberangkatan dari kantor, koordinasi aparat desa, pelaksanaan tugas lapangan, istirahat ISHOMA, kelanjutan tugas, perjalanan pulang, hingga tiba kembali di Kantor BPS Kabupaten Demak.
 - **Penyempurnaan AI Auto-Generate Jam Kronologis & Jam Pulang LPD**:
   - Mewajibkan AI meng-generate estimasi jam logis pada setiap tahapan kegiatan lapangan (keberangkatan, koordinasi, briefing, wawancara pagi, jam istirahat/ISHOMA 12.00–13.00 WIB, kegiatan siang, selesai & perjalanan pulang 15.30 WIB, hingga tiba kembali di kantor BPS 16.30 WIB).
   - Melarang butir kegiatan tanpa awalan jam pada format kronologis.

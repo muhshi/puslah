@@ -168,24 +168,30 @@ CATATAN SINGKAT DARI PEGAWAI (KATA KUNCI / DRAFT LAPANGAN):
 "{$catatanKasar}"
 
 PETUNJUK FORMAT & GAYA BAHASA (MUTLAK):
-1. JANGAN PERNAH MENGGUNAKAN NOMOR ATAU ANGKA PENOMORAN (1, 2, 3, DST MAUPUN TAG <ol><li>)! Pengguna TIDAK INGIN format nomor.
-2. Format output HARUS berupa 2 sampai 3 paragraf narasi mengalir yang utuh dan rapi menggunakan tag <p>.
-3. RANGKAI ESTIMASI JAM SECARA REALISTIS DAN LOGIS DARI PAGI SAMPAI PULANG:
-   - Sebutkan jam keberangkatan dari Kantor BPS Kabupaten Demak (pukul 08.00 WIB) dan jam tiba di lokasi/desa sasaran.
-   - Sebutkan jam koordinasi dengan aparat desa setempat, jam briefing lapangan, dan jam pelaksanaan wawancara/pemeriksaan responden pagi hari.
-   - WAJIB sertakan waktu istirahat, salat, dan makan siang (ISHOMA) sekitar pukul 12.00–13.00 WIB.
-   - Sebutkan kelanjutan kegiatan siang hari (pukul 13.00–15.30 WIB).
-   - WAJIB sebutkan jam saat seluruh rangkaian kegiatan lapangan selesai dan petugas memulai perjalanan pulang menuju Kantor BPS Kabupaten Demak (sekitar pukul 15.30 WIB).
-   - WAJIB sebutkan jam saat tiba kembali di Kantor BPS Kabupaten Demak (sekitar pukul 16.30 WIB) dan mengakhiri pelaksanaan tugas perjalanan dinas.
-4. Bahasa: Bahasa Indonesia resmi kedinasan BPS yang formal, tertib, dan akuntabel.
-5. Istilah BPS: Pertahankan dan gunakan secara tepat istilah teknis survei statistik bila relevan (misal: responden, sampel, komoditas, PPL, PML, Koseka, Task Force, INNAS, Fasih, CAPI, PAPI, blok sensus, dll.).
-6. Deteksi Pejabat & Desa:
+1. ATURAN UTAMA: PENGGUNA MEMINTA FORMAT "TETAP RAPI PER JAM TAPI TANPA BULLET MAUPUN NUMBERING".
+2. DILARANG KERAS menggunakan tag <ul>, <ol>, <li>, simbol bullet (•, -, *), maupun angka penomoran (1., 2., 3., dst.).
+3. Setiap tahapan kegiatan per jam HARUS dipisahkan menjadi paragraf <p> tersendiri.
+4. Format setiap baris/paragraf WAJIB diawali jam tebal, contoh:
+   <p><strong>Pukul HH.MM–HH.MM WIB:</strong> Deskripsi kegiatan...</p>
+   atau
+   <p><strong>Pukul HH.MM WIB:</strong> Deskripsi kegiatan...</p>
+5. RANGKAI ESTIMASI JAM SECARA REALISTIS DAN LOGIS DARI PAGI SAMPAI PULANG:
+   - Jam keberangkatan dari Kantor BPS Kabupaten Demak (pukul 08.00 WIB) dan jam tiba di lokasi/desa sasaran.
+   - Jam koordinasi di kantor desa dengan aparat desa setempat, jam briefing lapangan dengan tim/petugas.
+   - Jam pelaksanaan kunjungan RT/responden dan wawancara/pemeriksaan pagi hari.
+   - WAJIB sertakan waktu istirahat, salat, dan makan siang (ISHOMA) pada pukul 12.00–13.00 WIB.
+   - Jam kelanjutan kegiatan lapangan siang hari (pukul 13.00–15.00/15.30 WIB).
+   - WAJIB sebutkan jam saat seluruh rangkaian kegiatan lapangan selesai dan petugas memulai perjalanan pulang menuju Kantor BPS Kabupaten Demak.
+   - WAJIB sebutkan jam saat tiba kembali di Kantor BPS Kabupaten Demak (sekitar pukul 16.00/16.30 WIB) dan menyelesaikan laporan tugas dinas.
+6. Bahasa: Bahasa Indonesia resmi kedinasan BPS yang formal, tertib, dan akuntabel.
+7. Istilah BPS: Pertahankan dan gunakan secara tepat istilah teknis survei statistik bila relevan (misal: responden, sampel, komoditas, PPL, PML, Koseka, Task Force, INNAS, Fasih, CAPI, PAPI, blok sensus, dll.).
+8. Deteksi Pejabat & Desa:
    - Jika pada catatan pegawai terdeteksi nama pejabat/tokoh (misal kades, sekdes, ketua RT/RW, responden utama), ekstrak ke field "nama_pejabat" beserta jabatannya (misal: "Bapak Mufna'am (Sekretaris Desa Morodemak)").
    - Jika terdeteksi nama desa/kecamatan/lokasi, ekstrak ke field "desa_pejabat" (misal: "Desa Morodemak").
 
 HASIL HARUS DALAM FORMAT JSON BERSIH BERIKUT (tanpa markdown backticks):
 {
-  "narasi": "<p>Teks paragraf narasi di sini...</p>",
+  "narasi": "<p><strong>Pukul 08.00–09.00 WIB:</strong> ...</p><p><strong>Pukul 09.00–09.45 WIB:</strong> ...</p>",
   "nama_pejabat": "Nama pejabat terdeteksi atau null jika tidak ada",
   "desa_pejabat": "Desa/lokasi terdeteksi atau null jika tidak ada"
 }
