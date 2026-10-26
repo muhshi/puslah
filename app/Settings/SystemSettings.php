@@ -34,6 +34,10 @@ class SystemSettings extends Settings
     public string $ppk_nip;
     public string $ppk_title;
 
+    // AI Settings
+    public ?string $gemini_api_key;
+    public ?string $gemini_model;
+
     public static function defaults(): array
     {
         return [
@@ -62,6 +66,8 @@ class SystemSettings extends Settings
             'ppk_name' => '-',
             'ppk_nip' => '-',
             'ppk_title' => 'Pejabat Pembuat Komitmen',
+            'gemini_api_key' => null,
+            'gemini_model' => 'gemini-1.5-flash',
         ];
     }
 

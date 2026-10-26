@@ -14,6 +14,7 @@ use PhpOffice\PhpWord\TemplateProcessor;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use App\Services\LpdExportService;
+use App\Services\LpdAiService;
 
 class LaporanPerjalananDinasResource extends Resource
 {
@@ -399,7 +400,71 @@ class LaporanPerjalananDinasResource extends Resource
 
                     Forms\Components\RichEditor::make('uraian_kegiatan')
                         ->label('Uraian Kegiatan')
-                        ->helperText('Gunakan bullets, numbering, atau format teks')
+                        ->helperText('Gunakan bullets, numbering, atau format teks. Klik "✨ Bantu Tulis AI" untuk merangkum catatan lapangan Anda secara otomatis.')
+                        ->hintAction(
+                            Forms\Components\Actions\Action::make('ai_generate')
+                                ->label('✨ Bantu Tulis AI')
+                                ->icon('heroicon-m-sparkles')
+                                ->color('primary')
+                                ->modalHeading('Asisten Penulisan Narasi LPD (AI Gemini)')
+                                ->modalDescription('Cukup masukkan catatan singkat atau poin-poin kegiatan lapangan Anda. AI akan menyusunnya menjadi narasi resmi standar BPS berdasarkan contoh laporan dinas yang ada.')
+                                ->modalSubmitActionLabel('Buat Narasi')
+                                ->fillForm(fn (Forms\Get $get) => [
+                                    'poin_kegiatan' => strip_tags($get('uraian_kegiatan') ?? ''),
+                                    'format_gaya' => 'paragraf',
+                                ])
+                                ->form([
+                                    Forms\Components\Textarea::make('poin_kegiatan')
+                                        ->label('Catatan Singkat / Poin Lapangan')
+                                        ->placeholder('Contoh: jam 9 koordinasi kades pak parwoto izin tugas, jam 10 wawancara responden bu eka petani bawang, kendala sampel pak dwi pindah alamat, jam 12.30 selesai balik kantor.')
+                                        ->rows(4)
+                                        ->required()
+                                        ->helperText('Tulis kata kunci, waktu, nama orang/responden, atau temuan lapangan.'),
+                                    Forms\Components\Radio::make('format_gaya')
+                                        ->label('Format Narasi')
+                                        ->options([
+                                            'paragraf' => 'Paragraf Naratif Terpadu (Mengalir & Padat)',
+                                            'kronologis' => 'Kronologis Poin per Jam (Pukul 08.00 WIB ...)',
+                                        ])
+                                        ->default('paragraf')
+                                        ->inline(),
+                                ])
+                                ->action(function (Forms\Set $set, Forms\Get $get, array $data, LpdAiService $aiService) {
+                                    try {
+                                        $result = $aiService->generateNarasi([
+                                            'surat_tugas_id' => $get('surat_tugas_id'),
+                                            'tujuan' => $get('tujuan'),
+                                            'tanggal_kunjungan' => $get('tanggal_kunjungan'),
+                                            'nama_pejabat' => $get('nama_pejabat'),
+                                            'desa_pejabat' => $get('desa_pejabat'),
+                                            'user_id' => $get('user_id_temp') ?? Auth::id(),
+                                            'catatan' => $data['poin_kegiatan'],
+                                            'gaya' => $data['format_gaya'],
+                                        ]);
+
+                                        $set('uraian_kegiatan', $result['narasi']);
+
+                                        if (!empty($result['nama_pejabat']) && empty($get('nama_pejabat'))) {
+                                            $set('nama_pejabat', $result['nama_pejabat']);
+                                        }
+                                        if (!empty($result['desa_pejabat']) && empty($get('desa_pejabat'))) {
+                                            $set('desa_pejabat', $result['desa_pejabat']);
+                                        }
+
+                                        \Filament\Notifications\Notification::make()
+                                            ->title('Berhasil membuat narasi LPD dengan AI')
+                                            ->success()
+                                            ->send();
+                                    } catch (\Exception $e) {
+                                        \Filament\Notifications\Notification::make()
+                                            ->title('Gagal memproses AI')
+                                            ->body($e->getMessage())
+                                            ->danger()
+                                            ->persistent()
+                                            ->send();
+                                    }
+                                })
+                        )
                         ->required()
                         ->toolbarButtons([
                             'bold',

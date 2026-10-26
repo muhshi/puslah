@@ -1,0 +1,247 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\LaporanPerjalananDinas;
+use App\Models\SuratTugas;
+use App\Models\User;
+use App\Settings\SystemSettings;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Exception;
+
+class LpdAiService
+{
+    /**
+     * Dapatkan API Key Gemini dari Pengaturan Sistem atau file .env.
+     */
+    public function getApiKey(): ?string
+    {
+        $settingsKey = app(SystemSettings::class)->gemini_api_key ?? null;
+        if (!empty($settingsKey)) {
+            return trim($settingsKey);
+        }
+
+        $configKey = config('services.gemini.api_key');
+        if (!empty($configKey)) {
+            return trim($configKey);
+        }
+
+        return env('GEMINI_API_KEY');
+    }
+
+    /**
+     * Dapatkan model Gemini yang dipilih.
+     */
+    public function getModel(): string
+    {
+        $settingsModel = app(SystemSettings::class)->gemini_model ?? null;
+        if (!empty($settingsModel)) {
+            return trim($settingsModel);
+        }
+
+        return config('services.gemini.model', 'gemini-1.5-flash');
+    }
+
+    /**
+     * Mengambil 2-3 contoh LPD nyata dari database untuk Few-Shot In-Context Learning.
+     * Mengutamakan LPD dengan survei/kegiatan yang sejenis.
+     *
+     * @param int|null $surveyId
+     * @return array<int, array{tujuan: string, uraian: string, pejabat: string, desa: string}>
+     */
+    public function getFewShotExamples(?int $surveyId = null): array
+    {
+        $query = LaporanPerjalananDinas::query()
+            ->whereNotNull('uraian_kegiatan')
+            ->whereRaw('LENGTH(uraian_kegiatan) > 100')
+            ->with(['suratTugas.survey']);
+
+        if ($surveyId) {
+            $query->orderByRaw("CASE WHEN surat_tugas_id IN (SELECT id FROM surat_tugas WHERE survey_id = ?) THEN 0 ELSE 1 END", [$surveyId]);
+        }
+
+        $records = $query->latest()->take(3)->get();
+
+        $examples = [];
+        foreach ($records as $rec) {
+            $surveyName = $rec->suratTugas?->survey?->name ?? 'Survei Lapangan';
+            $tujuan = $rec->tujuan ?: $rec->suratTugas?->keperluan ?: '-';
+            $uraian = strip_tags($rec->uraian_kegiatan);
+            // Batasi panjang jika terlalu panjang agar hemat token
+            if (mb_strlen($uraian) > 600) {
+                $uraian = mb_substr($uraian, 0, 600) . '...';
+            }
+
+            $examples[] = [
+                'survei' => $surveyName,
+                'tujuan' => $tujuan,
+                'pejabat' => $rec->nama_pejabat ?: '-',
+                'desa' => $rec->desa_pejabat ?: '-',
+                'uraian' => $uraian,
+            ];
+        }
+
+        return $examples;
+    }
+
+    /**
+     * Generate narasi laporan perjalanan dinas berbasis Gemini AI.
+     *
+     * @param array{
+     *     surat_tugas_id?: int|string|null,
+     *     tujuan?: string|null,
+     *     tanggal_kunjungan?: string|null,
+     *     nama_pejabat?: string|null,
+     *     desa_pejabat?: string|null,
+     *     user_id?: int|string|null,
+     *     catatan: string,
+     *     gaya?: string
+     * } $params
+     * @return array{narasi: string, nama_pejabat: ?string, desa_pejabat: ?string}
+     * @throws Exception
+     */
+    public function generateNarasi(array $params): array
+    {
+        $apiKey = $this->getApiKey();
+        if (empty($apiKey)) {
+            throw new Exception("API Key Gemini belum disetel. Silakan isi di Pengaturan Sistem (tab Integrasi AI) atau tambahkan GEMINI_API_KEY di file .env.");
+        }
+
+        $model = $this->getModel();
+
+        // 1. Kumpulkan metadata konteks
+        $suratTugas = null;
+        if (!empty($params['surat_tugas_id'])) {
+            $suratTugas = SuratTugas::with(['survey', 'user'])->find($params['surat_tugas_id']);
+        }
+
+        $surveyName = $suratTugas?->survey?->name ?? 'Kegiatan BPS';
+        $tujuan = $params['tujuan'] ?? $suratTugas?->keperluan ?? 'Tugas Lapangan BPS';
+        $tanggal = $params['tanggal_kunjungan'] ?? null;
+        $tanggalFormatted = $tanggal ? \Carbon\Carbon::parse($tanggal)->translatedFormat('l, d F Y') : 'hari tugas';
+
+        $userId = $params['user_id'] ?? $suratTugas?->user_id ?? Auth::id();
+        $user = $userId ? User::find($userId) : Auth::user();
+        $petugasName = $user?->name ?? 'Petugas Lapangan';
+
+        $namaPejabat = $params['nama_pejabat'] ?? null;
+        $desaPejabat = $params['desa_pejabat'] ?? null;
+        $catatanKasar = trim($params['catatan']);
+        $gaya = $params['gaya'] ?? 'paragraf';
+
+        // 2. Ambil contoh LPD nyata dari DB
+        $surveyId = $suratTugas?->survey_id;
+        $examples = $this->getFewShotExamples($surveyId);
+
+        $examplesPrompt = "";
+        if (!empty($examples)) {
+            $examplesPrompt .= "Berikut adalah contoh gaya penulisan LPD nyata pegawai BPS Kabupaten Demak yang sudah ada di database:\n\n";
+            foreach ($examples as $idx => $ex) {
+                $no = $idx + 1;
+                $examplesPrompt .= "--- CONTOH {$no} ---\n";
+                $examplesPrompt .= "Survei: {$ex['survei']}\n";
+                $examplesPrompt .= "Tujuan: {$ex['tujuan']}\n";
+                $examplesPrompt .= "Pejabat/Lokasi: {$ex['pejabat']} ({$ex['desa']})\n";
+                $examplesPrompt .= "Uraian Narasi:\n{$ex['uraian']}\n\n";
+            }
+        }
+
+        // 3. Susun System & User Prompt
+        $prompt = <<<EOT
+Anda adalah asisten AI resmi Badan Pusat Statistik (BPS) Kabupaten Demak.
+Tugas Anda adalah menyusun narasi 'Uraian Kegiatan' untuk Laporan Perjalanan Dinas (LPD) yang formal, akuntabel, runtut kronologis, dan profesional berdasarkan catatan singkat dari pegawai.
+
+{$examplesPrompt}
+
+INFORMASI TUGAS YANG SEDANG DILAKSANAKAN:
+- Nama Petugas/Pegawai: {$petugasName}
+- Survei / Kegiatan: {$surveyName}
+- Tujuan / Keperluan Surat Tugas: {$tujuan}
+- Tanggal Kunjungan: {$tanggalFormatted}
+- Nama Pejabat yang Dikunjungi (jika sudah ada): {$namaPejabat}
+- Desa/Lokasi Pejabat (jika sudah ada): {$desaPejabat}
+- Gaya Penulisan yang Diminta: {$gaya}
+
+CATATAN SINGKAT DARI PEGAWAI (KATA KUNCI / DRAFT LAPANGAN):
+"{$catatanKasar}"
+
+PETUNJUK FORMAT & GAYA BAHASA:
+1. Bahasa: Bahasa Indonesia resmi kedinasan, santun, lugas, dan mencerminkan pelaksanaan tugas BPS yang akuntabel.
+2. Jika Gaya Penulisan adalah 'paragraf':
+   - Buat 1 atau 2 paragraf naratif utuh yang runtut kronologis mengalir (diawali jam keberangkatan dari kantor, koordinasi/izin dengan aparat setempat bila ada, proses pencacahan/wawancara responden sampel/supervisi petugas, kendala/temuan bila dicatat, hingga waktu kepulangan kembali ke kantor).
+   - Format HTML yang dihasilkan harus menggunakan tag `<p>` dan bila perlu `<strong>` untuk penekanan.
+3. Jika Gaya Penulisan adalah 'kronologis':
+   - Buat format poin berurutan menggunakan tag `<ol><li>...</li></ol>`.
+   - Tiap item diawali dengan keterangan waktu (misalnya: "Pukul 08.30 WIB, melakukan perjalanan...").
+4. Istilah BPS: Pertahankan dan gunakan secara tepat istilah teknis survei statistik bila relevan (misal: responden, sampel, komoditas, PPL, PML, Koseka, INNAS, Fasih, CAPI, PAPI, blok sensus, dll.).
+5. Deteksi Pejabat & Desa:
+   - Jika pada catatan pegawai terdeteksi nama pejabat/tokoh (misal kades, sekdes, ketua RT/RW, responden utama) dan di form belum terisi, ekstrak nilainya.
+   - Jika terdeteksi nama desa/kecamatan/lokasi dan di form belum terisi, ekstrak nilainya.
+
+HASIL HARUS DALAM FORMAT JSON BERSIH BERIKUT (tanpa markdown backticks):
+{
+  "narasi": "<p>Teks narasi HTML di sini...</p>",
+  "nama_pejabat": "Nama pejabat terdeteksi atau null jika tidak ada",
+  "desa_pejabat": "Desa/lokasi terdeteksi atau null jika tidak ada"
+}
+EOT;
+
+        // 4. Panggil Gemini API
+        $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
+
+        $response = Http::withHeaders([
+            'Content-Type' => 'application/json',
+        ])->timeout(30)->post($endpoint, [
+            'contents' => [
+                [
+                    'role' => 'user',
+                    'parts' => [
+                        ['text' => $prompt]
+                    ]
+                ]
+            ],
+            'generationConfig' => [
+                'responseMimeType' => 'application/json',
+                'temperature' => 0.3,
+            ],
+        ]);
+
+        if ($response->failed()) {
+            $errorJson = $response->json();
+            $errorMessage = $errorJson['error']['message'] ?? $response->body() ?? 'Gagal menghubungi Gemini API';
+            Log::error('Gemini API Error', ['status' => $response->status(), 'response' => $response->body()]);
+            throw new Exception("Gemini API Error: " . $errorMessage);
+        }
+
+        $rawText = $response->json('candidates.0.content.parts.0.text');
+        if (empty($rawText)) {
+            throw new Exception("Gemini API tidak memberikan respon teks.");
+        }
+
+        // Parse JSON
+        $decoded = json_decode($rawText, true);
+        if (!is_array($decoded) || !isset($decoded['narasi'])) {
+            // Bersihkan jika ada markdown code block ```json ... ```
+            $cleaned = preg_replace('/^```(?:json)?\s*/i', '', trim($rawText));
+            $cleaned = preg_replace('/\s*```$/i', '', $cleaned);
+            $decoded = json_decode($cleaned, true);
+        }
+
+        if (is_array($decoded) && isset($decoded['narasi'])) {
+            return [
+                'narasi' => $decoded['narasi'],
+                'nama_pejabat' => $decoded['nama_pejabat'] ?? null,
+                'desa_pejabat' => $decoded['desa_pejabat'] ?? null,
+            ];
+        }
+
+        // Fallback jika tidak berhasil parse JSON
+        return [
+            'narasi' => '<p>' . nl2br(htmlspecialchars($rawText)) . '</p>',
+            'nama_pejabat' => null,
+            'desa_pejabat' => null,
+        ];
+    }
+}

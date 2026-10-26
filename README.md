@@ -54,6 +54,19 @@ composer dev
 
 ## Changelog
 
+### 2026-10-26
+- **Asisten AI Penulisan Narasi Laporan Perjalanan Dinas (LPD) & Integrasi Gemini**:
+  - **Asisten Penulisan Narasi Otomatis (`LpdAiService`)**: Menyediakan fitur penyusunan narasi kegiatan LPD formal dari catatan singkat/draft kasar pegawai lapangan menggunakan Google Gemini AI.
+  - **Few-Shot In-Context Learning**: Sistem secara otomatis membaca 3 contoh LPD nyata dari database (diprioritaskan yang sejenis dengan survei yang sedang dikerjakan) sebagai acuan gaya bahasa resmi dan istilah statistik BPS (PPL, PML, Koseka, INNAS, responden, sampel, dsb.).
+  - **Interaksi Form Cepat & Fleksibel**:
+    - Tombol action *"✨ Bantu Tulis AI"* di samping label Uraian Kegiatan pada `LaporanPerjalananDinasResource`.
+    - Modal input untuk catatan singkat lapangan dengan pilihan gaya narasi (*Paragraf Naratif Mengalir* atau *Kronologis Poin per Jam*).
+    - Auto-detection pejabat & desa: AI otomatis mengekstrak nama pejabat dan desa/lokasi yang dikunjungi dari catatan jika kolom tersebut belum diisi pada form.
+  - **Manajemen Konfigurasi API Key**:
+    - Pengaturan terintegrasi pada halaman *Pengaturan Sistem* (`SystemSettingsPage`) untuk memasukkan Gemini API Key dan memilih model AI (`gemini-1.5-flash`, `gemini-2.0-flash`, `gemini-1.5-pro`).
+    - Fallback otomatis ke konfigurasi `.env` (`GEMINI_API_KEY` dan `GEMINI_MODEL`) jika belum diisi di Pengaturan Sistem.
+  - **Automated Tests**: Menambahkan test suite `LpdAiServiceTest` untuk validasi penanganan error tanpa API key, respons parsing narasi, dan pengambilan contoh LPD dari database.
+
 ### 2026-10-12
 - **Pembatasan dan Validasi Kuota Laporan Perjalanan Dinas (LPD) Berdasarkan Rentang Surat Tugas**:
   - **Penentuan Rentang Mandiri Surat Tugas**: Menghapus ekspansi rentang tanggal LPD ke rentang survei bulanan. Rentang tanggal LPD kini presisi mengikuti rentang tanggal penugasan pada Surat Tugas (`waktu_mulai` & `waktu_selesai` / `tanggal`).
