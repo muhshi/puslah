@@ -55,6 +55,17 @@ composer dev
 ## Changelog
 
 ### 2026-10-31
+- **Heatmap Distribusi Beban Petugas (Workload Heatmap)**:
+  - Menambahkan halaman interaktif `WorkloadHeatmap` di Filament (`Manajemen Dokumen > Heatmap Beban Petugas`) untuk memantau kepadatan penugasan harian seluruh pegawai BPS dan mitra dalam satu bulan.
+  - Dilengkapi filter dinamis (Bulan, Tahun, Peran/Role, pencarian Nama/NIP), legend indikator warna (hijau: 1 tugas optimal, oranye: 2 tugas padat, merah: 3+ tugas overload/potensi bentrok jadwal), dan tooltip informasi rincian kegiatan saat cell di-hover.
+- **Tanda Tangan Elektronik (TTE) & Segel Verifikasi Surat Tugas PDF**:
+  - Memperbarui layout PDF Surat Tugas (`pdf_table_layout.blade.php`) dengan segel tanda tangan elektronik resmi Badan Pusat Statistik Demak dan QR Code verifikasi dokumen ketika status surat `approved`.
+  - Memberikan penanda visual watermark/border draft `[ DRAFT - MENUNGGU PERSETUJUAN ]` yang rapi jika surat tugas belum disetujui.
+  - Memperbarui aksi `approve` dan `approveBulk` pada `SuratTugasResource` dengan konfirmasi pengesahan modal dialog dan pembuatan hash verifikasi instan bila belum tersedia.
+- **Integrasi Redis Cache & Session (Docker Stack)**:
+  - Menambahkan container `puslah-redis` (`redis:7-alpine`) dengan kebijakan eviksi memori `allkeys-lru` dan batas memori 128MB pada `docker-compose.yml`.
+  - Mengompilasi dan mengaktifkan ekstensi native `phpredis` di `Dockerfile` FrankenPHP.
+  - Menghubungkan container aplikasi, worker, dan scheduler ke Redis untuk mempercepat performa sesi pengguna dan caching query Filament.
 - **Kompresi & Auto-Resize Media Foto Dokumentasi (LPD & Lembur)**:
   - Mengaktifkan fitur auto-resizing client/server Filament pada upload foto di `LaporanPerjalananDinasResource` dan `LaporanLemburResource` (`imageResizeTargetWidth/Height = 1280px`, `imageResizeMode = cover`).
   - Mengurangi ukuran file foto mentah dari kamera HP (~5–8 MB menjadi ~200–300 KB), menghemat lebih dari 90% penyimpanan disk serta mempercepat ekspor Word dan ZIP tanpa lonjakan RAM.

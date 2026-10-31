@@ -18,7 +18,8 @@ RUN apt-get update && apt-get install -y \
     ghostscript \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j$(nproc) intl gd zip pdo_mysql \
-    && docker-php-ext-enable intl gd zip pdo_mysql \
+    && pecl install redis \
+    && docker-php-ext-enable intl gd zip pdo_mysql redis \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY . /app

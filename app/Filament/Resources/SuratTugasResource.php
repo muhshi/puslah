@@ -419,7 +419,22 @@ class SuratTugasResource extends Resource
                     ->visible(function (SuratTugas $record) {
                         return $record->status === 'pending' && auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag']);
                     })
-                    ->action(fn(SuratTugas $record) => $record->update(['status' => 'approved'])),
+                    ->requiresConfirmation()
+                    ->modalHeading('Persetujuan & Penerbitan TTE Surat Tugas')
+                    ->modalDescription('Apakah Anda yakin menyetujui Surat Tugas ini? Tindakan ini akan mengesahkan dokumen secara elektronik.')
+                    ->action(function (SuratTugas $record) {
+                        $updateData = ['status' => 'approved'];
+                        if (empty($record->hash)) {
+                            $updateData['hash'] = \Illuminate\Support\Str::random(32);
+                        }
+                        $record->update($updateData);
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Surat Tugas Berhasil Disetujui')
+                            ->body('Dokumen telah disahkan secara elektronik.')
+                            ->success()
+                            ->send();
+                    }),
                 Tables\Actions\Action::make('pdf')
                     ->label('PDF')
                     ->icon('heroicon-o-document-arrow-down')
@@ -588,12 +603,21 @@ class SuratTugasResource extends Resource
                         ->visible(fn() => auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag']))
                         ->requiresConfirmation()
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
-                            $count = $records->where('status', '!=', 'approved')->count();
-                            $records->each->update(['status' => 'approved']);
+                            $count = 0;
+                            foreach ($records as $record) {
+                                if ($record->status !== 'approved') {
+                                    $updateData = ['status' => 'approved'];
+                                    if (empty($record->hash)) {
+                                        $updateData['hash'] = \Illuminate\Support\Str::random(32);
+                                    }
+                                    $record->update($updateData);
+                                    $count++;
+                                }
+                            }
 
                             \Filament\Notifications\Notification::make()
-                                ->title('Berhasil!')
-                                ->body("{$count} surat tugas telah di-approve.")
+                                ->title('Berhasil Disetujui')
+                                ->body("{$count} surat tugas telah di-approve & disahkan secara elektronik.")
                                 ->success()
                                 ->send();
                         }),
