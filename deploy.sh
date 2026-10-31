@@ -105,6 +105,8 @@ docker exec "$CONTAINER_NAME" php artisan config:cache
 docker exec "$CONTAINER_NAME" php artisan route:cache
 docker exec "$CONTAINER_NAME" php artisan view:cache
 docker exec "$CONTAINER_NAME" php artisan event:cache
+docker exec "$CONTAINER_NAME" php artisan icons:cache
+docker exec "$CONTAINER_NAME" php artisan filament:optimize
 echo "   ✅ Cache berhasil di-generate."
 
 # 7. Reload Web Server & Restart Queue Worker & Scheduler

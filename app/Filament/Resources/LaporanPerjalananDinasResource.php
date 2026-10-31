@@ -582,6 +582,8 @@ class LaporanPerjalananDinasResource extends Resource
     {
         return $table
             ->modifyQueryUsing(function ($query) {
+                $query->with(['suratTugas.survey', 'suratTugas.user']);
+
                 $isSuperAdmin = Auth::user()?->hasRole('super_admin') ?? false;
 
                 if (!$isSuperAdmin) {

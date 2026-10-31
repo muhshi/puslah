@@ -55,6 +55,17 @@ composer dev
 ## Changelog
 
 ### 2026-10-31
+- **Optimasi Performa Query N+1 & Skalabilitas Database**:
+  - Mengeliminasi N+1 query dengan eager loading relasi `user.profile`, `survey`, `sppd`, dan `laporanPerjalananDinas` pada resource utama (`SuratTugasResource`, `LaporanPerjalananDinasResource`, `UserResource`, `AttendanceResource`, dan `LatestSuratTugasWidget`).
+  - Pengecekan visibilitas action SPPD dan kuota LPD pada tabel Surat Tugas dialihkan ke in-memory loaded relation tanpa query SQL berulang per baris.
+  - Penambahan composite database indexes pada tabel `surat_tugas` (`nomor_urut`, `status`, `tanggal`, `[tanggal, nomor_urut]`, `[user_id, status]`, `created_by`, `[waktu_mulai, waktu_selesai]`) dan `laporan_perjalanan_dinas` (`tanggal_kunjungan`, `[surat_tugas_id, tanggal_kunjungan]`, `nomor_surat_tugas`).
+- **Pembersihan Modul Pulse & Optimasi Dashboard**:
+  - Menghapus modul `laravel/pulse`, halaman `PulseAnalytics`, dan widget `DailyVisits` untuk mencegah pembengkakan ukuran database dan memangkas overhead query saat render dashboard.
+  - Mengaktifkan asynchronous lazy loading (`$isLazy = true`) pada chart widget Filament (`SuratTugasChartWidget`, `SurveyChartWidget`) agar dashboard langsung terbuka seketika.
+  - Standardisasi pengecekan role Spatie yang aman pada Dashboard dan Attendance.
+- **Optimasi Build, FrankenPHP Caddyfile & Deployment**:
+  - Penambahan caching header browser untuk static assets (`/build/*`, images, fonts) di `Caddyfile`.
+  - Penambahan `php artisan icons:cache` dan `php artisan filament:optimize` pada `deploy.sh`.
 - **Profil & Password Terpusat SIPETRA & Sinkronisasi 1-Klik**:
   - Menambahkan menu "Profil & Password (SIPETRA)" pada dropdown user Filament yang membuka modal pengaturan akun terpusat di `https://bpsdemak.com/account`.
   - Menambahkan opsi "Sinkronkan Profil dari SIPETRA" untuk menyegarkan data nama, NIP, email, dan jabatan secara instan dari SIPETRA SSO.

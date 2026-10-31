@@ -430,7 +430,7 @@ class SuratTugasResource extends Resource
                     ->label('Buat SPPD')
                     ->icon('heroicon-o-plus-circle')
                     ->color('primary')
-                    ->visible(fn(SuratTugas $record) => !$record->sppd()->exists() && auth()->user()->hasAnyRole(['super_admin', 'Kasubag', 'Kepala', 'Operator', 'Ketua Tim', 'Pegawai']))
+                    ->visible(fn(SuratTugas $record) => $record->sppd === null && auth()->user()->hasAnyRole(['super_admin', 'Kasubag', 'Kepala', 'Operator', 'Ketua Tim', 'Pegawai']))
                     ->form([
                         Forms\Components\TextInput::make('nomor_sppd')
                             ->label('Nomor SPPD')
@@ -522,7 +522,7 @@ class SuratTugasResource extends Resource
                     ->label('Cetak SPPD')
                     ->icon('heroicon-o-document-text')
                     ->color('success')
-                    ->visible(fn(SuratTugas $record) => $record->sppd()->exists())
+                    ->visible(fn(SuratTugas $record) => $record->sppd !== null)
                     ->action(fn(SuratTugas $record) => app(SppdService::class)->downloadWord($record)),
                 Tables\Actions\Action::make('generate_lpd')
                     ->label('Buat LPD')
@@ -532,7 +532,7 @@ class SuratTugasResource extends Resource
                     ->url(fn(SuratTugas $record) => LaporanPerjalananDinasResource::getUrl('create', ['surat_tugas_id' => $record->id])),
                 Tables\Actions\Action::make('view_lpd')
                     ->label(function (SuratTugas $record) {
-                        $count = $record->laporanPerjalananDinas()->count();
+                        $count = $record->laporan_perjalanan_dinas_count ?? $record->laporanPerjalananDinas->count();
                         $max = \App\Models\LaporanPerjalananDinas::getMaxLpdCount($record);
                         if ($max > 1) {
                             return "Lihat LPD ({$count}/{$max})";
@@ -541,7 +541,7 @@ class SuratTugasResource extends Resource
                     })
                     ->icon('heroicon-o-document-check')
                     ->color('success')
-                    ->visible(fn(SuratTugas $record) => $record->laporanPerjalananDinas()->exists())
+                    ->visible(fn(SuratTugas $record) => ($record->laporan_perjalanan_dinas_count ?? $record->laporanPerjalananDinas->count()) > 0)
                     ->url(function (SuratTugas $record) {
                         $lpds = $record->laporanPerjalananDinas;
                         if ($lpds->count() === 1) {
@@ -754,22 +754,15 @@ class SuratTugasResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
+        $query = parent::getEloquentQuery()
+            ->with(['user.profile', 'survey', 'sppd', 'laporanPerjalananDinas'])
+            ->withCount('laporanPerjalananDinas');
 
         /** @var \App\Models\User $user */
         $user = auth()->user();
 
         if ($user && !$user->hasRole(['super_admin', 'Kasubag', 'Kepala', 'Operator', 'Ketua Tim'])) {
-            // Ketua Tim: bisa lihat surat tugas yang mereka buat ATAU yang ditujukan untuk mereka
-            // if ($user->hasRole('Ketua Tim')) {
-            //     $query->where(function ($q) use ($user) {
-            //         $q->where('created_by', $user->id)
-            //             ->orWhere('user_id', $user->id);
-            //     });
-            // } else {
-            // Pegawai biasa: hanya bisa lihat surat tugas untuk diri sendiri
             $query->where('user_id', $user->id);
-            //}
         }
 
         return $query;

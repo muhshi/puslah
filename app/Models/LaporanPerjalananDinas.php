@@ -148,9 +148,11 @@ class LaporanPerjalananDinas extends Model
     public static function canCreateLpd(SuratTugas $st, ?int $excludeLpdId = null): bool
     {
         $max = self::getMaxLpdCount($st);
-        $currentCount = $st->laporanPerjalananDinas()
-            ->when($excludeLpdId, fn ($q) => $q->where('id', '!=', $excludeLpdId))
-            ->count();
+        $currentCount = ($st->relationLoaded('laporanPerjalananDinas') && $excludeLpdId === null)
+            ? ($st->laporan_perjalanan_dinas_count ?? $st->laporanPerjalananDinas->count())
+            : $st->laporanPerjalananDinas()
+                ->when($excludeLpdId, fn ($q) => $q->where('id', '!=', $excludeLpdId))
+                ->count();
 
         if ($currentCount >= $max) {
             return false;

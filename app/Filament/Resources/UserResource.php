@@ -144,6 +144,11 @@ class UserResource extends Resource
             ]);
     }
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(['profile', 'roles']);
+    }
+
     public static function getRelations(): array
     {
         return [

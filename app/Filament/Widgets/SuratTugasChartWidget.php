@@ -10,6 +10,7 @@ class SuratTugasChartWidget extends ChartWidget
 {
     protected static ?string $heading = 'Grafik Surat Tugas (Tahun Ini)';
     protected static ?int $sort = 2;
+    protected static bool $isLazy = true;
 
     protected function getData(): array
     {

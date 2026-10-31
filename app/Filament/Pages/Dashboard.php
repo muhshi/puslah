@@ -2,8 +2,6 @@
 
 namespace App\Filament\Pages;
 
-use App\Filament\Widgets\DailyVisitsChartWidget;
-use App\Filament\Widgets\DailyVisitsWidget;
 use App\Filament\Widgets\StatsOverviewWidget;
 use App\Filament\Widgets\SuratTugasChartWidget;
 use App\Filament\Widgets\LatestSuratTugasWidget;
@@ -24,20 +22,18 @@ class Dashboard extends BaseDashboard
     protected function isAdmin(): bool
     {
         // Check for super_admin or roles that should see the dashboard
-        return Auth::user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag']);
+        return Auth::user()?->hasAnyRole(['super_admin', 'Kepala', 'Kasubag']) ?? false;
     }
 
     protected function isPegawai(): bool
     {
-        return Auth::user()->roles[0]->name == 'Pegawai BPS';
+        return Auth::user()?->hasRole('Pegawai BPS') ?? false;
     }
 
     public function getWidgets(): array
     {
         return [
             StatsOverviewWidget::class,
-            DailyVisitsWidget::class,
-            DailyVisitsChartWidget::class,
             CalendarWidget::class,
             SuratTugasChartWidget::class,
             SurveyChartWidget::class,

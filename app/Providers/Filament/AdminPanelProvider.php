@@ -73,7 +73,6 @@ class AdminPanelProvider extends PanelProvider
                 Dashboard::class,
                 ProfileMe::class,
             ])
-    // Removed hardcoded navigationItems for Pulse Analytics
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,

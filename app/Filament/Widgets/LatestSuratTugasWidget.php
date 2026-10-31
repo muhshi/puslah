@@ -15,7 +15,7 @@ class LatestSuratTugasWidget extends BaseWidget
     public function table(Table $table): Table
     {
         return $table
-            ->query(\App\Models\SuratTugas::query()->latest()->limit(5))
+            ->query(\App\Models\SuratTugas::query()->with('user')->latest()->limit(5))
             ->columns([
                 Tables\Columns\TextColumn::make('nomor_surat')->label('Nomor')->sortable(),
                 Tables\Columns\TextColumn::make('user.name')->label('Pegawai'),
