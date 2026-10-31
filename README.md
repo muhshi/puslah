@@ -55,6 +55,9 @@ composer dev
 ## Changelog
 
 ### 2026-10-31
+- **Profil & Password Terpusat SIPETRA & Sinkronisasi 1-Klik**:
+  - Menambahkan menu "Profil & Password (SIPETRA)" pada dropdown user Filament yang membuka modal pengaturan akun terpusat di `https://bpsdemak.com/account`.
+  - Menambahkan opsi "Sinkronkan Profil dari SIPETRA" untuk menyegarkan data nama, NIP, email, dan jabatan secara instan dari SIPETRA SSO.
 - **Federated Single Logout (SLO) & Anti Double-Click SSO Button**:
   - Implementasi `SsoLogoutResponse` pada Filament agar logout pengguna otomatis memutus sesi terpusat di SIPETRA (`/oauth/logout`) dan mencegah login otomatis tanpa kredensial.
   - Menambahkan animasi loading spinner dan disable state pada tombol "Masuk dengan SIPETRA SSO" untuk mencegah submit ganda.

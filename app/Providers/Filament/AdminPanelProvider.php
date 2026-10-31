@@ -43,6 +43,15 @@ class AdminPanelProvider extends PanelProvider
                     ->label('Profile')
                     ->url(fn(): string => ProfileMe::getUrl())
                     ->icon('heroicon-o-user-circle'),
+                MenuItem::make()
+                    ->label('Profil & Password (SIPETRA)')
+                    ->url(fn (): string => rtrim(config('services.sipetra.base_url', 'https://bpsdemak.com'), '/') . '/account')
+                    ->icon('heroicon-o-shield-check')
+                    ->openUrlInNewTab(),
+                MenuItem::make()
+                    ->label('Sinkronkan Profil dari SIPETRA')
+                    ->url(fn (): string => route('sipetra.login'))
+                    ->icon('heroicon-o-arrow-path'),
                 // Menambahkan kembali item menu Logout
                 'logout' => MenuItem::make()->label('Log out'),
             ])
