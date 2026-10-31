@@ -54,6 +54,11 @@ composer dev
 
 ## Changelog
 
+### 2026-10-31
+- **Federated Single Logout (SLO) & Anti Double-Click SSO Button**:
+  - Implementasi `SsoLogoutResponse` pada Filament agar logout pengguna otomatis memutus sesi terpusat di SIPETRA (`/oauth/logout`) dan mencegah login otomatis tanpa kredensial.
+  - Menambahkan animasi loading spinner dan disable state pada tombol "Masuk dengan SIPETRA SSO" untuk mencegah submit ganda.
+
 ### 2026-10-26
 - **Format Narasi LPD Rapi Per Jam Tanpa Bullet & Numbering (`LpdAiService`)**:
   - Menyajikan narasi terstruktur per tahapan jam tanpa penomoran (angka 1, 2, 3) dan tanpa simbol bullet (`•`, `-`, atau `<ul><li>`).

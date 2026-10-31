@@ -14,7 +14,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        if (interface_exists(\Filament\Http\Responses\Auth\Contracts\LogoutResponse::class)) {
+            $this->app->singleton(\Filament\Http\Responses\Auth\Contracts\LogoutResponse::class, \App\Http\Responses\SsoLogoutResponse::class);
+        }
     }
 
     /**
@@ -32,6 +34,7 @@ class AppServiceProvider extends ServiceProvider
                 if (! $user) {
                     return false;
                 }
+
                 return $user->hasAnyRole(['super_admin', 'Super Admin', 'Kepala', 'Kasubag', 'admin', 'Admin', 'Operator'])
                     || $user->can('page_PulseAnalytics')
                     || $user->roles()->exists();
@@ -47,6 +50,7 @@ class AppServiceProvider extends ServiceProvider
         $socialite = $this->app->make(\Laravel\Socialite\Contracts\Factory::class);
         $socialite->extend('sipetra', function ($app) use ($socialite) {
             $config = $app['config']['services.sipetra'];
+
             return $socialite->buildProvider(\App\Providers\SipetraSocialiteProvider::class, $config);
         });
 
