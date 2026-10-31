@@ -372,14 +372,18 @@ class CreateBulkSuratTugas extends Page implements HasForms
         $sumberJabatan = $data['sumber_jabatan'] ?? 'database';
         $jabatanManual = $data['jabatan'] ?? '-';
 
-
+        // Pre-load users and profiles to prevent N+1 queries inside the loop
+        $profiles = ($sumberJabatan === 'database')
+            ? \App\Models\UserProfile::whereIn('user_id', $userIds)->get()->keyBy('user_id')
+            : collect();
+        $users = User::whereIn('id', $userIds)->get()->keyBy('id');
 
         try {
-            DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $year, &$currentUrut, $usedNumbers, $sumberJabatan, $jabatanManual) {
+            DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $year, &$currentUrut, $usedNumbers, $sumberJabatan, $jabatanManual, $profiles, $users) {
                 $abaikanValidasi = $data['abaikan_validasi'] ?? false;
                 foreach ($userIds as $userId) {
                     if (!$abaikanValidasi && ($overlap = SuratTugas::getOverlap($userId, $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null))) {
-                        $user = User::find($userId);
+                        $user = $users->get($userId);
                         $userName = $user ? $user->name : 'Pegawai';
                         $overlapMsg = SuratTugas::formatOverlapMessage($userName, $overlap);
                         throw new \Exception("Overlap: {$overlapMsg}");
@@ -395,7 +399,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
 
                     $jabatanPegawai = $jabatanManual;
                     if ($sumberJabatan === 'database') {
-                        $profile = \App\Models\UserProfile::where('user_id', $userId)->first();
+                        $profile = $profiles->get($userId);
                         $jabatanPegawai = $profile && !empty($profile->jabatan) ? $profile->jabatan : '-';
                     }
 

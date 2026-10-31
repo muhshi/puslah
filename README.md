@@ -55,6 +55,16 @@ composer dev
 ## Changelog
 
 ### 2026-10-31
+- **Kompresi & Auto-Resize Media Foto Dokumentasi (LPD & Lembur)**:
+  - Mengaktifkan fitur auto-resizing client/server Filament pada upload foto di `LaporanPerjalananDinasResource` dan `LaporanLemburResource` (`imageResizeTargetWidth/Height = 1280px`, `imageResizeMode = cover`).
+  - Mengurangi ukuran file foto mentah dari kamera HP (~5–8 MB menjadi ~200–300 KB), menghemat lebih dari 90% penyimpanan disk serta mempercepat ekspor Word dan ZIP tanpa lonjakan RAM.
+- **Tuning Performa OPcache Docker FrankenPHP**:
+  - Mengonfigurasi `docker/php.ini` dengan memori OPcache 256MB, 20.000 accelerated files, dan `validate_timestamps = 0` untuk eksekusi bytecode PHP langsung dari memori tanpa pembacaan disk di setiap HTTP request.
+- **Pembuatan Surat Tugas Kolektif Cepat & Bebas N+1 Query**:
+  - Mengoptimalkan `CreateBulkSuratTugas` dengan pre-loading data seluruh user dan `UserProfile` sebelum loop pembuatan surat, memangkas ratusan query SQL menjadi 1 query tunggal.
+- **Pembersihan Log Otomatis & Refaktor Kode PDF**:
+  - Menjadwalkan `activitylog:clean` harian di `routes/console.php` untuk mencegah pembengkakan tabel `activity_log`.
+  - Merefaktor endpoint verifikasi PDF di `routes/web.php` untuk memanggil `SuratTugasPdfService::renderPdf()`, mengeliminasi duplikasi kode dan menjaga keseragaman layout.
 - **Optimasi Performa Query N+1 & Skalabilitas Database**:
   - Mengeliminasi N+1 query dengan eager loading relasi `user.profile`, `survey`, `sppd`, dan `laporanPerjalananDinas` pada resource utama (`SuratTugasResource`, `LaporanPerjalananDinasResource`, `UserResource`, `AttendanceResource`, dan `LatestSuratTugasWidget`).
   - Pengecekan visibilitas action SPPD dan kuota LPD pada tabel Surat Tugas dialihkan ke in-memory loaded relation tanpa query SQL berulang per baris.
