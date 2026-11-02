@@ -12,6 +12,7 @@ APP_DIR=~/apps/puslah
 CONTAINER_NAME=puslah-franken
 WORKER_NAME=puslah-worker
 SCHEDULER_NAME=puslah-scheduler
+BOT_NAME=puslah-telegram-bot
 BRANCH=main
 FORCE_BUILD=false
 
@@ -116,7 +117,8 @@ echo "👷 [5/6] Reload Server, Worker & Scheduler..."
 docker restart "$CONTAINER_NAME" >/dev/null 2>&1 || true
 docker restart "$WORKER_NAME" >/dev/null 2>&1 || true
 docker restart "$SCHEDULER_NAME" >/dev/null 2>&1 || true
-echo "   ✅ Web Server, Worker & Scheduler di-reload dengan kode terbaru."
+docker restart "$BOT_NAME" >/dev/null 2>&1 || true
+echo "   ✅ Web Server, Worker, Scheduler & Bot Telegram di-reload dengan kode terbaru."
 
 # 8. Bersihkan image Docker lama hanya jika baru saja build
 echo ""

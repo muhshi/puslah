@@ -90,6 +90,30 @@ services:
       - default
       - mysql-stack_mysql_network
 
+  puslah-telegram-bot:
+    container_name: puslah-telegram-bot
+    restart: unless-stopped
+    mem_limit: 256m
+    healthcheck:
+      disable: true
+    depends_on:
+      - puslah-redis
+    environment:
+      - REDIS_HOST=puslah-redis
+      - REDIS_PORT=6379
+      - REDIS_CLIENT=phpredis
+      - CACHE_STORE=redis
+      - SESSION_DRIVER=redis
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: php artisan nutgram:run
+    volumes:
+      - .:/app
+    networks:
+      - default
+      - mysql-stack_mysql_network
+
 volumes:
   redis-data: {}
 
