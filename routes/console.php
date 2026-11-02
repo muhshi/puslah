@@ -13,3 +13,9 @@ Artisan::command('inspire', function () {
 \Illuminate\Support\Facades\Schedule::command('activitylog:clean')->daily();
 \Illuminate\Support\Facades\Schedule::command('app:generate-certificates')->daily();
 \Illuminate\Support\Facades\Schedule::command('recap:update')->dailyAt('23:00');
+
+// Pengingat Laporan Kinerja Harian Telegram (Multi-Tier, Hari Kerja)
+\Illuminate\Support\Facades\Schedule::command('daily-activity:send-reminders --tier=15:00')->weekdays()->at('15:00')->timezone('Asia/Jakarta');
+\Illuminate\Support\Facades\Schedule::command('daily-activity:send-reminders --tier=16:00')->weekdays()->at('16:00')->timezone('Asia/Jakarta');
+\Illuminate\Support\Facades\Schedule::command('daily-activity:send-reminders --tier=18:30')->weekdays()->at('18:30')->timezone('Asia/Jakarta');
+

@@ -178,6 +178,16 @@ class DailyActivityResource extends Resource
                                     ->directory('daily-activities')
                                     ->maxSize(5120)
                                     ->required()
+                                    ->live()
+                                    ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                        if ($state && is_string($state)) {
+                                            $fullPath = storage_path('app/public/' . $state);
+                                            $exif = app(\App\Services\ImageExifExtractorService::class)->extract($fullPath);
+                                            if ($exif['latitude']) $set('latitude', $exif['latitude']);
+                                            if ($exif['longitude']) $set('longitude', $exif['longitude']);
+                                            if ($exif['captured_at']) $set('captured_at', $exif['captured_at']->format('Y-m-d H:i:s'));
+                                        }
+                                    })
                                     ->columnSpan(2),
 
                                 Forms\Components\Grid::make(1)
@@ -185,6 +195,23 @@ class DailyActivityResource extends Resource
                                         Forms\Components\TextInput::make('caption')
                                             ->label('Keterangan / Kategori Foto')
                                             ->placeholder('Contoh: Koordinasi bersama Kades'),
+
+                                        Forms\Components\DateTimePicker::make('captured_at')
+                                            ->label('Waktu Foto')
+                                            ->displayFormat('d/m/Y H:i'),
+
+                                        Forms\Components\Grid::make(2)
+                                            ->schema([
+                                                Forms\Components\TextInput::make('latitude')
+                                                    ->label('Latitude')
+                                                    ->numeric()
+                                                    ->placeholder('-6.8945'),
+
+                                                Forms\Components\TextInput::make('longitude')
+                                                    ->label('Longitude')
+                                                    ->numeric()
+                                                    ->placeholder('110.6385'),
+                                            ]),
 
                                         Forms\Components\Toggle::make('is_stamped')
                                             ->label('Sudah Ada Stempel (Open Camera)')

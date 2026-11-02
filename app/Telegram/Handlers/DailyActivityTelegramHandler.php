@@ -4,9 +4,11 @@ namespace App\Telegram\Handlers;
 
 use App\Models\DailyActivity;
 use App\Models\DailyActivityAttachment;
+use App\Models\SuratTugas;
 use App\Models\TelegramUpdate;
 use App\Models\User;
 use App\Services\DailyActivityAiService;
+use App\Services\ImageExifExtractorService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -37,7 +39,7 @@ class DailyActivityTelegramHandler
                     "Mulai sekarang, Anda bisa langsung mengirimkan:\n" .
                     "📸 *Foto dokumentasi kegiatan* (bisa satu atau banyak sekaligus/album).\n" .
                     "📝 *Catatan teks kegiatan* dengan gaya bahasa santai.\n\n" .
-                    "Sistem akan otomatis mencatat dan menyusunnya ke dalam bukti dukung kinerja Puslah.",
+                    "Sistem akan otomatis mendeteksi Surat Tugas aktif hari ini dan mengekstrak koordinat GPS foto Anda.",
                     ['parse_mode' => 'Markdown']
                 );
                 return;
@@ -81,7 +83,7 @@ class DailyActivityTelegramHandler
         $activities = DailyActivity::query()
             ->where('user_id', $user->id)
             ->whereDate('activity_date', Carbon::today())
-            ->with('attachments')
+            ->with(['attachments', 'suratTugas'])
             ->orderBy('id', 'asc')
             ->get();
 
@@ -97,7 +99,7 @@ class DailyActivityTelegramHandler
             $no = $idx + 1;
             $fotoCount = $act->attachments->count();
             $fotoBadge = $fotoCount > 0 ? " [📷 {$fotoCount} foto]" : "";
-            $stBadge = $act->surat_tugas_id ? " (🔖 Terkait ST)" : "";
+            $stBadge = $act->suratTugas ? " (🔖 No. " . ($act->suratTugas->nomor_surat_tugas ?: 'Draft') . ")" : "";
             $text .= "{$no}. *{$act->final_content}*{$fotoBadge}{$stBadge}\n\n";
         }
 
@@ -119,15 +121,26 @@ class DailyActivityTelegramHandler
             return;
         }
 
+        // Auto-detect Surat Tugas aktif hari ini
+        $activeSt = $this->resolveActiveSuratTugas($user, Carbon::today());
+
         // Simpan kegiatan baru
         $activity = DailyActivity::create([
             'user_id' => $user->id,
+            'surat_tugas_id' => $activeSt?->id,
             'activity_date' => Carbon::today(),
             'raw_content' => $rawText,
             'final_content' => $rawText,
             'status' => 'submitted',
             'source' => 'telegram',
         ]);
+
+        $stInfo = "";
+        if ($activeSt) {
+            $stNo = $activeSt->nomor_surat_tugas ?: 'DRAFT';
+            $stTujuan = $activeSt->keperluan ?: $activeSt->tempat_tugas ?: 'Penugasan Lapangan';
+            $stInfo = "\n🔖 *Terkait:* ST No. {$stNo} ({$stTujuan})\n";
+        }
 
         $keyboard = InlineKeyboardMarkup::make()
             ->addRow(
@@ -139,7 +152,8 @@ class DailyActivityTelegramHandler
 
         $bot->sendMessage(
             "✅ *Kegiatan Berhasil Dicatat!*\n\n" .
-            "📝 \"{$rawText}\"\n\n" .
+            "📝 \"{$rawText}\"\n" .
+            $stInfo . "\n" .
             "_Kirim foto dokumentasi jika ada, atau klik tombol di bawah untuk merapikan narasi dengan AI._",
             [
                 'parse_mode' => 'Markdown',
@@ -182,6 +196,11 @@ class DailyActivityTelegramHandler
 
         Storage::disk('public')->put($relativePath, $fileContents);
 
+        // Ekstraksi EXIF GPS dan Waktu Pengambilan
+        $fullPath = storage_path('app/public/' . $relativePath);
+        $exifService = app(ImageExifExtractorService::class);
+        $exifData = $exifService->extract($fullPath);
+
         // Cari atau buat DailyActivity yang relevan
         $activity = null;
 
@@ -200,8 +219,11 @@ class DailyActivityTelegramHandler
         // Jika belum ada activity dari album, atau single photo:
         if (!$activity) {
             $content = !empty($caption) ? $caption : 'Dokumentasi kegiatan';
+            $activeSt = $this->resolveActiveSuratTugas($user, Carbon::today());
+
             $activity = DailyActivity::create([
                 'user_id' => $user->id,
+                'surat_tugas_id' => $activeSt?->id,
                 'activity_date' => Carbon::today(),
                 'raw_content' => $content,
                 'final_content' => $content,
@@ -221,7 +243,7 @@ class DailyActivityTelegramHandler
             }
         }
 
-        // Buat attachment
+        // Buat attachment dengan data EXIF jika tersedia
         DailyActivityAttachment::create([
             'daily_activity_id' => $activity->id,
             'file_path' => $relativePath,
@@ -229,6 +251,9 @@ class DailyActivityTelegramHandler
             'file_size' => strlen($fileContents),
             'mime_type' => 'image/jpeg',
             'is_stamped' => false,
+            'latitude' => $exifData['latitude'],
+            'longitude' => $exifData['longitude'],
+            'captured_at' => $exifData['captured_at'],
             'caption' => $caption ?: null,
         ]);
 
@@ -245,10 +270,23 @@ class DailyActivityTelegramHandler
                 );
             }
 
+            $stBadge = "";
+            if ($activity->suratTugas) {
+                $stNo = $activity->suratTugas->nomor_surat_tugas ?: 'DRAFT';
+                $stBadge = "\n🔖 *Terkait ST:* No. {$stNo}";
+            }
+
+            $gpsBadge = "";
+            if ($exifData['latitude'] && $exifData['longitude']) {
+                $gpsBadge = "\n📍 *GPS Terdeteksi:* {$exifData['latitude']}, {$exifData['longitude']}";
+            }
+
             $bot->sendMessage(
                 "📸 *Foto Berhasil Disimpan!*\n\n" .
                 "📝 Kegiatan: *{$activity->final_content}*\n" .
-                "🖼️ Terlampir: *{$totalPhotos} foto*\n\n" .
+                "🖼️ Terlampir: *{$totalPhotos} foto*" .
+                $stBadge .
+                $gpsBadge . "\n\n" .
                 "_Foto siap digunakan sebagai bukti dukung di Puslah._",
                 [
                     'parse_mode' => 'Markdown',
@@ -302,6 +340,35 @@ class DailyActivityTelegramHandler
             Log::error('AI Polish Error via Telegram: ' . $e->getMessage());
             $bot->sendMessage("⚠️ Gagal memoles narasi dengan AI: " . $e->getMessage());
         }
+    }
+
+    /**
+     * Auto-detect Surat Tugas aktif pegawai pada tanggal tertentu.
+     */
+    public function resolveActiveSuratTugas(User $user, Carbon $date): ?SuratTugas
+    {
+        $todayStr = $date->toDateString();
+        $startOfDay = $date->copy()->startOfDay();
+        $endOfDay = $date->copy()->endOfDay();
+
+        $activeStList = SuratTugas::query()
+            ->where('user_id', $user->id)
+            ->where(function ($q) use ($todayStr, $startOfDay, $endOfDay) {
+                $q->whereDate('tanggal', $todayStr)
+                    ->orWhere(function ($sub) use ($startOfDay, $endOfDay) {
+                        $sub->where('waktu_mulai', '<=', $endOfDay)
+                            ->where('waktu_selesai', '>=', $startOfDay);
+                    });
+            })
+            ->where('status', '!=', 'rejected')
+            ->get();
+
+        // Jika tepat 1 penugasan aktif, otomatis kaitkan
+        if ($activeStList->count() === 1) {
+            return $activeStList->first();
+        }
+
+        return null;
     }
 
     /**

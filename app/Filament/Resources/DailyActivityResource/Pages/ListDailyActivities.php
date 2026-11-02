@@ -14,6 +14,13 @@ class ListDailyActivities extends ListRecords
 {
     protected static string $resource = DailyActivityResource::class;
 
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            \App\Filament\Widgets\DailyActivityCalendarWidget::class,
+        ];
+    }
+
     protected function getHeaderActions(): array
     {
         $user = Auth::user();

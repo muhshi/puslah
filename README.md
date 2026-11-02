@@ -60,9 +60,15 @@ composer dev
   - Integrasi Bot Telegram via Nutgram: mendukung penerimaan teks santai, foto tunggal, dan album foto (`media_group_id`) dengan tombol inline polesan narasi AI.
   - Penambahan fitur Pairing Akun Telegram langsung dari dashboard Filament dengan tautan token unik (`/start <token>`).
   - Integrasi Gemini AI (`DailyActivityAiService`) untuk memoles catatan kasar kegiatan menjadi narasi laporan kinerja kedinasan formal secara otomatis.
-  - Penambahan aksi satu-klik **"Salin ke LPD"**: otomatis membuat draf Laporan Perjalanan Dinas beserta foto lampirannya untuk kegiatan yang memiliki tautan Surat Tugas.
+  - Penambahan aksi satu-klik **"Salin ke LPD"**: otomatis membuat draf Laporan Perjalanan Dinas beserta foto lampirannya untuk kegiatan yang memiliki tautan Surat Tugas (lengkap dengan validasi kuota durasi & anti-bentrok tanggal).
   - Penambahan aksi shortcut **"Stempel Foto"** yang terhubung ke modul Stempel Foto Puslah untuk foto yang belum berstempel.
   - Implementasi Document Compiler (`WorkReportGeneratorService`) berbasis PHPWord: menyusun berkas Word (`.docx`) bukti dukung dalam layout landscape rapi dengan foto thumbnail dan galeri lampiran.
+- **Penyempurnaan Auto-Detect ST, Ekstraksi EXIF, Multi-Tier Reminder & Kalender Interaktif**:
+  - **Auto-Detect Surat Tugas:** Bot Telegram otomatis mendeteksi dan menautkan Surat Tugas aktif pegawai pada tanggal hari ini.
+  - **Ekstraksi EXIF GPS & Timestamp:** Service `ImageExifExtractorService` otomatis mengekstrak koordinat latitude, longitude, dan jam asli jepretan kamera ke form upload (tetap 100% fleksibel diedit manual).
+  - **Multi-Tier Reminder:** Command `daily-activity:send-reminders` terjadwal setiap hari kerja pada jam 15:00, 16:00, dan 18:30 WIB dengan proteksi hari libur akhir pekan dan pegawai yang sedang cuti approved.
+  - **Kalender Interaktif Bukti Dukung:** Widget `DailyActivityCalendarWidget` (FullCalendar) di menu Bukti Dukung Harian dengan pemetaan visual (Hijau: Rutin, Biru: ST, Ungu: LPD) dan fitur klik tanggal kosong untuk input backdate instan.
+
 
 ### 2026-10-31
 - **Heatmap Distribusi Beban Petugas (Workload Heatmap)**:
