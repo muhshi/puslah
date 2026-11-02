@@ -219,24 +219,18 @@ class DailyActivityResource extends Resource
                                                 ->icon('heroicon-m-map-pin')
                                                 ->color('warning')
                                                 ->modalHeading('Pilih Titik Koordinat Lokasi di Peta')
-                                                ->modalDescription('Geser penanda (marker) atau klik pada peta untuk menentukan koordinat lokasi kegiatan.')
+                                                ->modalDescription('Cari nama wilayah/desa/kecamatan atau klik & geser penanda (marker) pada peta.')
+                                                ->modalWidth(\Filament\Support\Enums\MaxWidth::FourExtraLarge)
+                                                ->modalSubmitActionLabel('Gunakan Titik Ini 📍')
                                                 ->form([
-                                                    \Dotswan\MapPicker\Fields\Map::make('map_location')
-                                                        ->label('Peta Lokasi')
+                                                    \App\Filament\Forms\Components\MapWithSearch::make('map_location')
+                                                        ->label('Peta & Pencarian Wilayah')
                                                         ->columnSpanFull()
                                                         ->default(function (Forms\Get $get) {
                                                             $lat = (float) ($get('latitude') ?: -6.894561);
                                                             $lng = (float) ($get('longitude') ?: 110.637492);
                                                             return ['lat' => $lat, 'lng' => $lng];
-                                                        })
-                                                        ->showMarker()
-                                                        ->markerColor("#ef4444")
-                                                        ->showFullscreenControl()
-                                                        ->showZoomControl()
-                                                        ->draggable()
-                                                        ->zoom(15)
-                                                        ->tilesUrl("https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga")
-                                                        ->liveLocation(),
+                                                        }),
                                                 ])
                                                 ->action(function (array $data, Forms\Set $set) {
                                                     if (!empty($data['map_location']['lat']) && !empty($data['map_location']['lng'])) {

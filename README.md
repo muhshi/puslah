@@ -55,6 +55,9 @@ composer dev
 ## Changelog
 
 ### 2026-11-02
+- **Penyempurnaan Map Picker dengan Pencarian Wilayah & Perbaikan Respons Bot Telegram**:
+  - **Pencarian Wilayah di Map Picker (Mirip Stempel Foto):** Menghadirkan komponen form peta interaktif `App\Filament\Forms\Components\MapWithSearch` (`map-with-search.blade.php`) di form bukti dukung. Pengguna kini dapat mencari nama wilayah, desa, atau kecamatan secara instan melalui OpenStreetMap Nominatim, menggunakan tombol cepat **GPS Saya**, beralih antara citra Satelit Google dan peta jalan OSM, serta menggeser marker koordinat secara mulus.
+  - **Perbaikan Respons Telegram Bot (Fix Nutgram Type Error):** Memperbaiki tanda tangan pemanggilan `$bot->sendMessage()` di `DailyActivityTelegramHandler` agar menggunakan named arguments PHP 8 (`chat_id: $bot->chatId(), parse_mode: 'Markdown', reply_markup: ...`). Mengeliminasi TypeError sehingga bot Telegram kini membalas chat dan kiriman foto pengguna secara instan dan interaktif.
 - **Modul Laporan Bukti Dukung Harian & Integrasi Telegram Bot**:
   - Menambahkan sistem pencatatan laporan kinerja harian / bukti dukung (`DailyActivityResource`) di menu `Manajemen Dokumen > Bukti Dukung Harian`.
   - Integrasi Bot Telegram via Nutgram: mendukung penerimaan teks santai, foto tunggal, dan album foto (`media_group_id`) dengan tombol inline polesan narasi AI.

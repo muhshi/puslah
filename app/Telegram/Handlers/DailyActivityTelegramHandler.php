@@ -34,18 +34,23 @@ class DailyActivityTelegramHandler
                 $user->save();
 
                 $bot->sendMessage(
-                    "🎉 *Akun Berhasil Terhubung!*\n\n" .
+                    text: "🎉 *Akun Berhasil Terhubung!*\n\n" .
                     "Halo *{$user->name}*, akun Puslah Anda telah berhasil dihubungkan dengan bot ini.\n\n" .
                     "Mulai sekarang, Anda bisa langsung mengirimkan:\n" .
                     "📸 *Foto dokumentasi kegiatan* (bisa satu atau banyak sekaligus/album).\n" .
                     "📝 *Catatan teks kegiatan* dengan gaya bahasa santai.\n\n" .
                     "Sistem akan otomatis mendeteksi Surat Tugas aktif hari ini dan mengekstrak koordinat GPS foto Anda.",
-                    ['parse_mode' => 'Markdown']
+                    chat_id: $chatId,
+                    parse_mode: 'Markdown'
                 );
                 return;
             }
 
-            $bot->sendMessage("⚠️ *Tautan Tidak Valid*\nKode penghubung salah atau sudah digunakan. Silakan buka menu profil di Puslah untuk mendapatkan tautan baru.", ['parse_mode' => 'Markdown']);
+            $bot->sendMessage(
+                text: "⚠️ *Tautan Tidak Valid*\nKode penghubung salah atau sudah digunakan. Silakan buka menu profil di Puslah untuk mendapatkan tautan baru.",
+                chat_id: $chatId,
+                parse_mode: 'Markdown'
+            );
             return;
         }
 
@@ -53,22 +58,24 @@ class DailyActivityTelegramHandler
         $user = User::where('telegram_chat_id', (string) $chatId)->first();
         if ($user) {
             $bot->sendMessage(
-                "Halo *{$user->name}*! 👋\n" .
+                text: "Halo *{$user->name}*! 👋\n" .
                 "Bot siap menerima bukti dukung dan laporan pekerjaan Anda hari ini.\n\n" .
                 "📌 *Perintah Cepat:*\n" .
                 "/today - Lihat daftar kegiatan Anda hari ini\n" .
                 "/help - Bantuan format pelaporan\n\n" .
                 "Silakan kirimkan foto kegiatan atau ketik apa yang sedang Anda kerjakan!",
-                ['parse_mode' => 'Markdown']
+                chat_id: $chatId,
+                parse_mode: 'Markdown'
             );
             return;
         }
 
         $bot->sendMessage(
-            "Selamat datang di *Bot Bukti Dukung Puslah*! 🏛️\n\n" .
+            text: "Selamat datang di *Bot Bukti Dukung Puslah*! 🏛️\n\n" .
             "Akun Telegram Anda belum terhubung dengan akun Puslah.\n" .
             "Silakan login ke web Puslah, buka halaman Profil / Akun, lalu klik tombol *Hubungkan ke Telegram*.",
-            ['parse_mode' => 'Markdown']
+            chat_id: $chatId,
+            parse_mode: 'Markdown'
         );
     }
 
@@ -88,7 +95,11 @@ class DailyActivityTelegramHandler
             ->get();
 
         if ($activities->isEmpty()) {
-            $bot->sendMessage("📅 *Laporan Hari Ini (" . Carbon::today()->translatedFormat('d F Y') . ")*\n\nBelum ada kegiatan yang tercatat hari ini. Kirim foto atau ketik pekerjaan Anda sekarang untuk mulai mencatat!", ['parse_mode' => 'Markdown']);
+            $bot->sendMessage(
+                text: "📅 *Laporan Hari Ini (" . Carbon::today()->translatedFormat('d F Y') . ")*\n\nBelum ada kegiatan yang tercatat hari ini. Kirim foto atau ketik pekerjaan Anda sekarang untuk mulai mencatat!",
+                chat_id: $bot->chatId(),
+                parse_mode: 'Markdown'
+            );
             return;
         }
 
@@ -105,7 +116,11 @@ class DailyActivityTelegramHandler
 
         $text .= "_Buka web Puslah untuk mengedit, menambah surat tugas, atau mengunduh laporan format Word/PDF._";
 
-        $bot->sendMessage($text, ['parse_mode' => 'Markdown']);
+        $bot->sendMessage(
+            text: $text,
+            chat_id: $bot->chatId(),
+            parse_mode: 'Markdown'
+        );
     }
 
     /**
@@ -151,14 +166,13 @@ class DailyActivityTelegramHandler
             );
 
         $bot->sendMessage(
-            "✅ *Kegiatan Berhasil Dicatat!*\n\n" .
+            text: "✅ *Kegiatan Berhasil Dicatat!*\n\n" .
             "📝 \"{$rawText}\"\n" .
             $stInfo . "\n" .
             "_Kirim foto dokumentasi jika ada, atau klik tombol di bawah untuk merapikan narasi dengan AI._",
-            [
-                'parse_mode' => 'Markdown',
-                'reply_markup' => $keyboard,
-            ]
+            chat_id: $bot->chatId(),
+            parse_mode: 'Markdown',
+            reply_markup: $keyboard,
         );
     }
 
@@ -190,7 +204,10 @@ class DailyActivityTelegramHandler
 
         $fileContents = @file_get_contents($fileUrl);
         if (!$fileContents) {
-            $bot->sendMessage("⚠️ Gagal mengunduh foto dari Telegram. Silakan coba kirim ulang.");
+            $bot->sendMessage(
+                text: "⚠️ Gagal mengunduh foto dari Telegram. Silakan coba kirim ulang.",
+                chat_id: $bot->chatId()
+            );
             return;
         }
 
@@ -282,16 +299,15 @@ class DailyActivityTelegramHandler
             }
 
             $bot->sendMessage(
-                "📸 *Foto Berhasil Disimpan!*\n\n" .
+                text: "📸 *Foto Berhasil Disimpan!*\n\n" .
                 "📝 Kegiatan: *{$activity->final_content}*\n" .
                 "🖼️ Terlampir: *{$totalPhotos} foto*" .
                 $stBadge .
                 $gpsBadge . "\n\n" .
                 "_Foto siap digunakan sebagai bukti dukung di Puslah._",
-                [
-                    'parse_mode' => 'Markdown',
-                    'reply_markup' => $keyboard->isEmpty() ? null : $keyboard,
-                ]
+                chat_id: $bot->chatId(),
+                parse_mode: 'Markdown',
+                reply_markup: $keyboard->isEmpty() ? null : $keyboard,
             );
         }
     }
@@ -331,14 +347,18 @@ class DailyActivityTelegramHandler
             ]);
 
             $bot->sendMessage(
-                "✨ *Narasi Berhasil Dipoles AI:*\n\n" .
+                text: "✨ *Narasi Berhasil Dipoles AI:*\n\n" .
                 "\"{$formalized}\"\n\n" .
                 "✅ _Telah diperbarui pada laporan bukti dukung Puslah._",
-                ['parse_mode' => 'Markdown']
+                chat_id: $bot->chatId(),
+                parse_mode: 'Markdown'
             );
         } catch (\Throwable $e) {
             Log::error('AI Polish Error via Telegram: ' . $e->getMessage());
-            $bot->sendMessage("⚠️ Gagal memoles narasi dengan AI: " . $e->getMessage());
+            $bot->sendMessage(
+                text: "⚠️ Gagal memoles narasi dengan AI: " . $e->getMessage(),
+                chat_id: $bot->chatId()
+            );
         }
     }
 
@@ -381,9 +401,10 @@ class DailyActivityTelegramHandler
 
         if (!$user) {
             $bot->sendMessage(
-                "⚠️ *Akun Belum Terhubung*\n" .
+                text: "⚠️ *Akun Belum Terhubung*\n" .
                 "Silakan buka web Puslah, masuk ke halaman Profil, dan klik tombol *Hubungkan ke Telegram* untuk mulai mencatat.",
-                ['parse_mode' => 'Markdown']
+                chat_id: $chatId,
+                parse_mode: 'Markdown'
             );
             return null;
         }
