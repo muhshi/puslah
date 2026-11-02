@@ -20,6 +20,19 @@ class DailyActivityCalendarWidget extends FullCalendarWidget implements HasActio
     public Model|string|null $model = DailyActivity::class;
 
     /**
+     * Matikan tombol create bawaan FullCalendar widget agar tidak muncul tombol kosong.
+     */
+    protected function headerActions(): array
+    {
+        return [];
+    }
+
+    protected function modalActions(): array
+    {
+        return [];
+    }
+
+    /**
      * Konfigurasi FullCalendar.
      */
     public function config(): array

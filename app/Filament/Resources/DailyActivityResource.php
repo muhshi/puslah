@@ -213,6 +213,39 @@ class DailyActivityResource extends Resource
                                                     ->placeholder('110.6385'),
                                             ]),
 
+                                        Forms\Components\Actions::make([
+                                            Forms\Components\Actions\Action::make('pick_coordinate_map')
+                                                ->label('Pilih Titik di Peta 📍')
+                                                ->icon('heroicon-m-map-pin')
+                                                ->color('warning')
+                                                ->modalHeading('Pilih Titik Koordinat Lokasi di Peta')
+                                                ->modalDescription('Geser penanda (marker) atau klik pada peta untuk menentukan koordinat lokasi kegiatan.')
+                                                ->form([
+                                                    \Dotswan\MapPicker\Fields\Map::make('map_location')
+                                                        ->label('Peta Lokasi')
+                                                        ->columnSpanFull()
+                                                        ->default(function (Forms\Get $get) {
+                                                            $lat = (float) ($get('latitude') ?: -6.894561);
+                                                            $lng = (float) ($get('longitude') ?: 110.637492);
+                                                            return ['lat' => $lat, 'lng' => $lng];
+                                                        })
+                                                        ->showMarker()
+                                                        ->markerColor("#ef4444")
+                                                        ->showFullscreenControl()
+                                                        ->showZoomControl()
+                                                        ->draggable()
+                                                        ->zoom(15)
+                                                        ->tilesUrl("https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga")
+                                                        ->liveLocation(),
+                                                ])
+                                                ->action(function (array $data, Forms\Set $set) {
+                                                    if (!empty($data['map_location']['lat']) && !empty($data['map_location']['lng'])) {
+                                                        $set('latitude', round((float)$data['map_location']['lat'], 8));
+                                                        $set('longitude', round((float)$data['map_location']['lng'], 8));
+                                                    }
+                                                }),
+                                        ]),
+
                                         Forms\Components\Toggle::make('is_stamped')
                                             ->label('Sudah Ada Stempel (Open Camera)')
                                             ->helperText('Centang jika foto sudah memiliki watermark koordinat/waktu bawaan.')

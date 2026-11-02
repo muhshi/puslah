@@ -66,6 +66,9 @@ composer dev
 - **Penyempurnaan Auto-Detect ST, Ekstraksi EXIF, Multi-Tier Reminder & Kalender Interaktif**:
   - **Auto-Detect Surat Tugas:** Bot Telegram otomatis mendeteksi dan menautkan Surat Tugas aktif pegawai pada tanggal hari ini.
   - **Ekstraksi EXIF GPS & Timestamp:** Service `ImageExifExtractorService` otomatis mengekstrak koordinat latitude, longitude, dan jam asli jepretan kamera ke form upload (tetap 100% fleksibel diedit manual).
+  - **Pilih Titik di Peta (Map Picker):** Menambahkan aksi modal Leaflet Map Picker (`Dotswan\MapPicker\Fields\Map`) pada kolom latitude/longitude bukti dukung untuk memilih koordinat langsung dengan klik/drag marker di peta.
+  - **Fix Pairing Telegram:** Memperbaiki fallback username bot (`dinamit3321_bot`) pada tautan token pairing agar tidak memicu error "username not found" saat config di-cache.
+  - **Pembersihan Widget Kalender:** Menghapus tombol kosong bawaan header FullCalendar ("Buat Daily Activity") agar antarmuka kalender bersih.
   - **Multi-Tier Reminder:** Command `daily-activity:send-reminders` terjadwal setiap hari kerja pada jam 15:00, 16:00, dan 18:30 WIB dengan proteksi hari libur akhir pekan dan pegawai yang sedang cuti approved.
   - **Kalender Interaktif Bukti Dukung:** Widget `DailyActivityCalendarWidget` (FullCalendar) di menu Bukti Dukung Harian dengan pemetaan visual (Hijau: Rutin, Biru: ST, Ungu: LPD) dan fitur klik tanggal kosong untuk input backdate instan.
 

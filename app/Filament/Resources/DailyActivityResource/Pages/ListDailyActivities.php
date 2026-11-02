@@ -25,7 +25,7 @@ class ListDailyActivities extends ListRecords
     {
         $user = Auth::user();
         $isConnected = !empty($user?->telegram_chat_id);
-        $botUsername = config('nutgram.bot_username', env('TELEGRAM_BOT_USERNAME', 'PuslahBot'));
+        $botUsername = config('nutgram.bot_username') ?: env('TELEGRAM_BOT_USERNAME') ?: 'dinamit3321_bot';
 
         return [
             Actions\Action::make('connect_telegram')
