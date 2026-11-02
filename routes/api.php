@@ -31,3 +31,9 @@ Route::get('/user', function (Request $request) {
 Route::middleware('auth:api')->get('/me', function (Request $request) {
     return $request->user();
 });
+
+// Telegram Bot Webhook Endpoint
+Route::post('/telegram/webhook', function (\SergiX44\Nutgram\Nutgram $bot) {
+    $bot->run();
+});
+
