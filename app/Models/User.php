@@ -36,6 +36,8 @@ class User extends Authenticatable implements FilamentUser
         'sipetra_id',
         'sipetra_token',
         'sipetra_refresh_token',
+        'telegram_chat_id',
+        'telegram_auth_token',
     ];
 
     /**
@@ -78,6 +80,11 @@ class User extends Authenticatable implements FilamentUser
     public function suratTugas()
     {
         return $this->hasMany(SuratTugas::class);
+    }
+
+    public function dailyActivities()
+    {
+        return $this->hasMany(\App\Models\DailyActivity::class);
     }
 
     protected static function booted()

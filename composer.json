@@ -22,6 +22,8 @@
         "laravel/socialite": "^5.24",
         "laravel/tinker": "^2.9",
         "maatwebsite/excel": "^3.1",
+        "nutgram/laravel": "*",
+        "nutgram/nutgram": "*",
         "phpoffice/phpword": "^1.4",
         "pxlrbt/filament-activity-log": "^1.1",
         "pxlrbt/filament-excel": "^2.5",

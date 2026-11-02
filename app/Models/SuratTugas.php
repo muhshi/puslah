@@ -58,6 +58,11 @@ class SuratTugas extends Model
         return $this->hasMany(LaporanPerjalananDinas::class);
     }
 
+    public function dailyActivities(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(DailyActivity::class);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

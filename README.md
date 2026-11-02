@@ -54,6 +54,16 @@ composer dev
 
 ## Changelog
 
+### 2026-11-02
+- **Modul Laporan Bukti Dukung Harian & Integrasi Telegram Bot**:
+  - Menambahkan sistem pencatatan laporan kinerja harian / bukti dukung (`DailyActivityResource`) di menu `Manajemen Dokumen > Bukti Dukung Harian`.
+  - Integrasi Bot Telegram via Nutgram: mendukung penerimaan teks santai, foto tunggal, dan album foto (`media_group_id`) dengan tombol inline polesan narasi AI.
+  - Penambahan fitur Pairing Akun Telegram langsung dari dashboard Filament dengan tautan token unik (`/start <token>`).
+  - Integrasi Gemini AI (`DailyActivityAiService`) untuk memoles catatan kasar kegiatan menjadi narasi laporan kinerja kedinasan formal secara otomatis.
+  - Penambahan aksi satu-klik **"Salin ke LPD"**: otomatis membuat draf Laporan Perjalanan Dinas beserta foto lampirannya untuk kegiatan yang memiliki tautan Surat Tugas.
+  - Penambahan aksi shortcut **"Stempel Foto"** yang terhubung ke modul Stempel Foto Puslah untuk foto yang belum berstempel.
+  - Implementasi Document Compiler (`WorkReportGeneratorService`) berbasis PHPWord: menyusun berkas Word (`.docx`) bukti dukung dalam layout landscape rapi dengan foto thumbnail dan galeri lampiran.
+
 ### 2026-10-31
 - **Heatmap Distribusi Beban Petugas (Workload Heatmap)**:
   - Menambahkan halaman interaktif `WorkloadHeatmap` di Filament (`Manajemen Dokumen > Heatmap Beban Petugas`) untuk memantau kepadatan penugasan harian seluruh pegawai BPS dan mitra dalam satu bulan.
