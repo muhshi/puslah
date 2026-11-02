@@ -5,7 +5,14 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 
-// Register Nutgram PSR-4 autoloader
+// Register Nutgram PSR-4 autoloader & helper functions
+if (file_exists(dirname(__DIR__) . '/vendor/nutgram/nutgram/src/Support/helpers.php')) {
+    require_once dirname(__DIR__) . '/vendor/nutgram/nutgram/src/Support/helpers.php';
+}
+if (file_exists(dirname(__DIR__) . '/vendor/nutgram/laravel/src/Support/Helpers.php')) {
+    require_once dirname(__DIR__) . '/vendor/nutgram/laravel/src/Support/Helpers.php';
+}
+
 spl_autoload_register(function ($class) {
     $prefixes = [
         'SergiX44\\Nutgram\\' => dirname(__DIR__) . '/vendor/nutgram/nutgram/src/',

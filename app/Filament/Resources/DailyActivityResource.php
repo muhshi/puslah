@@ -295,7 +295,55 @@ class DailyActivityResource extends Resource
                             return;
                         }
 
-                        // Buat Laporan Perjalanan Dinas
+                        // 1. Validasi Kuota LPD Surat Tugas (1 hari = 1 LPD, N hari = N LPD)
+                        if (!LaporanPerjalananDinas::canCreateLpd($st)) {
+                            $max = LaporanPerjalananDinas::getMaxLpdCount($st);
+                            $msg = $max === 1
+                                ? "Surat Tugas ini memiliki durasi 1 hari dan sudah memiliki 1 laporan LPD. Tidak dapat menambah LPD lagi."
+                                : "Surat Tugas ini memiliki durasi {$max} hari dan telah mencapai batas maksimal {$max} laporan LPD.";
+
+                            Notification::make()
+                                ->danger()
+                                ->title('Batas Kuota LPD Tercapai')
+                                ->body($msg)
+                                ->send();
+                            return;
+                        }
+
+                        // 2. Validasi Rentang Tanggal Surat Tugas
+                        $range = LaporanPerjalananDinas::getDateRangeForSuratTugas($st);
+                        $actDate = \Carbon\Carbon::parse($record->activity_date)->startOfDay();
+
+                        if ($range['start'] && $actDate->lt($range['start'])) {
+                            Notification::make()
+                                ->danger()
+                                ->title('Tanggal di Luar Penugasan')
+                                ->body("Tanggal kegiatan (" . $actDate->translatedFormat('d F Y') . ") mendahului rentang tanggal Surat Tugas (" . $range['start']->translatedFormat('d F Y') . ").")
+                                ->send();
+                            return;
+                        }
+
+                        if ($range['end'] && $actDate->gt($range['end'])) {
+                            Notification::make()
+                                ->danger()
+                                ->title('Tanggal di Luar Penugasan')
+                                ->body("Tanggal kegiatan (" . $actDate->translatedFormat('d F Y') . ") melebihi rentang tanggal Surat Tugas (" . $range['end']->translatedFormat('d F Y') . ").")
+                                ->send();
+                            return;
+                        }
+
+                        // 3. Validasi Konflik LPD pada Tanggal yang Sama untuk Pegawai yang Sama
+                        $duplicateLpd = LaporanPerjalananDinas::getDuplicateForUser($record->user_id, $record->activity_date);
+                        if ($duplicateLpd) {
+                            Notification::make()
+                                ->danger()
+                                ->title('Bentrok Jadwal LPD')
+                                ->body("Pegawai sudah memiliki Laporan Perjalanan Dinas pada tanggal " . $actDate->translatedFormat('d F Y') . " (No. ST: " . ($duplicateLpd->nomor_surat_tugas ?: 'Draft') . "). Satu pegawai hanya dapat memiliki 1 LPD per tanggal.")
+                                ->send();
+                            return;
+                        }
+
+                        // Buat Laporan Perjalanan Dinas jika semua validasi lolos
                         $lpd = LaporanPerjalananDinas::create([
                             'surat_tugas_id' => $st->id,
                             'nomor_surat_tugas' => $st->nomor_surat_tugas ?? '',
@@ -321,7 +369,7 @@ class DailyActivityResource extends Resource
                         Notification::make()
                             ->success()
                             ->title('LPD Berhasil Dibuat!')
-                            ->body('Data kegiatan dan foto berhasil disalin ke modul Laporan Perjalanan Dinas.')
+                            ->body('Data kegiatan dan foto berhasil divalidasi dan disalin ke Laporan Perjalanan Dinas.')
                             ->actions([
                                 \Filament\Notifications\Actions\Action::make('buka_lpd')
                                     ->label('Buka LPD')
