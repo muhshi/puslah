@@ -207,6 +207,10 @@ class DailyActivityResource extends Resource
                                     })
                                     ->columnSpan(2),
 
+                                Forms\Components\ViewField::make('stamped_preview')
+                                    ->view('filament.forms.components.stamped-image-preview')
+                                    ->columnSpan(2),
+
                                 Forms\Components\Grid::make(1)
                                     ->schema([
                                         Forms\Components\TextInput::make('caption')
