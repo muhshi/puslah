@@ -67,7 +67,11 @@ class SharedWorkReportController extends Controller
         $validated['user_id'] = auth()->id();
         $validated['is_active'] = true;
 
-        SharedWorkReport::create($validated);
+        $report = SharedWorkReport::create($validated);
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'report' => $report]);
+        }
 
         return back()->with('success', 'Wadah KIPAPP berhasil dibuat!');
     }
@@ -91,19 +95,27 @@ class SharedWorkReportController extends Controller
 
         $report->update($validated);
 
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'report' => $report]);
+        }
+
         return back()->with('success', 'Wadah KIPAPP berhasil diperbarui!');
     }
 
     /**
      * Hapus wadah KIPAPP dari modal.
      */
-    public function destroy(int $id)
+    public function destroy(Request $request, int $id)
     {
         $report = SharedWorkReport::where('id', $id)
             ->where('user_id', auth()->id())
             ->firstOrFail();
 
         $report->delete();
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
 
         return back()->with('success', 'Wadah KIPAPP berhasil dihapus!');
     }

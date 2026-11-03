@@ -19,6 +19,60 @@
             period_end: '',
             description: ''
         },
+        isSaving: false,
+        saveWadah() {
+            if (!this.formData.title || !this.formData.title.trim()) {
+                alert('Nama Butir Kegiatan KIPAPP wajib diisi!');
+                return;
+            }
+            this.isSaving = true;
+            const url = this.isEditing 
+                ? '/bukti-dukung/wadah/' + this.formData.id + '/update' 
+                : '{{ route("shared-work-report.store") }}';
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(this.formData)
+            })
+            .then(async res => {
+                if (res.ok) {
+                    window.location.reload();
+                } else {
+                    const data = await res.json().catch(() => ({}));
+                    alert(data.message || 'Gagal menyimpan data wadah.');
+                    this.isSaving = false;
+                }
+            })
+            .catch(err => {
+                alert('Terjadi kesalahan jaringan: ' + err.message);
+                this.isSaving = false;
+            });
+        },
+        deleteWadah(id) {
+            if (!confirm('Apakah Anda yakin ingin menghapus wadah KIPAPP ini? Link publik akan dinonaktifkan.')) {
+                return;
+            }
+            fetch('/bukti-dukung/wadah/' + id + '/delete', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(res => {
+                if (res.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Gagal menghapus wadah.');
+                }
+            })
+            .catch(err => alert('Error: ' + err.message));
+        },
         openCreate() {
             this.isEditing = false;
             this.formData = { id: null, title: '', tag_slug: '', period_start: '', period_end: '', description: '' };
@@ -79,12 +133,7 @@
             <button type="button" @click="cancelForm()" class="text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer">Batal ✕</button>
         </div>
 
-        <form
-            :action="isEditing ? '/bukti-dukung/wadah/' + formData.id + '/update' : '{{ route('shared-work-report.store') }}'"
-            method="POST"
-            class="space-y-3 text-xs"
-        >
-            @csrf
+        <div class="space-y-3 text-xs">
             <div>
                 <label class="block font-bold text-slate-800 dark:text-slate-200 mb-1">Nama Butir Kegiatan KIPAPP *</label>
                 <input
@@ -150,15 +199,17 @@
                     Batal
                 </x-filament::button>
                 <x-filament::button
-                    type="submit"
+                    type="button"
                     color="primary"
                     size="sm"
                     icon="heroicon-m-check"
+                    @click="saveWadah()"
+                    x-bind:disabled="isSaving"
                 >
-                    <span x-text="isEditing ? 'Simpan Perubahan' : 'Buat Wadah KIPAPP'">Buat Wadah KIPAPP</span>
+                    <span x-text="isSaving ? 'Menyimpan...' : (isEditing ? 'Simpan Perubahan' : 'Buat Wadah KIPAPP')">Buat Wadah KIPAPP</span>
                 </x-filament::button>
             </div>
-        </form>
+        </div>
     </div>
 
     {{-- Tabel Wadah KIPAPP --}}
@@ -291,20 +342,14 @@
                                         </button>
 
                                         {{-- 5. Hapus --}}
-                                        <form
-                                            action="{{ route('shared-work-report.destroy', ['id' => $rep->id]) }}"
-                                            method="POST"
-                                            onsubmit="return confirm('Apakah Anda yakin ingin menghapus wadah KIPAPP ini? Link publik akan dinonaktifkan.');"
+                                        <button
+                                            type="button"
+                                            @click="deleteWadah({{ $rep->id }}); open = false;"
+                                            class="w-full px-3 py-2 text-left hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center gap-2 text-red-600 dark:text-red-400 transition-colors cursor-pointer"
                                         >
-                                            @csrf
-                                            <button
-                                                type="submit"
-                                                class="w-full px-3 py-2 text-left hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center gap-2 text-red-600 dark:text-red-400 transition-colors cursor-pointer"
-                                            >
-                                                <span>🗑️</span>
-                                                <span>Hapus Wadah</span>
-                                            </button>
-                                        </form>
+                                            <span>🗑️</span>
+                                            <span>Hapus Wadah</span>
+                                        </button>
                                     </div>
                                 </div>
                             </td>

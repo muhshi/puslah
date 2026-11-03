@@ -55,6 +55,10 @@ composer dev
 ## Changelog
 
 ### 2026-11-03
+- **Fix Penyimpanan Wadah KIPAPP pada Modal (AJAX Fetch & Resolusi Nested Form)**:
+  - **Penyelesaian Bentrok Form Livewire:** Menghapus tag `<form>` bersarang di dalam modal Filament yang sebelumnya memicu submit form luar Livewire dan menutup modal tanpa menyimpan.
+  - **Submit Asynchronous via Fetch API:** Menggunakan Alpine.js AJAX fetch untuk aksi simpan, ubah, dan hapus wadah dengan indikator loading (`Menyimpan...`) dan error handling yang jelas.
+  - **Dukungan Respon JSON:** Memperbarui `SharedWorkReportController` agar mengembalikan respon JSON valid saat request dikirim dari modal.
 - **Perbaikan Badge Status Wadah Menggunakan Komponen Native `<x-filament::badge>`**:
   - **Native Filament Badges:** Menggantikan SVG custom mentah dengan komponen resmi `<x-filament::badge>` (`color="success"` hijau untuk wadah terhubung, `color="danger"` merah untuk belum ada wadah). Menghindari distorsi SVG tanpa style di panel Filament.
   - **Uraian Narasi Ringkas (Maksimal 2 Baris):** Mengembalikan limitasi panjang teks narasi pada tabel (`limit(70)`) sehingga tinggi baris tabel tetap proporsional dan tidak memanjang ke bawah.
