@@ -191,15 +191,20 @@
                             </div>
                         </div>
 
-                        {{-- Galeri Foto Dokumentasi --}}
-                        @if($act->attachments->isNotEmpty())
-                            <div>
+                        @php
+                            $photos = $act->attachments->filter(fn($a) => !str_ends_with(strtolower($a->file_path), '.pdf'));
+                            $pdfs = $act->attachments->filter(fn($a) => str_ends_with(strtolower($a->file_path), '.pdf'));
+                        @endphp
+
+                        {{-- Galeri Foto Dokumentasi Berstempel --}}
+                        @if($photos->isNotEmpty())
+                            <div class="mb-5">
                                 <h5 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                                    <span>📸</span> Dokumentasi Foto Berstempel Koordinat & Waktu
+                                    <span>📸</span> Dokumentasi Foto Berstempel Koordinat & Waktu ({{ $photos->count() }})
                                 </h5>
 
                                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                    @foreach($act->attachments as $photo)
+                                    @foreach($photos as $photo)
                                         @php
                                             $photoUrl = $photo->url ?: asset('storage/' . ltrim($photo->file_path, '/'));
                                             $lat = $photo->latitude ?: -6.894561;
@@ -251,9 +256,51 @@
                                     @endforeach
                                 </div>
                             </div>
-                        @else
+                        @endif
+
+                        {{-- Daftar Dokumen PDF Bukti Dukung --}}
+                        @if($pdfs->isNotEmpty())
+                            <div>
+                                <h5 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                                    <span>📄</span> Dokumen Kelengkapan PDF ({{ $pdfs->count() }})
+                                </h5>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    @foreach($pdfs as $pdf)
+                                        @php
+                                            $pdfUrl = $pdf->url ?: asset('storage/' . ltrim($pdf->file_path, '/'));
+                                            $pdfTitle = $pdf->caption ?: ($pdf->file_name ?: 'Dokumen Bukti Dukung PDF');
+                                        @endphp
+                                        <div class="p-3.5 rounded-xl border border-red-200 bg-red-50/40 hover:bg-red-50 transition-colors flex items-center justify-between gap-3 shadow-xs">
+                                            <div class="flex items-center gap-3 min-w-0">
+                                                <div class="w-10 h-10 rounded-lg bg-red-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm font-bold text-xs uppercase">
+                                                    PDF
+                                                </div>
+                                                <div class="min-w-0">
+                                                    <div class="text-xs font-bold text-slate-900 truncate">{{ $pdfTitle }}</div>
+                                                    <div class="text-[11px] text-slate-500 truncate mt-0.5">
+                                                        {{ $pdf->file_name ?: 'Berkas Dokumen' }} &bull; {{ $pdf->file_size ? number_format($pdf->file_size / 1024, 0) . ' KB' : 'PDF' }}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <a
+                                                href="{{ $pdfUrl }}"
+                                                target="_blank"
+                                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-xs flex-shrink-0 transition-colors"
+                                            >
+                                                <span>Buka</span>
+                                                <span>↗</span>
+                                            </a>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        @if($act->attachments->isEmpty())
                             <div class="text-xs text-slate-400 italic">
-                                Belum ada foto dokumentasi yang dilampirkan pada tanggal ini.
+                                Belum ada berkas bukti dukung yang dilampirkan pada tanggal ini.
                             </div>
                         @endif
                     </div>

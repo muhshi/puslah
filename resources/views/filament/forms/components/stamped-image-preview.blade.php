@@ -54,11 +54,46 @@
                 }
             }
             return this.fallbackUrl;
+        },
+        get isPdf() {
+            let url = this.photoUrl;
+            if (!url) return false;
+            return url.toLowerCase().includes('.pdf');
         }
     }"
     class="w-full mt-2"
 >
-    <template x-if="photoUrl">
+    {{-- 1. Tampilan Jika File Berupa DOKUMEN PDF --}}
+    <template x-if="photoUrl && isPdf">
+        <div class="w-full rounded-xl p-5 border border-red-300 dark:border-red-900/60 bg-red-50/50 dark:bg-red-950/20 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3.5">
+                <div class="w-12 h-12 rounded-xl bg-red-600 text-white flex items-center justify-center flex-shrink-0 shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-600 text-white tracking-wide uppercase">PDF</span>
+                        <span class="text-xs font-bold text-gray-800 dark:text-gray-200">Dokumen Bukti Dukung Resmi</span>
+                    </div>
+                    <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5" x-text="caption"></p>
+                </div>
+            </div>
+
+            <a
+                :href="photoUrl"
+                target="_blank"
+                class="px-4 py-2 text-xs font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors shadow-sm flex items-center gap-1.5 flex-shrink-0"
+            >
+                <span>Buka / Pratinjau PDF</span>
+                <span>↗</span>
+            </a>
+        </div>
+    </template>
+
+    {{-- 2. Tampilan Jika File Berupa FOTO GAMBAR (Dengan Live Watermark Stempel) --}}
+    <template x-if="photoUrl && !isPdf">
         <div class="relative w-full rounded-xl overflow-hidden border border-gray-300 dark:border-gray-700 shadow-md bg-gray-950 flex items-center justify-center min-h-[220px]">
             {{-- Foto Utama --}}
             <img
@@ -105,12 +140,13 @@
         </div>
     </template>
 
+    {{-- 3. Tampilan Kosong (Belum Memilih File) --}}
     <template x-if="!photoUrl">
         <div class="w-full p-4 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 text-center text-xs text-gray-400 flex flex-col items-center justify-center gap-1.5 min-h-[140px]">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <span>Pilih atau unggah foto untuk melihat preview visual stempel di atas foto</span>
+            <span>Pilih atau unggah Foto Kegiatan atau Dokumen PDF bukti dukung</span>
         </div>
     </template>
 </div>

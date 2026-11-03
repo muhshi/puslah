@@ -170,11 +170,11 @@ class DailyActivityResource extends Resource
                                 Forms\Components\Grid::make(1)
                                     ->schema([
                                         Forms\Components\FileUpload::make('file_path')
-                                            ->label('Foto Kegiatan')
-                                            ->image()
+                                            ->label('Berkas Bukti (Foto / PDF)')
+                                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
                                             ->disk('public')
                                             ->directory('daily-activities')
-                                            ->maxSize(5120)
+                                            ->maxSize(10240)
                                             ->required()
                                             ->live()
                                             ->afterStateUpdated(function ($state, Forms\Set $set) {
@@ -188,13 +188,19 @@ class DailyActivityResource extends Resource
                                                 }
 
                                                 if ($realPath && file_exists($realPath)) {
-                                                    $exif = app(\App\Services\ImageExifExtractorService::class)->extract($realPath);
-                                                    if (!empty($exif['latitude'])) $set('latitude', $exif['latitude']);
-                                                    if (!empty($exif['longitude'])) $set('longitude', $exif['longitude']);
-                                                    if (!empty($exif['captured_at'])) {
-                                                        $set('captured_at', $exif['captured_at']->format('Y-m-d H:i:s'));
-                                                    } else {
+                                                    $ext = strtolower(pathinfo($realPath, PATHINFO_EXTENSION));
+                                                    if ($ext === 'pdf') {
                                                         $set('captured_at', now()->format('Y-m-d H:i:s'));
+                                                        $set('is_stamped', true);
+                                                    } else {
+                                                        $exif = app(\App\Services\ImageExifExtractorService::class)->extract($realPath);
+                                                        if (!empty($exif['latitude'])) $set('latitude', $exif['latitude']);
+                                                        if (!empty($exif['longitude'])) $set('longitude', $exif['longitude']);
+                                                        if (!empty($exif['captured_at'])) {
+                                                            $set('captured_at', $exif['captured_at']->format('Y-m-d H:i:s'));
+                                                        } else {
+                                                            $set('captured_at', now()->format('Y-m-d H:i:s'));
+                                                        }
                                                     }
                                                 }
                                             }),
@@ -213,7 +219,12 @@ class DailyActivityResource extends Resource
                                                 ->action(function (Forms\Get $get, Forms\Set $set) {
                                                     $filePath = $get('file_path');
                                                     if (!$filePath) {
-                                                        Notification::make()->warning()->title('Belum Ada Foto')->body('Unggah foto kegiatan terlebih dahulu.')->send();
+                                                        Notification::make()->warning()->title('Belum Ada File')->body('Unggah berkas bukti kegiatan terlebih dahulu.')->send();
+                                                        return;
+                                                    }
+
+                                                    if (is_string($filePath) && str_ends_with(strtolower($filePath), '.pdf')) {
+                                                        Notification::make()->info()->title('Dokumen PDF')->body('Stempel visual kamera hanya berlaku untuk berkas foto/gambar. Dokumen PDF otomatis siap dilampirkan.')->send();
                                                         return;
                                                     }
 

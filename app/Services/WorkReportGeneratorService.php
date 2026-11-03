@@ -133,36 +133,43 @@ class WorkReportGeneratorService
             $cellUraian = $row->addCell(5600, ['valign' => 'top']);
             $cellUraian->addText($act->final_content, 'TableBody', 'Left');
 
-            // Foto
+            // Foto / Dokumen
             $cellFoto = $row->addCell(3000, ['valign' => 'top']);
             $attachments = $act->attachments;
 
             if ($attachments->isNotEmpty()) {
                 $firstAtt = $attachments->first();
-                $photoPath = storage_path('app/public/' . $firstAtt->file_path);
+                $isPdf = str_ends_with(strtolower($firstAtt->file_path), '.pdf');
 
-                if (file_exists($photoPath)) {
-                    try {
-                        $cellFoto->addImage($photoPath, [
-                            'width' => 150,
-                            'height' => 105,
-                            'ratio' => true,
-                            'alignment' => Jc::CENTER,
-                        ]);
-                        if (!empty($firstAtt->caption)) {
-                            $cellFoto->addText($firstAtt->caption, 'TableBodySmall', 'Center');
-                        }
-                    } catch (\Throwable $e) {
-                        $cellFoto->addText('[Foto tidak terbaca]', 'TableBodySmall', 'Center');
-                    }
+                if ($isPdf) {
+                    $cellFoto->addText('📄 Dokumen PDF', 'TableBodySmall', 'Center');
+                    $cellFoto->addText($firstAtt->caption ?: ($firstAtt->file_name ?: 'Berkas Terlampir'), 'TableBodySmall', 'Center');
                 } else {
-                    $cellFoto->addText('[Foto terlampir di sistem]', 'TableBodySmall', 'Center');
+                    $photoPath = storage_path('app/public/' . $firstAtt->file_path);
+
+                    if (file_exists($photoPath)) {
+                        try {
+                            $cellFoto->addImage($photoPath, [
+                                'width' => 150,
+                                'height' => 105,
+                                'ratio' => true,
+                                'alignment' => Jc::CENTER,
+                            ]);
+                            if (!empty($firstAtt->caption)) {
+                                $cellFoto->addText($firstAtt->caption, 'TableBodySmall', 'Center');
+                            }
+                        } catch (\Throwable $e) {
+                            $cellFoto->addText('[Foto tidak terbaca]', 'TableBodySmall', 'Center');
+                        }
+                    } else {
+                        $cellFoto->addText('[Foto terlampir di sistem]', 'TableBodySmall', 'Center');
+                    }
                 }
 
-                // Jika ada lebih dari 1 foto, kumpulkan ke lampiran tambahan
+                // Jika ada lebih dari 1 berkas, kumpulkan ke lampiran tambahan
                 if ($attachments->count() > 1) {
                     $cellFoto->addTextBreak(1);
-                    $cellFoto->addText("(+" . ($attachments->count() - 1) . " foto di Lampiran)", 'TableBodySmall', 'Center');
+                    $cellFoto->addText("(+" . ($attachments->count() - 1) . " berkas di Lampiran)", 'TableBodySmall', 'Center');
                     foreach ($attachments->skip(1) as $extra) {
                         $extraPhotos[] = [
                             'date' => $tgl,
@@ -212,16 +219,22 @@ class WorkReportGeneratorService
                 $annexRow = $annexTable->addRow();
                 foreach ($chunk as $item) {
                     $c = $annexRow->addCell(6500, ['valign' => 'top']);
-                    $pPath = storage_path('app/public/' . $item['attachment']->file_path);
-                    if (file_exists($pPath)) {
-                        try {
-                            $c->addImage($pPath, [
-                                'width' => 240,
-                                'height' => 160,
-                                'ratio' => true,
-                                'alignment' => Jc::CENTER,
-                            ]);
-                        } catch (\Throwable $e) {}
+                    $isExtraPdf = str_ends_with(strtolower($item['attachment']->file_path), '.pdf');
+                    if ($isExtraPdf) {
+                        $c->addText('📄 Dokumen PDF', 'HeaderSub', 'Center');
+                        $c->addText($item['attachment']->file_name ?: 'Berkas Dokumen Terlampir', 'TableBodySmall', 'Center');
+                    } else {
+                        $pPath = storage_path('app/public/' . $item['attachment']->file_path);
+                        if (file_exists($pPath)) {
+                            try {
+                                $c->addImage($pPath, [
+                                    'width' => 240,
+                                    'height' => 160,
+                                    'ratio' => true,
+                                    'alignment' => Jc::CENTER,
+                                ]);
+                            } catch (\Throwable $e) {}
+                        }
                     }
                     $c->addText($item['date'] . " - " . mb_strimwidth($item['activity'], 0, 50, '...'), 'TableBodySmall', 'Center');
                     if (!empty($item['attachment']->caption)) {
