@@ -55,6 +55,11 @@ composer dev
 ## Changelog
 
 ### 2026-11-03
+- **Auto-Polish AI Instan, Visual Stempel Watermark, & Penyederhanaan Tampilan**:
+  - **Poles AI Otomatis (Zero-Click):** Catatan teks dan caption foto yang dikirim lewat Telegram kini langsung otomatis dipoles oleh Gemini AI menjadi narasi laporan resmi tanpa perlu klik tombol lagi. Pembuatan kegiatan via web juga otomatis memoles narasi jika belum dipoles manual.
+  - **Visual Stempel Watermark pada Form Foto:** Menambahkan preview visual stempel (watermark box) pada repeater lampiran foto di form Bukti Dukung. Menampilkan simulasi stempel siap cetak (Judul kegiatan, Koordinat, Jam/Tanggal, Satuan Kerja BPS Demak) serta indikator apakah foto sudah memiliki stempel bawaan.
+  - **Ekstraksi EXIF Fleksibel & Fallback Jam:** Memperbaiki handler `FileUpload` di web agar mengekstrak EXIF dari `TemporaryUploadedFile` secara langsung saat dipilih. Fallback otomatis jam pesan Telegram untuk foto tanpa metadata EXIF.
+  - **Penyederhanaan Tabel Bukti Dukung:** Menghilangkan kolom status yang belum digunakan dari tabel agar tampilan lebih bersih, ringkas, dan fokus pada uraian kegiatan, surat tugas, dan foto.
 - **Stabilisasi Handler Foto Telegram, Penanganan Polling Timeout & Fitur Tes Koneksi**:
   - **Fix Download Foto Telegram:** Memperbaiki fatal error `BadMethodCallException: getToken()` pada `DailyActivityTelegramHandler` saat mendownload foto dari Telegram. Menggunakan method native Nutgram `$bot->downloadFile()` dengan fallback otomatis ke token environment dan pembuatan direktori penyimpanan otomatis.
   - **Stabilisasi Polling Jaringan (cURL Error 28):** Mengoptimalkan konfigurasi Guzzle dan long polling pada `config/nutgram.php` (client timeout 30 detik, polling timeout 15 detik) untuk mencegah timeout socket cURL 28 pada jaringan server.

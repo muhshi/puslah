@@ -139,13 +139,26 @@ class DailyActivityTelegramHandler
         // Auto-detect Surat Tugas aktif hari ini
         $activeSt = $this->resolveActiveSuratTugas($user, Carbon::today());
 
+        // Otomatis poles narasi dengan Gemini AI langsung saat diterima
+        $formalContent = $rawText;
+        try {
+            $aiService = app(DailyActivityAiService::class);
+            $formalContent = $aiService->formalize($rawText, [
+                'user_name' => $user->name,
+                'tanggal' => Carbon::today()->translatedFormat('d F Y'),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('AI Polish direct error: ' . $e->getMessage());
+        }
+
         // Simpan kegiatan baru
         $activity = DailyActivity::create([
             'user_id' => $user->id,
             'surat_tugas_id' => $activeSt?->id,
             'activity_date' => Carbon::today(),
             'raw_content' => $rawText,
-            'final_content' => $rawText,
+            'ai_formal_content' => $formalContent,
+            'final_content' => $formalContent,
             'status' => 'submitted',
             'source' => 'telegram',
         ]);
@@ -154,25 +167,17 @@ class DailyActivityTelegramHandler
         if ($activeSt) {
             $stNo = $activeSt->nomor_surat_tugas ?: 'DRAFT';
             $stTujuan = $activeSt->keperluan ?: $activeSt->tempat_tugas ?: 'Penugasan Lapangan';
-            $stInfo = "\n🔖 *Terkait:* ST No. {$stNo} ({$stTujuan})\n";
+            $stInfo = "\n🔖 *Terkait ST:* No. {$stNo} ({$stTujuan})";
         }
 
-        $keyboard = InlineKeyboardMarkup::make()
-            ->addRow(
-                InlineKeyboardButton::make(
-                    text: '✨ Poles Narasi dengan AI',
-                    callback_data: "ai_polish:{$activity->id}"
-                )
-            );
-
         $bot->sendMessage(
-            text: "✅ *Kegiatan Berhasil Dicatat!*\n\n" .
-            "📝 \"{$rawText}\"\n" .
-            $stInfo . "\n" .
-            "_Kirim foto dokumentasi jika ada, atau klik tombol di bawah untuk merapikan narasi dengan AI._",
+            text: "✅ *Kegiatan Berhasil Dicatat & Dipoles AI!*\n\n" .
+            "📝 *Catatan Kasar:*\n_{$rawText}_\n\n" .
+            "✨ *Narasi Laporan Formal (AI):*\n*\"{$formalContent}\"*" .
+            $stInfo . "\n\n" .
+            "💡 _Kirim foto dokumentasi jika ada. Laporan Anda sudah tersimpan otomatis di Puslah!_",
             chat_id: $bot->chatId(),
-            parse_mode: 'Markdown',
-            reply_markup: $keyboard,
+            parse_mode: 'Markdown'
         );
     }
 
@@ -265,15 +270,31 @@ class DailyActivityTelegramHandler
 
         // Jika belum ada activity dari album, atau single photo:
         if (!$activity) {
-            $content = !empty($caption) ? $caption : 'Dokumentasi kegiatan';
+            $rawContent = !empty($caption) ? $caption : 'Dokumentasi kegiatan';
+            $formalContent = $rawContent;
+
+            // Jika ada caption, poles otomatis dengan AI
+            if (!empty($caption)) {
+                try {
+                    $aiService = app(DailyActivityAiService::class);
+                    $formalContent = $aiService->formalize($caption, [
+                        'user_name' => $user->name,
+                        'tanggal' => Carbon::today()->translatedFormat('d F Y'),
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::warning('AI Polish photo caption error: ' . $e->getMessage());
+                }
+            }
+
             $activeSt = $this->resolveActiveSuratTugas($user, Carbon::today());
 
             $activity = DailyActivity::create([
                 'user_id' => $user->id,
                 'surat_tugas_id' => $activeSt?->id,
                 'activity_date' => Carbon::today(),
-                'raw_content' => $content,
-                'final_content' => $content,
+                'raw_content' => $rawContent,
+                'ai_formal_content' => $formalContent,
+                'final_content' => $formalContent,
                 'status' => 'submitted',
                 'source' => 'telegram',
             ]);
@@ -290,6 +311,9 @@ class DailyActivityTelegramHandler
             }
         }
 
+        // Tentukan waktu foto: gunakan EXIF jika ada, atau waktu pesan Telegram saat dikirim
+        $capturedAt = $exifData['captured_at'] ?? Carbon::createFromTimestamp($msg->date ?? time());
+
         // Buat attachment dengan data EXIF jika tersedia
         DailyActivityAttachment::create([
             'daily_activity_id' => $activity->id,
@@ -300,23 +324,13 @@ class DailyActivityTelegramHandler
             'is_stamped' => false,
             'latitude' => $exifData['latitude'],
             'longitude' => $exifData['longitude'],
-            'captured_at' => $exifData['captured_at'],
+            'captured_at' => $capturedAt,
             'caption' => $caption ?: null,
         ]);
 
         // Kirim konfirmasi (hanya kirim jika single photo atau foto pertama dari album)
         $totalPhotos = $activity->attachments()->count();
         if (empty($mediaGroupId) || $totalPhotos === 1) {
-            $keyboard = InlineKeyboardMarkup::make();
-            if ($activity->final_content !== 'Dokumentasi kegiatan') {
-                $keyboard->addRow(
-                    InlineKeyboardButton::make(
-                        text: '✨ Poles Narasi dengan AI',
-                        callback_data: "ai_polish:{$activity->id}"
-                    )
-                );
-            }
-
             $stBadge = "";
             if ($activity->suratTugas) {
                 $stNo = $activity->suratTugas->nomor_surat_tugas ?: 'DRAFT';
@@ -324,20 +338,31 @@ class DailyActivityTelegramHandler
             }
 
             $gpsBadge = "";
-            if ($exifData['latitude'] && $exifData['longitude']) {
-                $gpsBadge = "\n📍 *GPS Terdeteksi:* {$exifData['latitude']}, {$exifData['longitude']}";
+            if (!empty($exifData['latitude']) && !empty($exifData['longitude'])) {
+                $gpsBadge = "\n📍 *GPS Terdeteksi:* `{$exifData['latitude']}, {$exifData['longitude']}`";
+            } else {
+                $gpsBadge = "\n📍 *GPS:* _Tidak ada tag lokasi (bisa pilih titik di peta Puslah)_";
+            }
+
+            $timeBadge = "\n🕒 *Waktu:* " . $capturedAt->translatedFormat('d M Y H:i') . " WIB";
+
+            $captionInfo = "";
+            if (!empty($caption)) {
+                $captionInfo = "\n📝 *Catatan:* \"{$caption}\"\n✨ *Narasi AI:* \"{$activity->final_content}\"\n";
+            } else {
+                $captionInfo = "\n📝 *Kegiatan:* {$activity->final_content}\n";
             }
 
             $bot->sendMessage(
-                text: "📸 *Foto Berhasil Disimpan!*\n\n" .
-                "📝 Kegiatan: *{$activity->final_content}*\n" .
-                "🖼️ Terlampir: *{$totalPhotos} foto*" .
+                text: "📸 *Foto Berhasil Disimpan!*\n" .
+                $captionInfo .
+                "🖼️ *Lampiran:* {$totalPhotos} foto" .
                 $stBadge .
-                $gpsBadge . "\n\n" .
-                "_Foto siap digunakan sebagai bukti dukung di Puslah._",
+                $gpsBadge .
+                $timeBadge . "\n\n" .
+                "✅ _Tersimpan otomatis di bukti dukung Puslah._",
                 chat_id: $bot->chatId(),
-                parse_mode: 'Markdown',
-                reply_markup: $keyboard->isEmpty() ? null : $keyboard,
+                parse_mode: 'Markdown'
             );
         }
     }

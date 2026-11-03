@@ -180,37 +180,91 @@ class DailyActivityResource extends Resource
                                     ->required()
                                     ->live()
                                     ->afterStateUpdated(function ($state, Forms\Set $set) {
-                                        if ($state && is_string($state)) {
-                                            $fullPath = storage_path('app/public/' . $state);
-                                            $exif = app(\App\Services\ImageExifExtractorService::class)->extract($fullPath);
-                                            if ($exif['latitude']) $set('latitude', $exif['latitude']);
-                                            if ($exif['longitude']) $set('longitude', $exif['longitude']);
-                                            if ($exif['captured_at']) $set('captured_at', $exif['captured_at']->format('Y-m-d H:i:s'));
+                                        if (!$state) return;
+
+                                        $realPath = null;
+                                        if (is_string($state)) {
+                                            $realPath = storage_path('app/public/' . $state);
+                                        } elseif (is_object($state) && method_exists($state, 'getRealPath')) {
+                                            $realPath = $state->getRealPath();
+                                        }
+
+                                        if ($realPath && file_exists($realPath)) {
+                                            $exif = app(\App\Services\ImageExifExtractorService::class)->extract($realPath);
+                                            if (!empty($exif['latitude'])) $set('latitude', $exif['latitude']);
+                                            if (!empty($exif['longitude'])) $set('longitude', $exif['longitude']);
+                                            if (!empty($exif['captured_at'])) {
+                                                $set('captured_at', $exif['captured_at']->format('Y-m-d H:i:s'));
+                                            } else {
+                                                $set('captured_at', now()->format('Y-m-d H:i:s'));
+                                            }
                                         }
                                     })
                                     ->columnSpan(2),
 
                                 Forms\Components\Grid::make(1)
                                     ->schema([
+                                        Forms\Components\Placeholder::make('stamp_preview')
+                                            ->label('Visual Stempel Watermark')
+                                            ->content(function (Forms\Get $get) {
+                                                $isStamped = (bool) $get('is_stamped');
+                                                $lat = $get('latitude');
+                                                $lng = $get('longitude');
+                                                $capturedAt = $get('captured_at');
+                                                $caption = $get('caption') ?: 'Dokumentasi Kegiatan BPS';
+
+                                                if ($isStamped) {
+                                                    return new \Illuminate\Support\HtmlString('
+                                                        <div class="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200">
+                                                            <span class="text-base">✅</span>
+                                                            <div>
+                                                                <span class="font-bold">Foto Sudah Berstempel</span>
+                                                                <div class="text-[10px] text-emerald-600 dark:text-emerald-400">Watermark sudah tertempel di foto bawaan kamera.</div>
+                                                            </div>
+                                                        </div>
+                                                    ');
+                                                }
+
+                                                $coordText = ($lat && $lng) ? "Lat: {$lat}, Lng: {$lng}" : "Koordinat belum diset";
+                                                $timeText = $capturedAt ? \Carbon\Carbon::parse($capturedAt)->translatedFormat('d M Y H:i') : now()->translatedFormat('d M Y H:i');
+
+                                                return new \Illuminate\Support\HtmlString('
+                                                    <div class="rounded-lg border border-gray-700 bg-gray-900/90 text-white font-mono text-[11px] p-2.5 shadow">
+                                                        <div class="flex items-center justify-between border-b border-gray-700 pb-1 mb-1.5 text-emerald-400 font-sans font-bold text-[10px]">
+                                                            <span>🏷️ PREVIEW STEMPEL</span>
+                                                            <span class="px-1 bg-emerald-900/60 rounded text-emerald-300">Siap Tersemat</span>
+                                                        </div>
+                                                        <div class="truncate text-yellow-300 font-semibold">' . e($caption) . '</div>
+                                                        <div class="text-gray-300 text-[10px] mt-0.5">📍 ' . e($coordText) . '</div>
+                                                        <div class="text-gray-300 text-[10px]">🕒 ' . e($timeText) . ' WIB</div>
+                                                        <div class="text-gray-400 text-[9px] mt-1 uppercase tracking-wider">BPS KABUPATEN DEMAK</div>
+                                                    </div>
+                                                ');
+                                            }),
+
                                         Forms\Components\TextInput::make('caption')
                                             ->label('Keterangan / Kategori Foto')
-                                            ->placeholder('Contoh: Koordinasi bersama Kades'),
+                                            ->placeholder('Contoh: Koordinasi bersama Kades')
+                                            ->live(),
 
                                         Forms\Components\DateTimePicker::make('captured_at')
                                             ->label('Waktu Foto')
-                                            ->displayFormat('d/m/Y H:i'),
+                                            ->displayFormat('d/m/Y H:i')
+                                            ->live(),
 
                                         Forms\Components\Grid::make(2)
                                             ->schema([
                                                 Forms\Components\TextInput::make('latitude')
                                                     ->label('Latitude')
                                                     ->numeric()
-                                                    ->placeholder('-6.8945'),
+                                                    ->placeholder('-6.8945')
+                                                    ->live(),
 
                                                 Forms\Components\TextInput::make('longitude')
                                                     ->label('Longitude')
                                                     ->numeric()
-                                                    ->placeholder('110.6385'),
+                                                    ->placeholder('110.6385')
+                                                    ->live(),
                                             ]),
 
                                         Forms\Components\Actions::make([
@@ -241,8 +295,9 @@ class DailyActivityResource extends Resource
                                         ]),
 
                                         Forms\Components\Toggle::make('is_stamped')
-                                            ->label('Sudah Ada Stempel (Open Camera)')
-                                            ->helperText('Centang jika foto sudah memiliki watermark koordinat/waktu bawaan.')
+                                            ->label('Sudah Ada Stempel Bawaan')
+                                            ->helperText('Aktifkan jika foto sudah memiliki cap koordinat & waktu bawaan (misal: Open Camera).')
+                                            ->live()
                                             ->default(false),
                                     ])
                                     ->columnSpan(1),
@@ -287,21 +342,6 @@ class DailyActivityResource extends Resource
                     ->badge()
                     ->icon('heroicon-m-camera')
                     ->color(fn ($state) => $state > 0 ? 'success' : 'gray'),
-
-                Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
-                    ->badge()
-                    ->colors([
-                        'gray' => 'draft',
-                        'info' => 'submitted',
-                        'success' => 'verified',
-                    ])
-                    ->formatStateUsing(fn ($state) => match ($state) {
-                        'draft' => 'Draft',
-                        'submitted' => 'Diajukan',
-                        'verified' => 'Diverifikasi',
-                        default => $state,
-                    }),
 
                 Tables\Columns\IconColumn::make('laporan_perjalanan_dinas_id')
                     ->label('LPD')

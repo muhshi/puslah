@@ -31,6 +31,27 @@ class CreateDailyActivity extends CreateRecord
 
         $data['source'] = 'web';
 
+        // Auto-polish narasi AI jika final_content belum dipoles atau sama dengan catatan kasar
+        $raw = trim($data['raw_content'] ?? '');
+        $final = trim($data['final_content'] ?? '');
+        if (!empty($raw) && (empty($final) || $final === $raw)) {
+            try {
+                $user = Auth::user();
+                $aiService = app(\App\Services\DailyActivityAiService::class);
+                $formal = $aiService->formalize($raw, [
+                    'user_name' => $user?->name ?? 'Pegawai',
+                    'tanggal' => $data['activity_date'] ?? now()->format('d F Y'),
+                ]);
+                $data['ai_formal_content'] = $formal;
+                $data['final_content'] = $formal;
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Auto polish AI on web create: ' . $e->getMessage());
+                if (empty($data['final_content'])) {
+                    $data['final_content'] = $raw;
+                }
+            }
+        }
+
         return $data;
     }
 }
