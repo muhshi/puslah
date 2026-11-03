@@ -3,18 +3,16 @@
     $lastDot = strrpos($statePath, '.');
     $parentPath = $lastDot !== false ? substr($statePath, 0, $lastDot) : $statePath;
     
-    // Ambil path file saat render awal
-    $rawPath = $get('file_path');
+    // Ambil initial url saat mode edit record jika file sudah ada
     $initialUrl = null;
-    if ($rawPath) {
-        if (is_string($rawPath)) {
-            $initialUrl = str_starts_with($rawPath, 'http') ? $rawPath : asset('storage/' . ltrim($rawPath, '/'));
-        } elseif (is_array($rawPath) && !empty($rawPath)) {
-            $first = reset($rawPath);
-            if (is_string($first)) {
-                $initialUrl = str_starts_with($first, 'http') ? $first : asset('storage/' . ltrim($first, '/'));
-            }
+    try {
+        $record = isset($getRecord) && is_callable($getRecord) ? $getRecord() : null;
+        if ($record && !empty($record->file_path)) {
+            $raw = $record->file_path;
+            $initialUrl = str_starts_with($raw, 'http') ? $raw : asset('storage/' . ltrim($raw, '/'));
         }
+    } catch (\Throwable $e) {
+        $initialUrl = null;
     }
 @endphp
 
