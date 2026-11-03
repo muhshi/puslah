@@ -314,7 +314,20 @@ class DailyActivityTelegramHandler
         // Tentukan waktu foto: gunakan EXIF jika ada, atau waktu pesan Telegram saat dikirim
         $capturedAt = $exifData['captured_at'] ?? Carbon::createFromTimestamp($msg->date ?? time());
 
-        // Buat attachment dengan data EXIF jika tersedia
+        // Tentukan koordinat: gunakan EXIF jika ada; jika kosong (kamera in-app Telegram), gunakan default kantor
+        $officeCoords = $this->getOfficeCoordinates();
+        $isDefaultOffice = false;
+
+        if (!empty($exifData['latitude']) && !empty($exifData['longitude'])) {
+            $latitude = $exifData['latitude'];
+            $longitude = $exifData['longitude'];
+        } else {
+            $latitude = $officeCoords['latitude'];
+            $longitude = $officeCoords['longitude'];
+            $isDefaultOffice = true;
+        }
+
+        // Buat attachment dengan data EXIF / default kantor
         DailyActivityAttachment::create([
             'daily_activity_id' => $activity->id,
             'file_path' => $relativePath,
@@ -322,8 +335,8 @@ class DailyActivityTelegramHandler
             'file_size' => $fileSize,
             'mime_type' => 'image/jpeg',
             'is_stamped' => false,
-            'latitude' => $exifData['latitude'],
-            'longitude' => $exifData['longitude'],
+            'latitude' => $latitude,
+            'longitude' => $longitude,
             'captured_at' => $capturedAt,
             'caption' => $caption ?: null,
         ]);
@@ -338,10 +351,10 @@ class DailyActivityTelegramHandler
             }
 
             $gpsBadge = "";
-            if (!empty($exifData['latitude']) && !empty($exifData['longitude'])) {
-                $gpsBadge = "\n📍 *GPS Terdeteksi:* `{$exifData['latitude']}, {$exifData['longitude']}`";
+            if (!$isDefaultOffice) {
+                $gpsBadge = "\n📍 *GPS Terdeteksi:* `{$latitude}, {$longitude}`";
             } else {
-                $gpsBadge = "\n📍 *GPS:* _Tidak ada tag lokasi (bisa pilih titik di peta Puslah)_";
+                $gpsBadge = "\n📍 *GPS:* `{$latitude}, {$longitude}` _(Default Kantor: {$officeCoords['name']})_";
             }
 
             $timeBadge = "\n🕒 *Waktu:* " . $capturedAt->translatedFormat('d M Y H:i') . " WIB";
@@ -465,5 +478,30 @@ class DailyActivityTelegramHandler
         }
 
         return $user;
+    }
+
+    /**
+     * Dapatkan koordinat kantor default BPS Demak dari SystemSettings atau fallback.
+     */
+    public function getOfficeCoordinates(): array
+    {
+        try {
+            $settings = app(\App\Settings\SystemSettings::class);
+            if (!empty($settings->default_office_lat) && !empty($settings->default_office_lng) && $settings->default_office_lat != 0) {
+                return [
+                    'latitude' => round((float) $settings->default_office_lat, 8),
+                    'longitude' => round((float) $settings->default_office_lng, 8),
+                    'name' => $settings->default_office_name ?? 'BPS Kabupaten Demak',
+                ];
+            }
+        } catch (\Throwable $e) {
+            // ignore
+        }
+
+        return [
+            'latitude' => -6.894561,
+            'longitude' => 110.637492,
+            'name' => 'BPS Kabupaten Demak',
+        ];
     }
 }

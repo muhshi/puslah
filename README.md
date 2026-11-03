@@ -55,6 +55,8 @@ composer dev
 ## Changelog
 
 ### 2026-11-03
+- **Auto-Default Koordinat Kantor BPS Demak untuk Foto Telegram**:
+  - Foto yang dikirim melalui kamera Telegram dan tidak memiliki metadata GPS secara otomatis diset ke koordinat kantor BPS Kabupaten Demak (`SystemSettings` / fallback `-6.894561, 110.637492`), sehingga lampiran bukti dukung selalu memiliki data koordinat yang valid.
 - **Auto-Polish AI Instan, Visual Stempel Watermark, & Penyederhanaan Tampilan**:
   - **Poles AI Otomatis (Zero-Click):** Catatan teks dan caption foto yang dikirim lewat Telegram kini langsung otomatis dipoles oleh Gemini AI menjadi narasi laporan resmi tanpa perlu klik tombol lagi. Pembuatan kegiatan via web juga otomatis memoles narasi jika belum dipoles manual.
   - **Visual Stempel Watermark pada Form Foto:** Menambahkan preview visual stempel (watermark box) pada repeater lampiran foto di form Bukti Dukung. Menampilkan simulasi stempel siap cetak (Judul kegiatan, Koordinat, Jam/Tanggal, Satuan Kerja BPS Demak) serta indikator apakah foto sudah memiliki stempel bawaan.
