@@ -23,6 +23,7 @@ class DailyActivity extends Model
     protected $fillable = [
         'user_id',
         'surat_tugas_id',
+        'shared_work_report_id',
         'activity_date',
         'started_at',
         'ended_at',
@@ -41,6 +42,11 @@ class DailyActivity extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function sharedWorkReport(): BelongsTo
+    {
+        return $this->belongsTo(SharedWorkReport::class, 'shared_work_report_id');
     }
 
     public function suratTugas(): BelongsTo
