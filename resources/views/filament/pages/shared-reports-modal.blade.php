@@ -55,15 +55,16 @@
             </p>
         </div>
 
-        {{-- Tombol Tambah Wadah Baru (SELALU MUNCUL, Kontras Tinggi) --}}
-        <button
+        {{-- Tombol Tambah Wadah Baru (Menggunakan Komponen Native Filament / Tailwind) --}}
+        <x-filament::button
             type="button"
+            color="primary"
+            icon="heroicon-m-plus"
+            size="sm"
             @click="openCreate()"
-            style="background-color: #0284c7 !important; color: #ffffff !important;"
-            class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg shadow-sm hover:opacity-90 cursor-pointer transition-all"
         >
-            <span>+ Buat Wadah Baru</span>
-        </button>
+            Buat Wadah Baru
+        </x-filament::button>
     </div>
 
     {{-- Form Inline Tambah / Ubah Wadah --}}
@@ -139,21 +140,23 @@
                 ></textarea>
             </div>
 
-            <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-sky-200/60 dark:border-sky-900/40">
-                <button
+            <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-sky-200/60 dark:border-sky-900/40">
+                <x-filament::button
                     type="button"
+                    color="gray"
+                    size="sm"
                     @click="cancelForm()"
-                    class="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 font-semibold cursor-pointer"
                 >
                     Batal
-                </button>
-                <button
+                </x-filament::button>
+                <x-filament::button
                     type="submit"
-                    style="background-color: #0284c7 !important; color: #ffffff !important;"
-                    class="px-5 py-2 rounded-lg font-bold shadow-md hover:opacity-90 cursor-pointer"
+                    color="primary"
+                    size="sm"
+                    icon="heroicon-m-check"
                 >
-                    <span x-text="isEditing ? 'Simpan Perubahan' : 'Buat Wadah KIPAPP 🚀'">Simpan</span>
-                </button>
+                    <span x-text="isEditing ? 'Simpan Perubahan' : 'Buat Wadah KIPAPP'">Buat Wadah KIPAPP</span>
+                </x-filament::button>
             </div>
         </form>
     </div>
@@ -183,7 +186,7 @@
                     @foreach($reports as $rep)
                         @php
                             $shareUrl = route('shared-work-report.show', ['uuid' => $rep->uuid]);
-                            $actCount = $rep->getActivities()->count();
+                            $actCount = $rep->activities_count;
                         @endphp
                         <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
                             {{-- Judul & Hashtag (Deskripsi langsung di bawah judul) --}}

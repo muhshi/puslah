@@ -37,7 +37,7 @@ class DailyActivityResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery()->with(['user', 'suratTugas', 'attachments']);
+        $query = parent::getEloquentQuery()->with(['user', 'suratTugas', 'attachments', 'sharedWorkReports', 'sharedWorkReport']);
         $user = Auth::user();
 
         // Hanya tampilkan kegiatan milik user yang sedang login (fokus pada laporan mandiri)
@@ -84,18 +84,14 @@ class DailyActivityResource extends Resource
                             ->helperText('Kosongkan jika merupakan pekerjaan rutin harian non-surat tugas.')
                             ->columnSpan(1),
 
-                        Forms\Components\Select::make('shared_work_report_id')
+                        Forms\Components\Select::make('sharedWorkReports')
+                            ->relationship('sharedWorkReports', 'title', modifyQueryUsing: fn ($query) => $query->where('user_id', Auth::id())->where('is_active', true)->latest())
                             ->label('Wadah Butir KIPAPP / E-Kinerja')
-                            ->options(function () {
-                                return \App\Models\SharedWorkReport::where('user_id', Auth::id())
-                                    ->where('is_active', true)
-                                    ->latest()
-                                    ->pluck('title', 'id');
-                            })
+                            ->multiple()
+                            ->preload()
                             ->searchable()
-                            ->nullable()
-                            ->placeholder('Pilih wadah butir KIPAPP (contoh: Wilkerstat, Pengembangan Inovasi...)')
-                            ->helperText('Kegiatan ini otomatis langsung tampil di tautan publik KIPAPP tersebut.')
+                            ->placeholder('Pilih satu atau beberapa wadah butir KIPAPP...')
+                            ->helperText('1 kegiatan dapat dimasukkan ke lebih dari 1 wadah butir KIPAPP sekaligus.')
                             ->columnSpan(2),
 
                         Forms\Components\Hidden::make('status')
@@ -350,21 +346,30 @@ class DailyActivityResource extends Resource
                     ->formatStateUsing(fn ($state) => $state ? "No. {$state}" : 'Kegiatan Rutin')
                     ->searchable(),
 
-                Tables\Columns\TextColumn::make('sharedWorkReport.title')
-                    ->label('KIPAPP')
-                    ->badge()
-                    ->color('info')
-                    ->placeholder('-')
-                    ->limit(22)
-                    ->tooltip(fn (DailyActivity $record) => $record->sharedWorkReport?->title)
-                    ->searchable()
-                    ->sortable(),
-
                 Tables\Columns\TextColumn::make('final_content')
                     ->label('Uraian Narasi Kegiatan')
-                    ->limit(65)
-                    ->tooltip(fn (DailyActivity $record) => $record->final_content)
-                    ->wrap(),
+                    ->wrap()
+                    ->description(function (DailyActivity $record) {
+                        $reports = $record->sharedWorkReports;
+                        if ($reports->isEmpty() && $record->sharedWorkReport) {
+                            $reports = collect([$record->sharedWorkReport]);
+                        }
+
+                        if ($reports->isEmpty()) {
+                            return new \Illuminate\Support\HtmlString(
+                                '<div class="mt-1"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60">⚪ Belum Ada Wadah KIPAPP</span></div>'
+                            );
+                        }
+
+                        $pills = $reports->map(function ($rep) {
+                            $title = e(\Illuminate\Support\Str::limit($rep->title, 35));
+                            $tag = $rep->tag_slug ? '#' . e($rep->tag_slug) . ' &bull; ' : '';
+                            return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800">📁 ' . $tag . $title . '</span>';
+                        })->implode(' ');
+
+                        return new \Illuminate\Support\HtmlString('<div class="flex flex-wrap gap-1 mt-1">' . $pills . '</div>');
+                    })
+                    ->tooltip(fn (DailyActivity $record) => $record->final_content),
 
                 Tables\Columns\TextColumn::make('attachments_count')
                     ->counts('attachments')

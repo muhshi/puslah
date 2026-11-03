@@ -65,14 +65,38 @@ class SharedWorkReport extends Model
         return $this->belongsTo(SuratTugas::class, 'surat_tugas_id');
     }
 
-    public function dailyActivities(): HasMany
+    public function dailyActivities(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
-        return $this->hasMany(DailyActivity::class, 'shared_work_report_id');
+        return $this->belongsToMany(DailyActivity::class, 'daily_activity_shared_work_report');
+    }
+
+    /**
+     * Hitung total kegiatan secara instan & efisien via SQL count tanpa memuat attachment/relasi.
+     */
+    public function getActivitiesCountAttribute(): int
+    {
+        $explicitIds = is_array($this->activity_ids) ? $this->activity_ids : [];
+
+        return DailyActivity::where(function ($q) use ($explicitIds) {
+            $q->whereHas('sharedWorkReports', fn ($sq) => $sq->where('shared_work_reports.id', $this->id))
+                ->orWhere('shared_work_report_id', $this->id);
+
+            if (!empty($explicitIds)) {
+                $q->orWhereIn('id', $explicitIds);
+            }
+
+            if ($this->period_start && $this->period_end) {
+                $q->orWhere(function ($sub) {
+                    $sub->where('user_id', $this->user_id)
+                        ->whereBetween('activity_date', [$this->period_start, $this->period_end]);
+                });
+            }
+        })->count();
     }
 
     /**
      * Ambil koleksi model DailyActivity yang dibundel, terurut kronologis tanggal kegiatan.
-     * Menggabungkan kegiatan yang ditautkan langsung, melalui activity_ids, maupun rentang tanggal.
+     * Menggabungkan kegiatan yang ditautkan via pivot table, langsung, activity_ids, maupun rentang tanggal.
      */
     public function getActivities(): Collection
     {
@@ -80,8 +104,9 @@ class SharedWorkReport extends Model
 
         $query = DailyActivity::with(['attachments', 'suratTugas'])
             ->where(function ($q) use ($explicitIds) {
-                // 1. Yang ditautkan langsung via shared_work_report_id
-                $q->where('shared_work_report_id', $this->id);
+                // 1. Yang ditautkan via pivot table many-to-many
+                $q->whereHas('sharedWorkReports', fn ($sq) => $sq->where('shared_work_reports.id', $this->id))
+                  ->orWhere('shared_work_report_id', $this->id);
 
                 // 2. Yang ada di daftar ID eksplisit
                 if (!empty($explicitIds)) {

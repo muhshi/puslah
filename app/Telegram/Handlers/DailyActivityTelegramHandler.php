@@ -166,7 +166,7 @@ class DailyActivityTelegramHandler
         $activeSt = $this->resolveActiveSuratTugas($user, Carbon::today(), $rawText);
 
         // Auto-detect wadah KIPAPP jika ada hashtag (misal: #wilkerstat, #inovasi)
-        $sharedReport = $this->resolveSharedWorkReport($user, $rawText);
+        $sharedReports = $this->resolveSharedWorkReports($user, $rawText);
 
         // Otomatis poles narasi dengan Gemini AI langsung saat diterima
         $formalContent = $rawText;
@@ -184,7 +184,7 @@ class DailyActivityTelegramHandler
         $activity = DailyActivity::create([
             'user_id' => $user->id,
             'surat_tugas_id' => $activeSt?->id,
-            'shared_work_report_id' => $sharedReport?->id,
+            'shared_work_report_id' => $sharedReports->first()?->id,
             'activity_date' => Carbon::today(),
             'raw_content' => $rawText,
             'ai_formal_content' => $formalContent,
@@ -192,6 +192,10 @@ class DailyActivityTelegramHandler
             'status' => 'submitted',
             'source' => 'telegram',
         ]);
+
+        if ($sharedReports->isNotEmpty()) {
+            $activity->sharedWorkReports()->sync($sharedReports->pluck('id'));
+        }
 
         $stInfo = "";
         if ($activeSt) {
@@ -201,8 +205,9 @@ class DailyActivityTelegramHandler
         }
 
         $kipappInfo = "";
-        if ($sharedReport) {
-            $kipappInfo = "\n📁 *Wadah KIPAPP:* {$sharedReport->title}";
+        if ($sharedReports->isNotEmpty()) {
+            $wadahNames = $sharedReports->pluck('title')->implode(', ');
+            $kipappInfo = "\n📁 *Wadah KIPAPP:* {$wadahNames}";
         }
 
         $bot->sendMessage(
@@ -322,12 +327,12 @@ class DailyActivityTelegramHandler
             }
 
             $activeSt = $this->resolveActiveSuratTugas($user, Carbon::today(), $caption ?: '');
-            $sharedReport = $this->resolveSharedWorkReport($user, $caption ?: '');
+            $sharedReports = $this->resolveSharedWorkReports($user, $caption ?: '');
 
             $activity = DailyActivity::create([
                 'user_id' => $user->id,
                 'surat_tugas_id' => $activeSt?->id,
-                'shared_work_report_id' => $sharedReport?->id,
+                'shared_work_report_id' => $sharedReports->first()?->id,
                 'activity_date' => Carbon::today(),
                 'raw_content' => $rawContent,
                 'ai_formal_content' => $formalContent,
@@ -335,6 +340,10 @@ class DailyActivityTelegramHandler
                 'status' => 'submitted',
                 'source' => 'telegram',
             ]);
+
+            if ($sharedReports->isNotEmpty()) {
+                $activity->sharedWorkReports()->sync($sharedReports->pluck('id'));
+            }
 
             if (!empty($mediaGroupId)) {
                 TelegramUpdate::create([
@@ -408,8 +417,13 @@ class DailyActivityTelegramHandler
             }
 
             $kipappBadge = "";
-            if ($activity->sharedWorkReport) {
-                $kipappBadge = "\n📁 *Wadah KIPAPP:* {$activity->sharedWorkReport->title}";
+            $allReports = $activity->sharedWorkReports;
+            if ($allReports->isEmpty() && $activity->sharedWorkReport) {
+                $allReports = collect([$activity->sharedWorkReport]);
+            }
+            if ($allReports->isNotEmpty()) {
+                $wadahList = $allReports->pluck('title')->implode(', ');
+                $kipappBadge = "\n📁 *Wadah KIPAPP:* {$wadahList}";
             }
 
             $gpsBadge = "";
@@ -582,20 +596,21 @@ class DailyActivityTelegramHandler
     }
 
     /**
-     * Deteksi dan kaitkan wadah KIPAPP / SharedWorkReport berdasarkan hashtag (#wilkerstat, #inovasi, dsb).
+     * Deteksi dan kaitkan satu atau beberapa wadah KIPAPP berdasarkan semua hashtag (#wilkerstat, #inovasi, dsb).
      */
-    protected function resolveSharedWorkReport(User $user, string $text): ?\App\Models\SharedWorkReport
+    protected function resolveSharedWorkReports(User $user, string $text): \Illuminate\Support\Collection
     {
         if (empty($text)) {
-            return null;
+            return collect();
         }
 
+        $reports = collect();
         if (preg_match_all('/#([a-zA-Z0-9_\-]+)/', $text, $matches)) {
             foreach ($matches[1] as $tag) {
                 $slug = \Illuminate\Support\Str::slug($tag);
                 if (empty($slug)) continue;
 
-                $report = \App\Models\SharedWorkReport::where('user_id', $user->id)
+                $found = \App\Models\SharedWorkReport::where('user_id', $user->id)
                     ->where('is_active', true)
                     ->where(function ($q) use ($slug) {
                         $q->where('tag_slug', $slug)
@@ -604,12 +619,20 @@ class DailyActivityTelegramHandler
                     ->latest()
                     ->first();
 
-                if ($report) {
-                    return $report;
+                if ($found && !$reports->contains('id', $found->id)) {
+                    $reports->push($found);
                 }
             }
         }
 
-        return null;
+        return $reports;
+    }
+
+    /**
+     * Backward-compatible helper untuk mengambil wadah pertama.
+     */
+    protected function resolveSharedWorkReport(User $user, string $text): ?\App\Models\SharedWorkReport
+    {
+        return $this->resolveSharedWorkReports($user, $text)->first();
     }
 }

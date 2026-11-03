@@ -55,6 +55,11 @@ composer dev
 ## Changelog
 
 ### 2026-11-03
+- **Multi-Wadah KIPAPP (Many-to-Many), Optimasi Kecepatan Modal & Tombol Native Tailwind**:
+  - **Relasi Multi-Wadah (1 Kegiatan Bisa Masuk > 1 Wadah):** Menghadirkan tabel pivot `daily_activity_shared_work_report` sehingga satu kegiatan harian dapat dikaitkan ke beberapa wadah KIPAPP sekaligus. Form kegiatan mendukung multi-select dengan tag pencarian, dan bot Telegram dapat memproses multi-hashtag sekaligus (contoh: `#wilkerstat #inovasi`).
+  - **Label Wadah pada Kolom Uraian Narasi Kegiatan:** Menampilkan badge/pill judul wadah (`📁 #wilkerstat • Judul Wadah`) langsung di bawah uraian kegiatan, atau indikator peringatan (`⚪ Belum Ada Wadah KIPAPP`) jika belum dimasukkan ke wadah manapun, memudahkan identifikasi status kegiatan.
+  - **Optimasi Kecepatan Modal Wadah KIPAPP (Instant Load):** Mengganti kalkulasi hitung kegiatan yang sebelumnya memuat relasi attachment berat menjadi query SQL ringan `activities_count`, memangkas waktu buka modal dari beberapa detik menjadi instan (milidetik).
+  - **Desain Tombol Proporsional & Native Tailwind:** Menghapus styling CSS manual yang kaku dan menggantinya dengan komponen native `<x-filament::button>` berbasis Tailwind standar panel Filament, menghasilkan proporsi tombol yang rapi, simetris, dan konsisten di seluruh tema.
 - **Penyempurnaan Tombol Modal Wadah, TrueType Watermark & Pembersihan Auto-ST**:
   - **Tombol Tambah & Simpan Kontras Tinggi:** Memperbaiki styling tombol `+ Buat Wadah Baru` dan `Simpan Perubahan` pada modal berkas publik agar selalu tampil solid (#0284c7) dan teks putih tegas tanpa terpengaruh override tema.
   - **Hashtag sebagai Subteks Judul:** Menampilkan hashtag `#tag` sebagai deskripsi langsung di bawah judul butir kegiatan pada tabel wadah KIPAPP.

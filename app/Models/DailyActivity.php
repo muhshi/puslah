@@ -49,6 +49,11 @@ class DailyActivity extends Model
         return $this->belongsTo(SharedWorkReport::class, 'shared_work_report_id');
     }
 
+    public function sharedWorkReports(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(SharedWorkReport::class, 'daily_activity_shared_work_report');
+    }
+
     public function suratTugas(): BelongsTo
     {
         return $this->belongsTo(SuratTugas::class);
