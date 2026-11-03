@@ -74,6 +74,17 @@
                     <span x-text="copied ? 'Tautan Tersalin! ✅' : 'Salin Tautan E-Kinerja'">Salin Tautan E-Kinerja</span>
                 </button>
 
+                {{-- Tombol Unduh PDF --}}
+                <a
+                    href="{{ route('shared-work-report.download-pdf', ['uuid' => $report->uuid]) }}"
+                    class="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg bg-rose-600 text-white hover:bg-rose-700 transition-colors shadow-sm"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    <span>Unduh PDF</span>
+                </a>
+
                 {{-- Tombol Unduh Word --}}
                 <a
                     href="{{ route('shared-work-report.download', ['uuid' => $report->uuid]) }}"

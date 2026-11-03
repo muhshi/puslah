@@ -458,6 +458,120 @@ class DailyActivityTelegramHandler
     }
 
     /**
+     * Handle pesan suara / voice note dan audio langsung dari lapangan.
+     */
+    public function handleVoiceMessage(Nutgram $bot): void
+    {
+        $user = $this->getAuthenticatedUser($bot);
+        if (!$user) return;
+
+        $msg = $bot->message();
+        $voice = $msg->voice ?? $msg->audio;
+        if (!$voice || empty($voice->file_id)) return;
+
+        $bot->sendChatAction(\SergiX44\Nutgram\Telegram\Properties\ChatAction::RECORD_VOICE);
+
+        // Download file suara dari Telegram
+        $file = $bot->getFile($voice->file_id);
+        if (!$file || empty($file->file_path)) {
+            $bot->sendMessage(text: "⚠️ Gagal membaca berkas pesan suara dari Telegram.", chat_id: $bot->chatId());
+            return;
+        }
+
+        $ext = pathinfo($file->file_path, PATHINFO_EXTENSION) ?: 'ogg';
+        $tempPath = storage_path('app/temp_voice_' . time() . '_' . uniqid() . '.' . $ext);
+
+        $downloaded = false;
+        try {
+            $downloaded = $bot->downloadFile($file, $tempPath);
+        } catch (\Throwable $e) {
+            Log::warning("Voice downloadFile error: " . $e->getMessage());
+        }
+
+        if (!$downloaded || !file_exists($tempPath) || filesize($tempPath) === 0) {
+            $token = config('nutgram.token');
+            $fileUrl = "https://api.telegram.org/file/bot{$token}/" . $file->file_path;
+            $contents = @file_get_contents($fileUrl);
+            if ($contents) {
+                file_put_contents($tempPath, $contents);
+                $downloaded = true;
+            }
+        }
+
+        if (!$downloaded || !file_exists($tempPath)) {
+            $bot->sendMessage(text: "⚠️ Gagal mengunduh berkas audio dari Telegram.", chat_id: $bot->chatId());
+            return;
+        }
+
+        try {
+            $bot->sendMessage(text: "🎙️ *Mendengarkan rekaman suara & memoles laporan dengan Gemini AI...*", chat_id: $bot->chatId(), parse_mode: 'Markdown');
+
+            $aiService = app(DailyActivityAiService::class);
+            $mimeType = str_contains($ext, 'mp3') ? 'audio/mp3' : 'audio/ogg';
+            $aiResult = $aiService->formalizeAudio($tempPath, $mimeType, [
+                'user_name' => $user->name,
+                'tanggal' => Carbon::today()->translatedFormat('d F Y'),
+            ]);
+
+            $rawTranscript = $aiResult['raw_transcript'];
+            $formalContent = $aiResult['formal_content'];
+
+            // Deteksi ST dan Wadah KIPAPP
+            $combinedText = $rawTranscript . " " . ($msg->caption ?? '');
+            $activeSt = $this->resolveActiveSuratTugas($user, Carbon::today(), $combinedText);
+            $sharedReports = $this->resolveSharedWorkReports($user, $combinedText);
+
+            $activity = DailyActivity::create([
+                'user_id' => $user->id,
+                'surat_tugas_id' => $activeSt?->id,
+                'shared_work_report_id' => $sharedReports->first()?->id,
+                'activity_date' => Carbon::today(),
+                'raw_content' => '[Pesan Suara] ' . $rawTranscript,
+                'ai_formal_content' => $formalContent,
+                'final_content' => $formalContent,
+                'status' => 'submitted',
+                'source' => 'telegram_voice',
+            ]);
+
+            if ($sharedReports->isNotEmpty()) {
+                $activity->sharedWorkReports()->sync($sharedReports->pluck('id'));
+            }
+
+            $stInfo = "";
+            if ($activeSt) {
+                $stNo = $activeSt->nomor_surat_tugas ?: 'DRAFT';
+                $stInfo = "\n🔖 *Terkait ST:* No. {$stNo}";
+            }
+
+            $kipappInfo = "";
+            if ($sharedReports->isNotEmpty()) {
+                $wadahNames = $sharedReports->pluck('title')->implode(', ');
+                $kipappInfo = "\n📁 *Wadah KIPAPP:* {$wadahNames}";
+            }
+
+            $bot->sendMessage(
+                text: "🎙️ *Laporan Suara Berhasil Dicatat!*\n\n" .
+                "🗣️ *Transkrip Ucapan:*\n_{$rawTranscript}_\n\n" .
+                "✨ *Narasi Laporan Formal (AI):*\n*\"{$formalContent}\"*" .
+                $stInfo . $kipappInfo . "\n\n" .
+                "✅ _Laporan kinerja harian Anda sudah otomatis tersimpan di Puslah!_",
+                chat_id: $bot->chatId(),
+                parse_mode: 'Markdown'
+            );
+        } catch (\Throwable $e) {
+            Log::error("Voice processing error: " . $e->getMessage());
+            $bot->sendMessage(
+                text: "⚠️ Terjadi kendala saat memproses rekaman suara dengan AI: " . $e->getMessage() . "\n\nSilakan kirimkan laporan dalam bentuk teks atau coba lagi.",
+                chat_id: $bot->chatId()
+            );
+        } finally {
+            if (file_exists($tempPath)) {
+                @unlink($tempPath);
+            }
+        }
+    }
+
+    /**
      * Handle callback query inline button (Poles dengan AI)
      */
     public function handleAiPolishCallback(Nutgram $bot): void

@@ -388,6 +388,35 @@ class DailyActivityResource extends Resource
                         true: fn ($query) => $query->whereNotNull('surat_tugas_id'),
                         false: fn ($query) => $query->whereNull('surat_tugas_id'),
                     ),
+
+                Tables\Filters\SelectFilter::make('wadah_kipapp')
+                    ->label('Wadah KIPAPP')
+                    ->placeholder('Semua Kegiatan')
+                    ->options(function () {
+                        $options = ['unassigned' => '⚠️ Belum Masuk Wadah'];
+                        $reports = \App\Models\SharedWorkReport::where('user_id', Auth::id())
+                            ->where('is_active', true)
+                            ->latest()
+                            ->pluck('title', 'id')
+                            ->toArray();
+                        return $options + $reports;
+                    })
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (empty($data['value'])) {
+                            return $query;
+                        }
+
+                        if ($data['value'] === 'unassigned') {
+                            return $query->whereDoesntHave('sharedWorkReports')
+                                ->whereNull('shared_work_report_id');
+                        }
+
+                        $reportId = (int) $data['value'];
+                        return $query->where(function ($q) use ($reportId) {
+                            $q->whereHas('sharedWorkReports', fn ($sq) => $sq->where('shared_work_reports.id', $reportId))
+                              ->orWhere('shared_work_report_id', $reportId);
+                        });
+                    }),
             ])
             ->actions([
                 // Aksi Satu-Klik Salin ke LPD

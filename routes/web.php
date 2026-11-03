@@ -126,10 +126,12 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/bukti-dukung/wadah', [\App\Http\Controllers\SharedWorkReportController::class, 'store'])->name('shared-work-report.store');
     Route::post('/bukti-dukung/wadah/{id}/update', [\App\Http\Controllers\SharedWorkReportController::class, 'update'])->name('shared-work-report.update');
     Route::post('/bukti-dukung/wadah/{id}/delete', [\App\Http\Controllers\SharedWorkReportController::class, 'destroy'])->name('shared-work-report.destroy');
+    Route::post('/bukti-dukung/wadah/{id}/ai-summary', [\App\Http\Controllers\SharedWorkReportController::class, 'generateAiSummary'])->name('shared-work-report.ai-summary');
 });
 
 // Berkas Publik Bukti Dukung Multi-Hari (Akses Pemeriksa E-Kinerja Tanpa Login)
 Route::get('/bukti-dukung/share/{uuid}', [\App\Http\Controllers\SharedWorkReportController::class, 'show'])->name('shared-work-report.show');
 Route::get('/bukti-dukung/share/{uuid}/download', [\App\Http\Controllers\SharedWorkReportController::class, 'downloadDocx'])->name('shared-work-report.download');
+Route::get('/bukti-dukung/share/{uuid}/pdf', [\App\Http\Controllers\SharedWorkReportController::class, 'downloadPdf'])->name('shared-work-report.download-pdf');
 
 

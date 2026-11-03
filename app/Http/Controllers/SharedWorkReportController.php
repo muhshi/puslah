@@ -52,6 +52,66 @@ class SharedWorkReportController extends Controller
     }
 
     /**
+     * Unduh berkas resmi PDF Buku Bukti Dukung Gabungan.
+     */
+    public function downloadPdf(string $uuid)
+    {
+        $report = SharedWorkReport::where('uuid', $uuid)
+            ->where('is_active', true)
+            ->with(['user.profile', 'suratTugas'])
+            ->firstOrFail();
+
+        $activities = $report->getActivities();
+        $user = $report->user;
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.shared-work-report-book', [
+            'report' => $report,
+            'activities' => $activities,
+            'user' => $user,
+        ])->setPaper('a4', 'portrait');
+
+        $safeTitle = \Illuminate\Support\Str::slug($report->title) ?: 'bukti-dukung';
+        $fileName = "BUKTI_DUKUNG_{$safeTitle}_" . date('Ymd') . ".pdf";
+
+        return $pdf->download($fileName);
+    }
+
+    /**
+     * Generate ringkasan capaian kinerja bulanan/triwulanan untuk SKP via Gemini AI.
+     */
+    public function generateAiSummary(int $id)
+    {
+        $report = SharedWorkReport::where('id', $id)
+            ->where('user_id', auth()->id())
+            ->firstOrFail();
+
+        $activities = $report->getActivities();
+        if ($activities->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Wadah ini belum memiliki catatan kegiatan untuk dirangkum.'
+            ], 422);
+        }
+
+        try {
+            $aiService = app(\App\Services\DailyActivityAiService::class);
+            $summary = $aiService->generateMonthlySummary($activities, $report->title);
+
+            return response()->json([
+                'success' => true,
+                'title' => $report->title,
+                'summary' => $summary,
+                'total_activities' => $activities->count(),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal merangkum dengan AI: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Tambah wadah KIPAPP baru dari modal.
      */
     public function store(Request $request)

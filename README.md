@@ -55,6 +55,13 @@ composer dev
 ## Changelog
 
 ### 2026-11-03
+- **Fitur Ekosistem KIPAPP Lengkap: Voice Note Telegram, Filter Wadah, Salin Tautan Cepat, AI Ringkasan SKP & Ekspor PDF**:
+  - **Pelaporan Pesan Suara Telegram (Gemini Multimodal Audio):** Pegawai kini dapat mengirimkan Voice Note / pesan audio langsung via Telegram bot; sistem mentranskripsikan suara secara presisi dan memolesnya langsung menjadi narasi laporan kedinasan formal aktif menggunakan Google Gemini Audio API.
+  - **Filter Wadah KIPAPP pada Tabel Web:** Menambahkan `SelectFilter` pada tabel *Bukti Dukung Harian* untuk menyaring kegiatan berdasarkan wadah butir tertentu atau melihat kegiatan yang `Belum Masuk Wadah`.
+  - **Satu-Klik Salin Tautan dari Badge Tabel:** Mengeklik badge wadah hijau pada kolom narasi kegiatan langsung menyalin link publik resmi bukti dukung ke clipboard secara instan (`Tautan Disalin!`).
+  - **Generator Ringkasan Realisasi SKP (Gemini AI):** Tombol baru *"✨ Ringkasan SKP (AI)"* pada menu wadah KIPAPP yang membaca seluruh log kegiatan harian dan merangkumnya menjadi 1-2 paragraf narasi capaian kinerja padat untuk kotak Realisasi E-Kinerja BPS.
+  - **Ekspor Buku Bukti Dukung PDF Resmi (*Merged Evidence Book*):** Opsi unduh dokumen PDF gabungan yang memuat kop instansi BPS Demak, matriks tabel kegiatan kronologis, lampiran galeri foto berstempel watermark fisik, dan lembar pengesahan pegawai.
+  - **Pembaruan Halaman Publik:** Menambahkan tombol unduh PDF resmi pada halaman publik `/bukti-dukung/share/{uuid}` yang terintegrasi dengan lightbox foto mobile.
 - **Penghapusan Halaman Heatmap Beban Petugas**:
   - Menghapus halaman `WorkloadHeatmap` (`app/Filament/Pages/WorkloadHeatmap.php`) dan view terkait (`resources/views/filament/pages/workload-heatmap.blade.php`) dari navigasi Filament karena fitur tidak dibutuhkan.
 - **Fix SQL 1364 Default Value Kolom `activity_ids` Wadah KIPAPP**:

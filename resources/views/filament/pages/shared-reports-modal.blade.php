@@ -20,6 +20,40 @@
             description: ''
         },
         isSaving: false,
+        showAiModal: false,
+        isGeneratingAi: false,
+        aiSummaryTitle: '',
+        aiSummaryText: '',
+        copiedAi: false,
+        openAiSummary(id, title) {
+            this.aiSummaryTitle = title;
+            this.aiSummaryText = '';
+            this.isGeneratingAi = true;
+            this.showAiModal = true;
+            this.copiedAi = false;
+
+            fetch('/bukti-dukung/wadah/' + id + '/ai-summary', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(async res => {
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    this.aiSummaryText = data.summary;
+                } else {
+                    this.aiSummaryText = data.message || 'Gagal menghasilkan ringkasan AI.';
+                }
+            })
+            .catch(err => {
+                this.aiSummaryText = 'Terjadi kesalahan jaringan: ' + err.message;
+            })
+            .finally(() => {
+                this.isGeneratingAi = false;
+            });
+        },
         saveWadah() {
             if (!this.formData.title || !this.formData.title.trim()) {
                 alert('Nama Butir Kegiatan KIPAPP wajib diisi!');
@@ -329,6 +363,26 @@
                                             <span>Unduh Dokumen Word</span>
                                         </a>
 
+                                        {{-- 3b. Unduh Buku PDF --}}
+                                        <a
+                                            href="{{ route('shared-work-report.download-pdf', ['uuid' => $rep->uuid]) }}"
+                                            @click="open = false"
+                                            class="w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-2 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                                        >
+                                            <span class="text-rose-600 font-bold">📄</span>
+                                            <span>Unduh Buku PDF</span>
+                                        </a>
+
+                                        {{-- 3c. Ringkasan Realisasi SKP (AI) --}}
+                                        <button
+                                            type="button"
+                                            @click="openAiSummary({{ $rep->id }}, '{{ addslashes($rep->title) }}'); open = false;"
+                                            class="w-full px-3 py-2 text-left hover:bg-purple-50 dark:hover:bg-purple-950/40 flex items-center gap-2 text-purple-700 dark:text-purple-300 font-medium transition-colors cursor-pointer"
+                                        >
+                                            <span>✨</span>
+                                            <span>Ringkasan SKP (AI)</span>
+                                        </button>
+
                                         <div class="border-t border-slate-100 dark:border-slate-700 my-1"></div>
 
                                         {{-- 4. Ubah / Edit --}}
@@ -359,4 +413,73 @@
             </table>
         </div>
     @endif
+
+    {{-- Pop-up Modal Ringkasan SKP (Gemini AI) --}}
+    <div
+        x-show="showAiModal"
+        x-cloak
+        x-transition
+        class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4"
+    >
+        <div
+            @click.away="showAiModal = false"
+            class="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4 text-xs"
+        >
+            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+                <div>
+                    <h4 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <span>✨</span> Ringkasan Capaian SKP (Gemini AI)
+                    </h4>
+                    <p class="text-[11px] text-sky-600 dark:text-sky-400 font-semibold mt-0.5" x-text="aiSummaryTitle"></p>
+                </div>
+                <button
+                    type="button"
+                    @click="showAiModal = false"
+                    class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                >
+                    ✕
+                </button>
+            </div>
+
+            {{-- Loading State --}}
+            <div x-show="isGeneratingAi" class="py-8 text-center space-y-3">
+                <div class="inline-block animate-spin text-2xl">⏳</div>
+                <p class="text-slate-500 font-medium">Gemini AI sedang membaca seluruh log kegiatan dan menyintesis narasi capaian kinerja...</p>
+            </div>
+
+            {{-- Result State --}}
+            <div x-show="!isGeneratingAi" class="space-y-3">
+                <label class="block font-semibold text-slate-700 dark:text-slate-300">
+                    Uraian Realisasi (Siap Disalin ke Kotak Realisasi E-Kinerja):
+                </label>
+                <div
+                    class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 font-sans text-slate-800 dark:text-slate-100 leading-relaxed max-h-60 overflow-y-auto select-all"
+                    x-text="aiSummaryText"
+                ></div>
+
+                <div class="flex items-center justify-between pt-2">
+                    <span class="text-[10px] text-slate-400">💡 Anda dapat langsung menyalin teks di atas ke formulir E-Kinerja BPS.</span>
+                    <div class="flex items-center gap-2">
+                        <x-filament::button
+                            type="button"
+                            color="gray"
+                            size="sm"
+                            @click="showAiModal = false"
+                        >
+                            Tutup
+                        </x-filament::button>
+                        <x-filament::button
+                            type="button"
+                            color="primary"
+                            size="sm"
+                            icon="heroicon-m-clipboard-document-check"
+                            @click="navigator.clipboard.writeText(aiSummaryText); copiedAi = true; setTimeout(() => copiedAi = false, 2500)"
+                        >
+                            <span x-text="copiedAi ? 'Tersalin! ✅' : 'Salin Ringkasan 📋'">Salin Ringkasan</span>
+                        </x-filament::button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

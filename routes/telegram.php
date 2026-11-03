@@ -29,5 +29,9 @@ $bot->onMessageType(MessageType::TEXT, [$handler, 'handleTextMessage']);
 // Handling pesan foto
 $bot->onMessageType(MessageType::PHOTO, [$handler, 'handlePhotoMessage']);
 
+// Handling pesan suara (Voice Note & Audio)
+$bot->onMessageType(MessageType::VOICE, [$handler, 'handleVoiceMessage']);
+$bot->onMessageType(MessageType::AUDIO, [$handler, 'handleVoiceMessage']);
+
 // Handling callback query (AI Polish)
 $bot->onCallbackQueryData('ai_polish:{id}', [$handler, 'handleAiPolishCallback']);
