@@ -66,6 +66,7 @@ class SharedWorkReportController extends Controller
 
         $validated['user_id'] = auth()->id();
         $validated['is_active'] = true;
+        $validated['activity_ids'] = [];
 
         $report = SharedWorkReport::create($validated);
 

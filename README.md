@@ -55,6 +55,9 @@ composer dev
 ## Changelog
 
 ### 2026-11-03
+- **Fix SQL 1364 Default Value Kolom `activity_ids` Wadah KIPAPP**:
+  - **Nilai Default Otomatis:** Menambahkan default array kosong `[]` pada event `booted()` model `SharedWorkReport` dan controller saat pembuatan wadah baru.
+  - **Kolom Nullable:** Migrasi skema database untuk menetapkan kolom `activity_ids` menjadi nullable agar pembuatan wadah baru tidak mengalami kegagalan pada mode SQL strict MySQL.
 - **Fix Penyimpanan Wadah KIPAPP pada Modal (AJAX Fetch & Resolusi Nested Form)**:
   - **Penyelesaian Bentrok Form Livewire:** Menghapus tag `<form>` bersarang di dalam modal Filament yang sebelumnya memicu submit form luar Livewire dan menutup modal tanpa menyimpan.
   - **Submit Asynchronous via Fetch API:** Menggunakan Alpine.js AJAX fetch untuk aksi simpan, ubah, dan hapus wadah dengan indikator loading (`Menyimpan...`) dan error handling yang jelas.

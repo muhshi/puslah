@@ -46,6 +46,9 @@ class SharedWorkReport extends Model
             if (!empty($model->tag_slug)) {
                 $model->tag_slug = Str::slug(ltrim($model->tag_slug, '#'));
             }
+            if ($model->activity_ids === null) {
+                $model->activity_ids = [];
+            }
         });
 
         static::updating(function ($model) {
