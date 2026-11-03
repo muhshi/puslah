@@ -173,43 +173,88 @@ class DailyActivityResource extends Resource
                         Forms\Components\Repeater::make('attachments')
                             ->relationship('attachments')
                             ->label('Daftar Foto Bukti')
-                            ->columns(3)
+                            ->columns(2)
                             ->reorderable('sort_order')
                             ->schema([
-                                Forms\Components\FileUpload::make('file_path')
-                                    ->label('Foto Kegiatan')
-                                    ->image()
-                                    ->disk('public')
-                                    ->directory('daily-activities')
-                                    ->maxSize(5120)
-                                    ->required()
-                                    ->live()
-                                    ->afterStateUpdated(function ($state, Forms\Set $set) {
-                                        if (!$state) return;
+                                Forms\Components\Grid::make(1)
+                                    ->schema([
+                                        Forms\Components\FileUpload::make('file_path')
+                                            ->label('Foto Kegiatan')
+                                            ->image()
+                                            ->disk('public')
+                                            ->directory('daily-activities')
+                                            ->maxSize(5120)
+                                            ->required()
+                                            ->live()
+                                            ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                                if (!$state) return;
 
-                                        $realPath = null;
-                                        if (is_string($state)) {
-                                            $realPath = storage_path('app/public/' . $state);
-                                        } elseif (is_object($state) && method_exists($state, 'getRealPath')) {
-                                            $realPath = $state->getRealPath();
-                                        }
+                                                $realPath = null;
+                                                if (is_string($state)) {
+                                                    $realPath = storage_path('app/public/' . $state);
+                                                } elseif (is_object($state) && method_exists($state, 'getRealPath')) {
+                                                    $realPath = $state->getRealPath();
+                                                }
 
-                                        if ($realPath && file_exists($realPath)) {
-                                            $exif = app(\App\Services\ImageExifExtractorService::class)->extract($realPath);
-                                            if (!empty($exif['latitude'])) $set('latitude', $exif['latitude']);
-                                            if (!empty($exif['longitude'])) $set('longitude', $exif['longitude']);
-                                            if (!empty($exif['captured_at'])) {
-                                                $set('captured_at', $exif['captured_at']->format('Y-m-d H:i:s'));
-                                            } else {
-                                                $set('captured_at', now()->format('Y-m-d H:i:s'));
-                                            }
-                                        }
-                                    })
-                                    ->columnSpan(2),
+                                                if ($realPath && file_exists($realPath)) {
+                                                    $exif = app(\App\Services\ImageExifExtractorService::class)->extract($realPath);
+                                                    if (!empty($exif['latitude'])) $set('latitude', $exif['latitude']);
+                                                    if (!empty($exif['longitude'])) $set('longitude', $exif['longitude']);
+                                                    if (!empty($exif['captured_at'])) {
+                                                        $set('captured_at', $exif['captured_at']->format('Y-m-d H:i:s'));
+                                                    } else {
+                                                        $set('captured_at', now()->format('Y-m-d H:i:s'));
+                                                    }
+                                                }
+                                            }),
 
-                                Forms\Components\ViewField::make('stamped_preview')
-                                    ->view('filament.forms.components.stamped-image-preview')
-                                    ->columnSpan(2),
+                                        Forms\Components\ViewField::make('stamped_preview')
+                                            ->view('filament.forms.components.stamped-image-preview'),
+
+                                        Forms\Components\Actions::make([
+                                            Forms\Components\Actions\Action::make('burn_stamp_now')
+                                                ->label('⚡ Cap Stempel Permanen ke File Gambar')
+                                                ->icon('heroicon-m-sparkles')
+                                                ->color('warning')
+                                                ->requiresConfirmation()
+                                                ->modalHeading('Cap Stempel Permanen ke File')
+                                                ->modalDescription('Koordinat, waktu, dan logo instansi akan digambar langsung (burn-in) secara permanen ke dalam file foto menggunakan PHP GD. Lanjutkan?')
+                                                ->action(function (Forms\Get $get, Forms\Set $set) {
+                                                    $filePath = $get('file_path');
+                                                    if (!$filePath) {
+                                                        Notification::make()->warning()->title('Belum Ada Foto')->body('Unggah foto kegiatan terlebih dahulu.')->send();
+                                                        return;
+                                                    }
+
+                                                    $realPath = is_string($filePath) ? storage_path('app/public/' . $filePath) : null;
+                                                    if (!$realPath || !file_exists($realPath)) {
+                                                        Notification::make()->danger()->title('File Tidak Ditemukan')->body('Simpan kegiatan terlebih dahulu sebelum mencap stempel permanen.')->send();
+                                                        return;
+                                                    }
+
+                                                    $lat = (float) ($get('latitude') ?: -6.894561);
+                                                    $lng = (float) ($get('longitude') ?: 110.637492);
+                                                    $time = $get('captured_at') ?: now();
+                                                    $caption = $get('caption') ?: 'Dokumentasi Pelaksanaan Tugas';
+
+                                                    $ok = app(\App\Services\PhotoWatermarkService::class)->applyWatermark($realPath, [
+                                                        'latitude' => $lat,
+                                                        'longitude' => $lng,
+                                                        'captured_at' => $time,
+                                                        'caption' => $caption,
+                                                        'office_name' => 'BPS KABUPATEN DEMAK',
+                                                    ]);
+
+                                                    if ($ok) {
+                                                        $set('is_stamped', true);
+                                                        Notification::make()->success()->title('✅ Stempel Berhasil Dicap Permanen')->body('File gambar telah berhasil dibakar stempel fisik resmi.')->send();
+                                                    } else {
+                                                        Notification::make()->danger()->title('Gagal Mencap Stempel')->body('Terjadi kendala saat memproses gambar fisik.')->send();
+                                                    }
+                                                }),
+                                        ]),
+                                    ])
+                                    ->columnSpan(1),
 
                                 Forms\Components\Grid::make(1)
                                     ->schema([

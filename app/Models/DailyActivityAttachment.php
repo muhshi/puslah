@@ -39,6 +39,44 @@ class DailyActivityAttachment extends Model
         return $this->belongsTo(DailyActivity::class, 'daily_activity_id');
     }
 
+    /**
+     * Terapkan watermark stempel koordinat dan waktu permanen ke file fisik foto.
+     */
+    public function applyWatermark(): bool
+    {
+        if (empty($this->file_path)) {
+            return false;
+        }
+
+        $fullPath = storage_path('app/public/' . $this->file_path);
+        if (!file_exists($fullPath)) {
+            return false;
+        }
+
+        $caption = $this->caption;
+        if (empty($caption) && $this->dailyActivity) {
+            $caption = $this->dailyActivity->raw_content;
+        }
+
+        $success = app(\App\Services\PhotoWatermarkService::class)->applyWatermark($fullPath, [
+            'latitude' => $this->latitude ?: -6.894561,
+            'longitude' => $this->longitude ?: 110.637492,
+            'captured_at' => $this->captured_at ?: now(),
+            'caption' => $caption ?: 'Dokumentasi Kegiatan BPS',
+            'office_name' => 'BPS KABUPATEN DEMAK',
+        ]);
+
+        if ($success) {
+            clearstatcache(true, $fullPath);
+            $this->updateQuietly([
+                'is_stamped' => true,
+                'file_size' => filesize($fullPath),
+            ]);
+        }
+
+        return $success;
+    }
+
     public function getUrlAttribute(): ?string
     {
         if (empty($this->file_path)) {

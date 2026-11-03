@@ -353,14 +353,34 @@ class DailyActivityTelegramHandler
             $isDefaultOffice = true;
         }
 
-        // Buat attachment dengan data EXIF / default kantor
+        // Terapkan watermark stempel fisik permanen ke file foto (PHP GD)
+        $watermarkSuccess = false;
+        try {
+            $watermarkService = app(\App\Services\PhotoWatermarkService::class);
+            $watermarkSuccess = $watermarkService->applyWatermark($fullPath, [
+                'latitude' => $latitude,
+                'longitude' => $longitude,
+                'captured_at' => $capturedAt,
+                'caption' => $caption ?: $activity->raw_content,
+                'office_name' => $officeCoords['name'] ?? 'BPS KABUPATEN DEMAK',
+            ]);
+            if ($watermarkSuccess) {
+                // Update ukuran file setelah distempel
+                clearstatcache(true, $fullPath);
+                $fileSize = filesize($fullPath);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Gagal membakar watermark foto telegram: ' . $e->getMessage());
+        }
+
+        // Buat attachment dengan status is_stamped = true jika berhasil distempel
         DailyActivityAttachment::create([
             'daily_activity_id' => $activity->id,
             'file_path' => $relativePath,
             'file_name' => $fileName,
             'file_size' => $fileSize,
             'mime_type' => 'image/jpeg',
-            'is_stamped' => false,
+            'is_stamped' => $watermarkSuccess,
             'latitude' => $latitude,
             'longitude' => $longitude,
             'captured_at' => $capturedAt,
