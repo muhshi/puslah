@@ -5,6 +5,19 @@
 @endphp
 
 <div class="space-y-4" x-data="{ copiedId: null }">
+    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-800 pb-3">
+        <span class="text-xs text-gray-500 dark:text-gray-400">
+            Daftar tautan publik butir KIPAPP yang telah Anda buat. Link ini permanen dan dapat langsung disalin ke E-Kinerja.
+        </span>
+        <a
+            href="{{ \App\Filament\Resources\SharedWorkReportResource::getUrl('index') }}"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 text-white hover:bg-sky-700 text-xs font-bold shadow-sm transition-colors"
+        >
+            <span>⚙️ Kelola Wadah (Tambah / Edit / Hapus)</span>
+            <span>↗</span>
+        </a>
+    </div>
+
     @if($reports->isEmpty())
         <div class="p-8 text-center bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
             <div class="text-3xl mb-2">📂</div>

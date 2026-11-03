@@ -55,6 +55,10 @@ composer dev
 ## Changelog
 
 ### 2026-11-03
+- **Personalisasi Tampilan Kegiatan Mandiri & Modal SlideOver Wadah KIPAPP**:
+  - **Fokus Kegiatan Pribadi:** Menyesuaikan query Bukti Dukung Harian dan Wadah KIPAPP agar hanya menampilkan data milik pengguna yang sedang login (Abdul Muhshi), menyembunyikan kolom pegawai, serta mengotomatiskan `user_id` tanpa perlu memilih nama lagi.
+  - **Manajemen Wadah Cepat (SlideOver Modal):** Aksi Tambah dan Ubah (Edit) pada menu *Wadah Berkas KIPAPP* kini menggunakan panel SlideOver di samping kanan layar, sehingga pengguna dapat menambah atau mengedit butir kegiatan secara instan tanpa perlu berpindah-pindah halaman.
+  - **Akses Cepat Pengelolaan Wadah:** Menambahkan tautan langsung ke menu Wadah KIPAPP dari modal Bukti Dukung Harian.
 - **Wadah Berkas KIPAPP / E-Kinerja & Dukungan Lampiran PDF**:
   - **Sistem Wadah Berkas Butir KIPAPP (`SharedWorkReportResource`):** Menghadirkan menu baru `Manajemen Dokumen > Wadah Berkas KIPAPP` untuk mengelompokkan bukti dukung berdasarkan butir kegiatan SKP (contoh: *Pengolahan Peta Wilkerstat*, *Pengembangan Inovasi Sistem Puslah*). Setiap wadah memiliki **1 Tautan Publik Permanen** yang tidak perlu diganti setiap ada laporan baru.
   - **Auto-Hashtag Telegram (#wilkerstat, #inovasi):** Bot Telegram secara cerdas mendeteksi hashtag pada pesan atau caption foto (misal: `#wilkerstat`) dan otomatis memasukkan kegiatan ke dalam wadah KIPAPP terkait.

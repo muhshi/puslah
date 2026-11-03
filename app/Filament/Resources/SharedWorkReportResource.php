@@ -105,11 +105,6 @@ class SharedWorkReportResource extends Resource
                     ->formatStateUsing(fn ($state) => $state ? "#{$state}" : '-')
                     ->searchable(),
 
-                Tables\Columns\TextColumn::make('user.name')
-                    ->label('Pegawai')
-                    ->sortable()
-                    ->visible($isSuperAdmin),
-
                 Tables\Columns\TextColumn::make('activities_count')
                     ->label('Terkumpul')
                     ->badge()
@@ -170,7 +165,10 @@ class SharedWorkReportResource extends Resource
                     ->color('gray')
                     ->url(fn (SharedWorkReport $record) => route('shared-work-report.download', ['uuid' => $record->uuid])),
 
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->slideOver()
+                    ->modalHeading('Ubah Wadah Butir KIPAPP'),
+
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
@@ -185,7 +183,8 @@ class SharedWorkReportResource extends Resource
         $query = parent::getEloquentQuery();
         $user = Auth::user();
 
-        if ($user && !$user->hasAnyRole(['super_admin', 'admin'])) {
+        // Hanya tampilkan wadah milik user yang sedang login
+        if ($user) {
             $query->where('user_id', $user->id);
         }
 
@@ -196,8 +195,6 @@ class SharedWorkReportResource extends Resource
     {
         return [
             'index' => Pages\ListSharedWorkReports::route('/'),
-            'create' => Pages\CreateSharedWorkReport::route('/create'),
-            'edit' => Pages\EditSharedWorkReport::route('/{record}/edit'),
         ];
     }
 }

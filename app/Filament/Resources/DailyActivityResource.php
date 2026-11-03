@@ -40,8 +40,8 @@ class DailyActivityResource extends Resource
         $query = parent::getEloquentQuery()->with(['user', 'suratTugas', 'attachments']);
         $user = Auth::user();
 
-        // Super admin / admin melihat semua, pegawai hanya melihat miliknya
-        if ($user && !$user->hasAnyRole(['super_admin', 'admin'])) {
+        // Hanya tampilkan kegiatan milik user yang sedang login (fokus pada laporan mandiri)
+        if ($user) {
             $query->where('user_id', $user->id);
         }
 
@@ -50,35 +50,25 @@ class DailyActivityResource extends Resource
 
     public static function form(Form $form): Form
     {
-        $isSuperAdmin = Auth::user()?->hasAnyRole(['super_admin', 'admin']) ?? false;
-
         return $form
             ->schema([
                 Forms\Components\Section::make('Informasi Kegiatan')
-                    ->columns(3)
+                    ->columns(2)
                     ->schema([
-                        Forms\Components\Select::make('user_id')
-                            ->label('Pegawai / Petugas')
-                            ->options(fn () => User::where('name', 'not like', '%Terlampir%')->pluck('name', 'id'))
-                            ->searchable()
-                            ->preload()
-                            ->required()
-                            ->default(Auth::id())
-                            ->visible($isSuperAdmin)
-                            ->live()
-                            ->columnSpan(1),
+                        Forms\Components\Hidden::make('user_id')
+                            ->default(fn () => Auth::id()),
 
                         Forms\Components\DatePicker::make('activity_date')
                             ->label('Tanggal Kegiatan')
                             ->required()
                             ->default(Carbon::today())
                             ->displayFormat('d/m/Y')
-                            ->columnSpan($isSuperAdmin ? 1 : 1),
+                            ->columnSpan(1),
 
                         Forms\Components\Select::make('surat_tugas_id')
                             ->label('Tautan Surat Tugas')
                             ->options(function (Forms\Get $get) {
-                                $userId = $get('user_id') ?: Auth::id();
+                                $userId = Auth::id();
                                 return SuratTugas::where('user_id', $userId)
                                     ->latest('tanggal')
                                     ->take(30)
@@ -92,7 +82,7 @@ class DailyActivityResource extends Resource
                             ->nullable()
                             ->placeholder('Pilih jika terkait Surat Tugas')
                             ->helperText('Kosongkan jika merupakan pekerjaan rutin harian non-surat tugas.')
-                            ->columnSpan($isSuperAdmin ? 2 : 2),
+                            ->columnSpan(1),
 
                         Forms\Components\Select::make('shared_work_report_id')
                             ->label('Wadah Butir KIPAPP / E-Kinerja')
@@ -351,9 +341,7 @@ class DailyActivityResource extends Resource
 
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Pegawai')
-                    ->searchable()
-                    ->sortable()
-                    ->visible($isSuperAdmin),
+                    ->visible(false),
 
                 Tables\Columns\TextColumn::make('suratTugas.nomor_surat_tugas')
                     ->label('Surat Tugas')
