@@ -55,6 +55,12 @@ composer dev
 ## Changelog
 
 ### 2026-11-03
+- **Wadah Berkas KIPAPP / E-Kinerja & Dukungan Lampiran PDF**:
+  - **Sistem Wadah Berkas Butir KIPAPP (`SharedWorkReportResource`):** Menghadirkan menu baru `Manajemen Dokumen > Wadah Berkas KIPAPP` untuk mengelompokkan bukti dukung berdasarkan butir kegiatan SKP (contoh: *Pengolahan Peta Wilkerstat*, *Pengembangan Inovasi Sistem Puslah*). Setiap wadah memiliki **1 Tautan Publik Permanen** yang tidak perlu diganti setiap ada laporan baru.
+  - **Auto-Hashtag Telegram (#wilkerstat, #inovasi):** Bot Telegram secara cerdas mendeteksi hashtag pada pesan atau caption foto (misal: `#wilkerstat`) dan otomatis memasukkan kegiatan ke dalam wadah KIPAPP terkait.
+  - **Dukungan Dokumen PDF:** Repeater berkas bukti dukung kini menerima format gambar (`JPG, PNG, WebP`) **sekaligus dokumen PDF** (`application/pdf`) hingga 10MB. Dilengkapi pratinjau kartu dokumen PDF resmi di form dan tampilan terpisah yang rapi pada halaman publik `/bukti-dukung/share/{uuid}`.
+  - **Tautan Langsung & Bulk Action di Web:** Menambahkan dropdown pemilihan wadah KIPAPP pada form input kegiatan harian serta aksi massal *"📁 Tautkan ke Wadah KIPAPP"* pada tabel.
+  - **Pembersihan Form:** Menghilangkan kolom input status yang tidak terpakai dari form Tambah & Edit kegiatan.
 - **Stempel Watermark Visual Langsung di Atas Foto & Pembakaran Fisik PHP GD**:
   - **Live Preview Watermark Overlay:** Menghapus tombol dan placeholder stempel foto lama yang terpisah. Kini preview stempel watermark tampil melayang (*live overlay*) tepat di pojok kiri bawah preview gambar foto (menampilkan Lat/Long, Waktu WIB, Keterangan Kegiatan, dan Satuan Kerja BPS Kabupaten Demak) layaknya hasil foto OpenCamera.
   - **Service Pembakar Stempel Permanen (`PhotoWatermarkService`):** Menggunakan ekstensi native PHP GD untuk menggambar kotak stempel semi-transparan dan teks stempel koordinat/waktu secara permanen (*burn-in*) langsung ke dalam file fisik gambar. Dilengkapi koreksi orientasi EXIF (`imagerotate`) agar foto jepretan kamera HP portrait tidak miring.
