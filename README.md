@@ -55,11 +55,9 @@ composer dev
 ## Changelog
 
 ### 2026-11-03
-- **Redesain Ringkas & Badge Warna Status Wadah KIPAPP**:
+- **Perbaikan Badge Status Wadah Menggunakan Komponen Native `<x-filament::badge>`**:
+  - **Native Filament Badges:** Menggantikan SVG custom mentah dengan komponen resmi `<x-filament::badge>` (`color="success"` hijau untuk wadah terhubung, `color="danger"` merah untuk belum ada wadah). Menghindari distorsi SVG tanpa style di panel Filament.
   - **Uraian Narasi Ringkas (Maksimal 2 Baris):** Mengembalikan limitasi panjang teks narasi pada tabel (`limit(70)`) sehingga tinggi baris tabel tetap proporsional dan tidak memanjang ke bawah.
-  - **Pill Badge Hijau & Merah Elegan:** Menggantikan emoji besar dengan pill badge rounded-full yang modern dan ramping:
-    - **Badge Hijau (Emerald):** Ditampilkan untuk kegiatan yang sudah memiliki wadah KIPAPP lengkap dengan dot indicator status.
-    - **Badge Merah (Rose):** Ditampilkan dengan status jelas `Belum Ada Wadah KIPAPP` untuk kegiatan yang belum terhubung ke butir kegiatan manapun.
 - **Multi-Wadah KIPAPP (Many-to-Many), Optimasi Kecepatan Modal & Tombol Native Tailwind**:
   - **Relasi Multi-Wadah (1 Kegiatan Bisa Masuk > 1 Wadah):** Menghadirkan tabel pivot `daily_activity_shared_work_report` sehingga satu kegiatan harian dapat dikaitkan ke beberapa wadah KIPAPP sekaligus. Form kegiatan mendukung multi-select dengan tag pencarian, dan bot Telegram dapat memproses multi-hashtag sekaligus (contoh: `#wilkerstat #inovasi`).
   - **Label Wadah pada Kolom Uraian Narasi Kegiatan:** Menampilkan badge/pill judul wadah (`📁 #wilkerstat • Judul Wadah`) langsung di bawah uraian kegiatan, atau indikator peringatan (`⚪ Belum Ada Wadah KIPAPP`) jika belum dimasukkan ke wadah manapun, memudahkan identifikasi status kegiatan.
