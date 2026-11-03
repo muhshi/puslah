@@ -209,44 +209,6 @@ class DailyActivityResource extends Resource
 
                                 Forms\Components\Grid::make(1)
                                     ->schema([
-                                        Forms\Components\Placeholder::make('stamp_preview')
-                                            ->label('Visual Stempel Watermark')
-                                            ->content(function (Forms\Get $get) {
-                                                $isStamped = (bool) $get('is_stamped');
-                                                $lat = $get('latitude');
-                                                $lng = $get('longitude');
-                                                $capturedAt = $get('captured_at');
-                                                $caption = $get('caption') ?: 'Dokumentasi Kegiatan BPS';
-
-                                                if ($isStamped) {
-                                                    return new \Illuminate\Support\HtmlString('
-                                                        <div class="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200">
-                                                            <span class="text-base">✅</span>
-                                                            <div>
-                                                                <span class="font-bold">Foto Sudah Berstempel</span>
-                                                                <div class="text-[10px] text-emerald-600 dark:text-emerald-400">Watermark sudah tertempel di foto bawaan kamera.</div>
-                                                            </div>
-                                                        </div>
-                                                    ');
-                                                }
-
-                                                $coordText = ($lat && $lng) ? "Lat: {$lat}, Lng: {$lng}" : "Koordinat belum diset";
-                                                $timeText = $capturedAt ? \Carbon\Carbon::parse($capturedAt)->translatedFormat('d M Y H:i') : now()->translatedFormat('d M Y H:i');
-
-                                                return new \Illuminate\Support\HtmlString('
-                                                    <div class="rounded-lg border border-gray-700 bg-gray-900/90 text-white font-mono text-[11px] p-2.5 shadow">
-                                                        <div class="flex items-center justify-between border-b border-gray-700 pb-1 mb-1.5 text-emerald-400 font-sans font-bold text-[10px]">
-                                                            <span>🏷️ PREVIEW STEMPEL</span>
-                                                            <span class="px-1 bg-emerald-900/60 rounded text-emerald-300">Siap Tersemat</span>
-                                                        </div>
-                                                        <div class="truncate text-yellow-300 font-semibold">' . e($caption) . '</div>
-                                                        <div class="text-gray-300 text-[10px] mt-0.5">📍 ' . e($coordText) . '</div>
-                                                        <div class="text-gray-300 text-[10px]">🕒 ' . e($timeText) . ' WIB</div>
-                                                        <div class="text-gray-400 text-[9px] mt-1 uppercase tracking-wider">BPS KABUPATEN DEMAK</div>
-                                                    </div>
-                                                ');
-                                            }),
-
                                         Forms\Components\TextInput::make('caption')
                                             ->label('Keterangan / Kategori Foto')
                                             ->placeholder('Contoh: Koordinasi bersama Kades')
@@ -476,14 +438,6 @@ class DailyActivityResource extends Resource
                             ])
                             ->send();
                     }),
-
-                // Aksi Buka di Halaman Stempel Foto
-                Tables\Actions\Action::make('open_photo_stamp')
-                    ->label('Stempel Foto')
-                    ->icon('heroicon-m-camera')
-                    ->color('warning')
-                    ->visible(fn (DailyActivity $record) => $record->attachments()->where('is_stamped', false)->exists())
-                    ->url(route('filament.admin.pages.stempel-foto')),
 
                 // Aksi Unduh DOCX
                 Tables\Actions\Action::make('export_docx')
