@@ -124,6 +124,32 @@ class DailyActivityTelegramHandler
     }
 
     /**
+     * Handle command /help
+     */
+    public function handleHelp(Nutgram $bot): void
+    {
+        $text = "📖 *Panduan Penggunaan Bot Bukti Dukung Puslah*\n\n" .
+            "Bot ini bersifat *dua arah & interaktif* untuk membantu pencatatan kinerja harian Anda secara santai.\n\n" .
+            "📌 *Cara Kerja Interaktif:*\n" .
+            "1️⃣ *Kirim Catatan Kegiatan:*\n" .
+            "Ketik kalimat santai tentang apa yang Anda kerjakan hari ini. Contoh:\n" .
+            "_\"Validasi peta blok sensus kec. Karangawen, matching duplikat poligon\"_\n" .
+            "👉 *Gemini AI langsung membalas* dengan narasi kedinasan resmi yang rapi dan menyimpannya ke server.\n\n" .
+            "2️⃣ *Kirim Foto Dokumentasi:*\n" .
+            "Kirim foto kegiatan lapangan atau layar kerja. Bot akan membalas dengan konfirmasi lampiran, jam jepret, dan koordinat lokasi.\n\n" .
+            "📌 *Perintah Cepat:*\n" .
+            "• `/today` - Lihat rekap seluruh kegiatan Anda hari ini\n" .
+            "• `/help` - Buka panduan ini\n\n" .
+            "🏛️ _Akses web Puslah untuk mengunduh rekap Word atau menyalin ke Laporan Perjalanan Dinas (LPD)._";
+
+        $bot->sendMessage(
+            text: $text,
+            chat_id: $bot->chatId(),
+            parse_mode: 'Markdown'
+        );
+    }
+
+    /**
      * Handle pesan teks (catatan harian santai)
      */
     public function handleTextMessage(Nutgram $bot): void
