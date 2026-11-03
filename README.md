@@ -55,6 +55,16 @@ composer dev
 ## Changelog
 
 ### 2026-11-03
+- **Stempel Watermark Visual Langsung di Atas Foto & Pembakaran Fisik PHP GD**:
+  - **Live Preview Watermark Overlay:** Menghapus tombol dan placeholder stempel foto lama yang terpisah. Kini preview stempel watermark tampil melayang (*live overlay*) tepat di pojok kiri bawah preview gambar foto (menampilkan Lat/Long, Waktu WIB, Keterangan Kegiatan, dan Satuan Kerja BPS Kabupaten Demak) layaknya hasil foto OpenCamera.
+  - **Service Pembakar Stempel Permanen (`PhotoWatermarkService`):** Menggunakan ekstensi native PHP GD untuk menggambar kotak stempel semi-transparan dan teks stempel koordinat/waktu secara permanen (*burn-in*) langsung ke dalam file fisik gambar. Dilengkapi koreksi orientasi EXIF (`imagerotate`) agar foto jepretan kamera HP portrait tidak miring.
+  - **Auto-Burn Watermark Telegram:** Foto yang dikirimkan petugas via bot Telegram kini otomatis dibakar stempel fisik permanennya saat disimpan ke server.
+  - **Aksi Satu-Klik Stempel di Web:** Menyediakan tombol aksi *"⚡ Cap Stempel Permanen ke File Gambar"* pada form upload Filament jika petugas ingin membakar stempel ke file secara manual.
+- **Modul Berkas Publik Multi-Hari untuk Bukti Dukung Aplikasi Pusat (E-Kinerja)**:
+  - **Solusi Pekerjaan Berhari-hari:** Memfasilitasi pekerjaan sejenis yang dikerjakan selama beberapa hari (baik rentang tanggal berturut-turut maupun melompat-lompat) agar dapat dikumpulkan menjadi satu berkas terpadu dengan satu tautan publik resmi yang siap dilampirkan ke aplikasi E-Kinerja BPS.
+  - **Bulk Action "🔗 Buat Berkas Publik Multi-Hari":** Pengguna cukup mencentang beberapa kegiatan di tabel Bukti Dukung, mengisi judul berkas, lalu sistem otomatis menerbitkan berkas resmi dengan UUID v4 unik.
+  - **Halaman Berkas Publik Bebas Login (`/bukti-dukung/share/{uuid}`):** Halaman verifikasi publik ber-Kop BPS Kabupaten Demak, profil pegawai, timeline kronologis kegiatan harian, galeri foto dokumentasi berstempel dengan fitur modal lightbox zoom, tombol salin tautan satu-klik ke clipboard, serta tombol unduh berkas Word (.docx).
+  - **Modal "Berkas Publik Saya 🔗":** Akses cepat di header halaman bukti dukung untuk melihat seluruh tautan berkas publik yang pernah diterbitkan, memantau jumlah penayangan (*view count*), dan menyalin kembali link E-Kinerja kapan saja.
 - **Auto-Default Koordinat Kantor BPS Demak untuk Foto Telegram**:
   - Foto yang dikirim melalui kamera Telegram dan tidak memiliki metadata GPS secara otomatis diset ke koordinat kantor BPS Kabupaten Demak (`SystemSettings` / fallback `-6.894561, 110.637492`), sehingga lampiran bukti dukung selalu memiliki data koordinat yang valid.
 - **Auto-Polish AI Instan, Visual Stempel Watermark, & Penyederhanaan Tampilan**:
