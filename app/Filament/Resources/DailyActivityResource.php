@@ -529,6 +529,7 @@ class DailyActivityResource extends Resource
 
                             foreach ($records as $rec) {
                                 $rec->update(['shared_work_report_id' => $rep->id]);
+                                $rec->sharedWorkReports()->syncWithoutDetaching([$rep->id]);
                             }
 
                             Notification::make()
