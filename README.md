@@ -55,6 +55,8 @@ composer dev
 ## Changelog
 
 ### 2026-11-03
+- **Penghapusan Halaman Heatmap Beban Petugas**:
+  - Menghapus halaman `WorkloadHeatmap` (`app/Filament/Pages/WorkloadHeatmap.php`) dan view terkait (`resources/views/filament/pages/workload-heatmap.blade.php`) dari navigasi Filament karena fitur tidak dibutuhkan.
 - **Fix SQL 1364 Default Value Kolom `activity_ids` Wadah KIPAPP**:
   - **Nilai Default Otomatis:** Menambahkan default array kosong `[]` pada event `booted()` model `SharedWorkReport` dan controller saat pembuatan wadah baru.
   - **Kolom Nullable:** Migrasi skema database untuk menetapkan kolom `activity_ids` menjadi nullable agar pembuatan wadah baru tidak mengalami kegagalan pada mode SQL strict MySQL.
