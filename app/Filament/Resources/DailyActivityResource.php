@@ -94,6 +94,20 @@ class DailyActivityResource extends Resource
                             ->helperText('Kosongkan jika merupakan pekerjaan rutin harian non-surat tugas.')
                             ->columnSpan($isSuperAdmin ? 2 : 2),
 
+                        Forms\Components\Select::make('shared_work_report_id')
+                            ->label('Wadah Butir KIPAPP / E-Kinerja')
+                            ->options(function () {
+                                return \App\Models\SharedWorkReport::where('user_id', Auth::id())
+                                    ->where('is_active', true)
+                                    ->latest()
+                                    ->pluck('title', 'id');
+                            })
+                            ->searchable()
+                            ->nullable()
+                            ->placeholder('Pilih wadah butir KIPAPP (contoh: Wilkerstat, Pengembangan Inovasi...)')
+                            ->helperText('Kegiatan ini otomatis langsung tampil di tautan publik KIPAPP tersebut.')
+                            ->columnSpan(2),
+
                         Forms\Components\Hidden::make('status')
                             ->default('submitted'),
                     ]),
@@ -348,6 +362,16 @@ class DailyActivityResource extends Resource
                     ->formatStateUsing(fn ($state) => $state ? "No. {$state}" : 'Kegiatan Rutin')
                     ->searchable(),
 
+                Tables\Columns\TextColumn::make('sharedWorkReport.title')
+                    ->label('KIPAPP')
+                    ->badge()
+                    ->color('info')
+                    ->placeholder('-')
+                    ->limit(22)
+                    ->tooltip(fn (DailyActivity $record) => $record->sharedWorkReport?->title)
+                    ->searchable()
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('final_content')
                     ->label('Uraian Narasi Kegiatan')
                     ->limit(65)
@@ -512,6 +536,38 @@ class DailyActivityResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('assign_to_shared_report')
+                        ->label('📁 Tautkan ke Wadah KIPAPP')
+                        ->icon('heroicon-m-folder-plus')
+                        ->color('warning')
+                        ->form([
+                            Forms\Components\Select::make('shared_work_report_id')
+                                ->label('Pilih Wadah KIPAPP Tujuan')
+                                ->options(fn () => \App\Models\SharedWorkReport::where('user_id', Auth::id())->where('is_active', true)->latest()->pluck('title', 'id'))
+                                ->required()
+                                ->searchable()
+                                ->placeholder('Pilih wadah berkas KIPAPP Anda...'),
+                        ])
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
+                            $rep = \App\Models\SharedWorkReport::find($data['shared_work_report_id']);
+                            if (!$rep) return;
+
+                            foreach ($records as $rec) {
+                                $rec->update(['shared_work_report_id' => $rep->id]);
+                            }
+
+                            Notification::make()
+                                ->success()
+                                ->title('Kegiatan Berhasil Ditautkan!')
+                                ->body("Sebanyak {$records->count()} kegiatan telah dimasukkan ke wadah \"{$rep->title}\".")
+                                ->actions([
+                                    \Filament\Notifications\Actions\Action::make('buka_berkas')
+                                        ->label('Buka Berkas Publik 🌐')
+                                        ->url(route('shared-work-report.show', ['uuid' => $rep->uuid]), shouldOpenInNewTab: true),
+                                ])
+                                ->send();
+                        }),
+
                     Tables\Actions\BulkAction::make('create_shared_report')
                         ->label('🔗 Buat Berkas Publik Multi-Hari (Link E-Kinerja)')
                         ->icon('heroicon-m-link')
