@@ -29,6 +29,11 @@ class SharedWorkReportResource extends Resource
 
     protected static ?int $navigationSort = 4;
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -68,7 +73,7 @@ class SharedWorkReportResource extends Resource
 
                         Forms\Components\Select::make('surat_tugas_id')
                             ->label('Surat Tugas Terkait (Opsional)')
-                            ->relationship('suratTugas', 'nomor_surat_tugas')
+                            ->relationship('suratTugas', 'nomor_surat')
                             ->searchable()
                             ->preload()
                             ->nullable()

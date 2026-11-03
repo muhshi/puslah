@@ -343,7 +343,7 @@ class DailyActivityResource extends Resource
                     ->label('Pegawai')
                     ->visible(false),
 
-                Tables\Columns\TextColumn::make('suratTugas.nomor_surat_tugas')
+                Tables\Columns\TextColumn::make('suratTugas.nomor_surat')
                     ->label('Surat Tugas')
                     ->badge()
                     ->color(fn ($state) => $state ? 'primary' : 'gray')

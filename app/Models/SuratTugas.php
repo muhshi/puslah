@@ -48,6 +48,14 @@ class SuratTugas extends Model
         'waktu_selesai' => 'datetime',
     ];
 
+    /**
+     * Alias accessor agar pemanggilan nomor_surat_tugas tetap kompatibel.
+     */
+    public function getNomorSuratTugasAttribute(): ?string
+    {
+        return $this->nomor_surat;
+    }
+
     public function sppd(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(Sppd::class);

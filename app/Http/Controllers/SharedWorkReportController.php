@@ -50,4 +50,61 @@ class SharedWorkReportController extends Controller
 
         return response()->download($result['path'], $result['name']);
     }
+
+    /**
+     * Tambah wadah KIPAPP baru dari modal.
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'tag_slug' => 'nullable|string|max:64',
+            'period_start' => 'nullable|date',
+            'period_end' => 'nullable|date',
+            'description' => 'nullable|string',
+        ]);
+
+        $validated['user_id'] = auth()->id();
+        $validated['is_active'] = true;
+
+        SharedWorkReport::create($validated);
+
+        return back()->with('success', 'Wadah KIPAPP berhasil dibuat!');
+    }
+
+    /**
+     * Update wadah KIPAPP dari modal.
+     */
+    public function update(Request $request, int $id)
+    {
+        $report = SharedWorkReport::where('id', $id)
+            ->where('user_id', auth()->id())
+            ->firstOrFail();
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'tag_slug' => 'nullable|string|max:64',
+            'period_start' => 'nullable|date',
+            'period_end' => 'nullable|date',
+            'description' => 'nullable|string',
+        ]);
+
+        $report->update($validated);
+
+        return back()->with('success', 'Wadah KIPAPP berhasil diperbarui!');
+    }
+
+    /**
+     * Hapus wadah KIPAPP dari modal.
+     */
+    public function destroy(int $id)
+    {
+        $report = SharedWorkReport::where('id', $id)
+            ->where('user_id', auth()->id())
+            ->firstOrFail();
+
+        $report->delete();
+
+        return back()->with('success', 'Wadah KIPAPP berhasil dihapus!');
+    }
 }

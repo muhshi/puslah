@@ -121,6 +121,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/storage/download-file', [\App\Http\Controllers\FileDownloadController::class, 'downloadStorageFile']);
     Route::get('/laporan-perjalanan-dinas/{record}/download-photos', [\App\Http\Controllers\FileDownloadController::class, 'downloadLpdPhotosZip'])->name('lpd.download-photos-zip');
     Route::get('/laporan-lembur/{record}/download-photos', [\App\Http\Controllers\FileDownloadController::class, 'downloadLemburPhotosZip'])->name('laporan-lembur.download-photos-zip');
+
+    // Manajemen Wadah KIPAPP dari Modal
+    Route::post('/bukti-dukung/wadah', [\App\Http\Controllers\SharedWorkReportController::class, 'store'])->name('shared-work-report.store');
+    Route::post('/bukti-dukung/wadah/{id}/update', [\App\Http\Controllers\SharedWorkReportController::class, 'update'])->name('shared-work-report.update');
+    Route::post('/bukti-dukung/wadah/{id}/delete', [\App\Http\Controllers\SharedWorkReportController::class, 'destroy'])->name('shared-work-report.destroy');
 });
 
 // Berkas Publik Bukti Dukung Multi-Hari (Akses Pemeriksa E-Kinerja Tanpa Login)

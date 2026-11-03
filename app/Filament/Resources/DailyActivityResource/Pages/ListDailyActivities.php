@@ -28,60 +28,43 @@ class ListDailyActivities extends ListRecords
         $botUsername = config('nutgram.bot_username') ?: env('TELEGRAM_BOT_USERNAME') ?: 'dinamit3321_bot';
 
         return [
-            Actions\Action::make('test_telegram')
-                ->label('Tes Koneksi Bot 🔔')
-                ->color('gray')
-                ->icon('heroicon-m-bell-alert')
-                ->tooltip('Kirim pesan tes ke Telegram untuk memastikan bot aktif')
-                ->visible(fn () => !empty(Auth::user()?->telegram_chat_id))
-                ->requiresConfirmation()
-                ->modalHeading('Uji Coba Koneksi Bot Telegram')
-                ->modalDescription('Sistem akan mengirimkan pesan notifikasi uji coba ke aplikasi Telegram Anda sekarang.')
-                ->modalSubmitActionLabel('Kirim Pesan Tes 🚀')
-                ->action(function () use ($botUsername) {
-                    $currentUser = Auth::user();
-                    if (!$currentUser || empty($currentUser->telegram_chat_id)) {
-                        Notification::make()->warning()->title('Akun Telegram Belum Terhubung')->send();
-                        return;
-                    }
-
-                    try {
-                        $bot = app(\SergiX44\Nutgram\Nutgram::class);
-                        $bot->sendMessage(
-                            text: "🔔 *Tes Koneksi Telegram Puslah Berhasil!*\n\n" .
-                                "Halo *{$currentUser->name}*, akun Puslah Anda terhubung secara aktif dengan bot @{$botUsername}.\n\n" .
-                                "Mulai sekarang Anda bisa mengirimkan foto kegiatan lapangan atau catatan pekerjaan harian langsung ke bot ini kapan saja!",
-                            chat_id: (int) $currentUser->telegram_chat_id,
-                            parse_mode: 'Markdown'
-                        );
-
-                        Notification::make()
-                            ->success()
-                            ->title('Pesan Tes Berhasil Dikirim! 🔔')
-                            ->body("Pesan uji coba telah terkirim ke Telegram Anda (Chat ID: {$currentUser->telegram_chat_id}). Silakan periksa aplikasi Telegram Anda.")
-                            ->send();
-                    } catch (\Throwable $e) {
-                        Notification::make()
-                            ->danger()
-                            ->title('Gagal Mengirim Pesan')
-                            ->body('Terjadi kendala koneksi ke Telegram: ' . $e->getMessage())
-                            ->send();
-                    }
-                }),
-
+            // 1. Status / Pengaturan Telegram (Ringkas)
             Actions\Action::make('connect_telegram')
-                ->label(fn () => !empty(Auth::user()?->telegram_chat_id) ? 'Telegram Terhubung 🟢' : 'Hubungkan Telegram 📱')
-                ->color(fn () => !empty(Auth::user()?->telegram_chat_id) ? 'success' : 'primary')
+                ->label(fn () => !empty(Auth::user()?->telegram_chat_id) ? 'Telegram 🟢' : 'Hubungkan Telegram 📱')
+                ->color('gray')
                 ->icon('heroicon-m-chat-bubble-left-right')
-                ->modalHeading(fn () => !empty(Auth::user()?->telegram_chat_id) ? 'Status Akun Telegram Anda' : 'Hubungkan Akun Telegram')
+                ->modalHeading(fn () => !empty(Auth::user()?->telegram_chat_id) ? 'Status Akun Telegram' : 'Hubungkan Akun Telegram')
                 ->modalDescription(function () use ($botUsername) {
                     $currentUser = Auth::user();
                     if (!empty($currentUser?->telegram_chat_id)) {
-                        return "Akun Telegram Anda saat ini AKTIF TERHUBUNG (Chat ID: {$currentUser->telegram_chat_id}) dengan bot @{$botUsername}. Setiap foto dan pesan yang Anda kirim ke bot akan otomatis masuk sebagai bukti dukung. Klik tombol di bawah HANYA jika Anda ingin memutuskan tautan akun.";
+                        return "Akun Telegram Anda saat ini AKTIF TERHUBUNG (Chat ID: {$currentUser->telegram_chat_id}) dengan bot @{$botUsername}.\n\nSetiap foto/catatan yang Anda kirim akan otomatis masuk sebagai bukti dukung. Gunakan hashtag (misal: #wilkerstat) untuk otomatis masuk ke wadah KIPAPP.";
                     }
 
                     return "Kirim catatan harian dan foto dokumentasi bukti dukung dengan santai kapan saja melalui Telegram tanpa perlu buka web.";
                 })
+                ->extraModalFooterActions([
+                    Actions\Action::make('ping_bot')
+                        ->label('Kirim Pesan Tes 🔔')
+                        ->color('info')
+                        ->visible(fn () => !empty(Auth::user()?->telegram_chat_id))
+                        ->action(function () use ($botUsername) {
+                            $currentUser = Auth::user();
+                            if (!$currentUser || empty($currentUser->telegram_chat_id)) return;
+
+                            try {
+                                $bot = app(\SergiX44\Nutgram\Nutgram::class);
+                                $bot->sendMessage(
+                                    text: "🔔 *Tes Koneksi Telegram Puslah Berhasil!*\n\nHalo *{$currentUser->name}*, akun Puslah Anda terhubung aktif dengan bot @{$botUsername}.",
+                                    chat_id: (int) $currentUser->telegram_chat_id,
+                                    parse_mode: 'Markdown'
+                                );
+
+                                Notification::make()->success()->title('Pesan Tes Terkirim! 🔔')->send();
+                            } catch (\Throwable $e) {
+                                Notification::make()->danger()->title('Gagal Kirim Pesan')->body($e->getMessage())->send();
+                            }
+                        }),
+                ])
                 ->modalSubmitActionLabel(fn () => !empty(Auth::user()?->telegram_chat_id) ? 'Putus Hubungan Akun' : 'Dapatkan Tautan Bot')
                 ->action(function () use ($botUsername) {
                     $currentUser = Auth::user();
@@ -102,7 +85,7 @@ class ListDailyActivities extends ListRecords
                     Notification::make()
                         ->success()
                         ->title('Tautan Bot Siap!')
-                        ->body("Klik tautan di bawah ini untuk membuka bot @{$botUsername} di Telegram Anda dan tekan Mulai/Start.")
+                        ->body("Buka bot @{$botUsername} di Telegram Anda dan tekan Mulai/Start.")
                         ->actions([
                             \Filament\Notifications\Actions\Action::make('buka_telegram')
                                 ->label('Buka Bot Telegram 🚀')
@@ -112,69 +95,22 @@ class ListDailyActivities extends ListRecords
                         ->send();
                 }),
 
+            // 2. Wadah Berkas KIPAPP (Modal Lengkap)
             Actions\Action::make('my_shared_reports')
-                ->label('Berkas Publik Saya 🔗')
-                ->color('success')
-                ->icon('heroicon-m-share')
-                ->modalHeading('Daftar Berkas Publik Bukti Dukung (E-Kinerja)')
-                ->modalDescription('Koleksi tautan publik resmi yang pernah Anda buat untuk dilampirkan sebagai bukti dukung di aplikasi E-Kinerja.')
+                ->label('Wadah KIPAPP 📁')
+                ->color('gray')
+                ->icon('heroicon-m-folder')
+                ->modalHeading('Daftar Wadah Berkas KIPAPP (E-Kinerja)')
+                ->modalDescription('Koleksi tautan publik resmi yang pernah Anda buat untuk disematkan sebagai bukti dukung di aplikasi E-Kinerja.')
                 ->modalWidth(\Filament\Support\Enums\MaxWidth::FourExtraLarge)
                 ->modalSubmitAction(false)
                 ->modalCancelActionLabel('Tutup')
                 ->modalContent(fn () => view('filament.pages.shared-reports-modal')),
 
-            Actions\Action::make('export_monthly_docx')
-                ->label('Unduh Rekap Word 📄')
-                ->color('info')
-                ->icon('heroicon-m-document-arrow-down')
-                ->form([
-                    \Filament\Forms\Components\DatePicker::make('start_date')
-                        ->label('Dari Tanggal')
-                        ->default(Carbon::now()->startOfMonth())
-                        ->required(),
-                    \Filament\Forms\Components\DatePicker::make('end_date')
-                        ->label('Sampai Tanggal')
-                        ->default(Carbon::now()->endOfMonth())
-                        ->required(),
-                ])
-                ->action(function (array $data) {
-                    $user = Auth::user();
-                    $startDate = Carbon::parse($data['start_date'])->startOfDay();
-                    $endDate = Carbon::parse($data['end_date'])->endOfDay();
-
-                    $activities = \App\Models\DailyActivity::query()
-                        ->where('user_id', $user->id)
-                        ->whereBetween('activity_date', [$startDate, $endDate])
-                        ->with(['suratTugas', 'attachments'])
-                        ->orderBy('activity_date', 'asc')
-                        ->get();
-
-                    if ($activities->isEmpty()) {
-                        Notification::make()
-                            ->warning()
-                            ->title('Tidak Ada Kegiatan')
-                            ->body('Tidak ditemukan catatan kegiatan pada rentang tanggal yang dipilih.')
-                            ->send();
-                        return;
-                    }
-
-                    try {
-                        $generator = app(\App\Services\WorkReportGeneratorService::class);
-                        $period = $startDate->translatedFormat('d M Y') . ' s.d. ' . $endDate->translatedFormat('d M Y');
-                        $res = $generator->generateWordReport($user, $activities, $period);
-
-                        return response()->download($res['path'], $res['name']);
-                    } catch (\Throwable $e) {
-                        Notification::make()
-                            ->danger()
-                            ->title('Gagal Membuat Rekap Word')
-                            ->body($e->getMessage())
-                            ->send();
-                    }
-                }),
-
+            // 3. Tambah Kegiatan (Primary)
             Actions\CreateAction::make()
-                ->label('Tambah Kegiatan'),
+                ->label('Tambah Kegiatan')
+                ->icon('heroicon-m-plus'),
         ];
     }
 }

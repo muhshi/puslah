@@ -55,6 +55,13 @@ composer dev
 ## Changelog
 
 ### 2026-11-03
+- **Perbaikan Kolom Surat Tugas, Redesain Modal Wadah KIPAPP & Penyederhanaan Header**:
+  - **Fix SQL Unknown Column:** Memperbaiki relasi `suratTugas.nomor_surat` (menggantikan `nomor_surat_tugas`) di form dan tabel, serta menambahkan accessor `nomor_surat_tugas` pada model `SuratTugas` agar selalu kompatibel.
+  - **Penyederhanaan Header:** Menghapus tombol *Unduh Rekap Word* dan menyatukan tombol tes Telegram ke dalam modal status, sehingga header kini tampil bersih dan proporsional dengan 3 tombol utama (`Telegram`, `Wadah KIPAPP`, `+ Tambah Kegiatan`).
+  - **Modal Wadah KIPAPP Interaktif (Menu Titik Tiga `⋮`):**
+    - Menyembunyikan menu resource `Wadah Berkas KIPAPP` dari sidebar agar menu aplikasi lebih ramping.
+    - Pengelolaan penuh (Tambah Wadah Baru, Ubah/Edit, Hapus, Salin Link KIPAPP, Buka Publik, Unduh Word) kini dilakukan **langsung dari dalam modal pop-up** menggunakan menu dropdown titik tiga (`⋮`) yang bersih.
+    - Memperbaiki kontras warna teks dan tombol pada modal agar terbaca jelas di mode terang maupun gelap.
 - **Personalisasi Tampilan Kegiatan Mandiri & Modal SlideOver Wadah KIPAPP**:
   - **Fokus Kegiatan Pribadi:** Menyesuaikan query Bukti Dukung Harian dan Wadah KIPAPP agar hanya menampilkan data milik pengguna yang sedang login (Abdul Muhshi), menyembunyikan kolom pegawai, serta mengotomatiskan `user_id` tanpa perlu memilih nama lagi.
   - **Manajemen Wadah Cepat (SlideOver Modal):** Aksi Tambah dan Ubah (Edit) pada menu *Wadah Berkas KIPAPP* kini menggunakan panel SlideOver di samping kanan layar, sehingga pengguna dapat menambah atau mengedit butir kegiatan secara instan tanpa perlu berpindah-pindah halaman.
