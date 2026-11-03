@@ -92,19 +92,10 @@ class DailyActivityResource extends Resource
                             ->nullable()
                             ->placeholder('Pilih jika terkait Surat Tugas')
                             ->helperText('Kosongkan jika merupakan pekerjaan rutin harian non-surat tugas.')
-                            ->columnSpan($isSuperAdmin ? 1 : 2),
+                            ->columnSpan($isSuperAdmin ? 2 : 2),
 
-                        Forms\Components\Select::make('status')
-                            ->label('Status')
-                            ->options([
-                                'draft' => 'Draft',
-                                'submitted' => 'Diajukan / Selesai',
-                                'verified' => 'Diverifikasi Atasan',
-                            ])
-                            ->default('submitted')
-                            ->required()
-                            ->visible($isSuperAdmin)
-                            ->columnSpan(1),
+                        Forms\Components\Hidden::make('status')
+                            ->default('submitted'),
                     ]),
 
                 Forms\Components\Section::make('Uraian Narasi Kegiatan')
