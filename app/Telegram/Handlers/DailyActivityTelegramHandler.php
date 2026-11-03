@@ -165,6 +165,9 @@ class DailyActivityTelegramHandler
         // Auto-detect Surat Tugas aktif hari ini
         $activeSt = $this->resolveActiveSuratTugas($user, Carbon::today());
 
+        // Auto-detect wadah KIPAPP jika ada hashtag (misal: #wilkerstat, #inovasi)
+        $sharedReport = $this->resolveSharedWorkReport($user, $rawText);
+
         // Otomatis poles narasi dengan Gemini AI langsung saat diterima
         $formalContent = $rawText;
         try {
@@ -181,6 +184,7 @@ class DailyActivityTelegramHandler
         $activity = DailyActivity::create([
             'user_id' => $user->id,
             'surat_tugas_id' => $activeSt?->id,
+            'shared_work_report_id' => $sharedReport?->id,
             'activity_date' => Carbon::today(),
             'raw_content' => $rawText,
             'ai_formal_content' => $formalContent,
@@ -196,12 +200,17 @@ class DailyActivityTelegramHandler
             $stInfo = "\n🔖 *Terkait ST:* No. {$stNo} ({$stTujuan})";
         }
 
+        $kipappInfo = "";
+        if ($sharedReport) {
+            $kipappInfo = "\n📁 *Wadah KIPAPP:* {$sharedReport->title}";
+        }
+
         $bot->sendMessage(
             text: "✅ *Kegiatan Berhasil Dicatat & Dipoles AI!*\n\n" .
             "📝 *Catatan Kasar:*\n_{$rawText}_\n\n" .
             "✨ *Narasi Laporan Formal (AI):*\n*\"{$formalContent}\"*" .
-            $stInfo . "\n\n" .
-            "💡 _Kirim foto dokumentasi jika ada. Laporan Anda sudah tersimpan otomatis di Puslah!_",
+            $stInfo . $kipappInfo . "\n\n" .
+            "💡 _Kirim foto/dokumen jika ada. Laporan Anda sudah tersimpan otomatis di Puslah!_",
             chat_id: $bot->chatId(),
             parse_mode: 'Markdown'
         );
@@ -313,10 +322,12 @@ class DailyActivityTelegramHandler
             }
 
             $activeSt = $this->resolveActiveSuratTugas($user, Carbon::today());
+            $sharedReport = $this->resolveSharedWorkReport($user, $caption ?: '');
 
             $activity = DailyActivity::create([
                 'user_id' => $user->id,
                 'surat_tugas_id' => $activeSt?->id,
+                'shared_work_report_id' => $sharedReport?->id,
                 'activity_date' => Carbon::today(),
                 'raw_content' => $rawContent,
                 'ai_formal_content' => $formalContent,
@@ -396,6 +407,11 @@ class DailyActivityTelegramHandler
                 $stBadge = "\n🔖 *Terkait ST:* No. {$stNo}";
             }
 
+            $kipappBadge = "";
+            if ($activity->sharedWorkReport) {
+                $kipappBadge = "\n📁 *Wadah KIPAPP:* {$activity->sharedWorkReport->title}";
+            }
+
             $gpsBadge = "";
             if (!$isDefaultOffice) {
                 $gpsBadge = "\n📍 *GPS Terdeteksi:* `{$latitude}, {$longitude}`";
@@ -415,8 +431,9 @@ class DailyActivityTelegramHandler
             $bot->sendMessage(
                 text: "📸 *Foto Berhasil Disimpan!*\n" .
                 $captionInfo .
-                "🖼️ *Lampiran:* {$totalPhotos} foto" .
+                "🖼️ *Lampiran:* {$totalPhotos} berkas" .
                 $stBadge .
+                $kipappBadge .
                 $gpsBadge .
                 $timeBadge . "\n\n" .
                 "✅ _Tersimpan otomatis di bukti dukung Puslah._",
@@ -549,5 +566,37 @@ class DailyActivityTelegramHandler
             'longitude' => 110.637492,
             'name' => 'BPS Kabupaten Demak',
         ];
+    }
+
+    /**
+     * Deteksi dan kaitkan wadah KIPAPP / SharedWorkReport berdasarkan hashtag (#wilkerstat, #inovasi, dsb).
+     */
+    protected function resolveSharedWorkReport(User $user, string $text): ?\App\Models\SharedWorkReport
+    {
+        if (empty($text)) {
+            return null;
+        }
+
+        if (preg_match_all('/#([a-zA-Z0-9_\-]+)/', $text, $matches)) {
+            foreach ($matches[1] as $tag) {
+                $slug = \Illuminate\Support\Str::slug($tag);
+                if (empty($slug)) continue;
+
+                $report = \App\Models\SharedWorkReport::where('user_id', $user->id)
+                    ->where('is_active', true)
+                    ->where(function ($q) use ($slug) {
+                        $q->where('tag_slug', $slug)
+                          ->orWhere('title', 'like', "%{$slug}%");
+                    })
+                    ->latest()
+                    ->first();
+
+                if ($report) {
+                    return $report;
+                }
+            }
+        }
+
+        return null;
     }
 }
