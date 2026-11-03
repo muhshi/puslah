@@ -348,7 +348,9 @@ class DailyActivityResource extends Resource
 
                 Tables\Columns\TextColumn::make('final_content')
                     ->label('Uraian Narasi Kegiatan')
+                    ->limit(70)
                     ->wrap()
+                    ->tooltip(fn (DailyActivity $record) => $record->final_content)
                     ->description(function (DailyActivity $record) {
                         $reports = $record->sharedWorkReports;
                         if ($reports->isEmpty() && $record->sharedWorkReport) {
@@ -357,19 +359,17 @@ class DailyActivityResource extends Resource
 
                         if ($reports->isEmpty()) {
                             return new \Illuminate\Support\HtmlString(
-                                '<div class="mt-1"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/60">⚪ Belum Ada Wadah KIPAPP</span></div>'
+                                '<div class="mt-1"><span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800"><svg class="w-2 h-2 text-rose-500 fill-current shrink-0" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg>Belum Ada Wadah KIPAPP</span></div>'
                             );
                         }
 
                         $pills = $reports->map(function ($rep) {
                             $title = e(\Illuminate\Support\Str::limit($rep->title, 35));
-                            $tag = $rep->tag_slug ? '#' . e($rep->tag_slug) . ' &bull; ' : '';
-                            return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800">📁 ' . $tag . $title . '</span>';
+                            return '<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"><svg class="w-2 h-2 text-emerald-500 fill-current shrink-0" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg>' . $title . '</span>';
                         })->implode(' ');
 
                         return new \Illuminate\Support\HtmlString('<div class="flex flex-wrap gap-1 mt-1">' . $pills . '</div>');
-                    })
-                    ->tooltip(fn (DailyActivity $record) => $record->final_content),
+                    }),
 
                 Tables\Columns\TextColumn::make('attachments_count')
                     ->counts('attachments')
