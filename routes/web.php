@@ -123,3 +123,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/laporan-lembur/{record}/download-photos', [\App\Http\Controllers\FileDownloadController::class, 'downloadLemburPhotosZip'])->name('laporan-lembur.download-photos-zip');
 });
 
+// Berkas Publik Bukti Dukung Multi-Hari (Akses Pemeriksa E-Kinerja Tanpa Login)
+Route::get('/bukti-dukung/share/{uuid}', [\App\Http\Controllers\SharedWorkReportController::class, 'show'])->name('shared-work-report.show');
+Route::get('/bukti-dukung/share/{uuid}/download', [\App\Http\Controllers\SharedWorkReportController::class, 'downloadDocx'])->name('shared-work-report.download');
+
+

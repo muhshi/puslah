@@ -510,6 +510,75 @@ class DailyActivityResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('create_shared_report')
+                        ->label('🔗 Buat Berkas Publik Multi-Hari (Link E-Kinerja)')
+                        ->icon('heroicon-m-link')
+                        ->color('success')
+                        ->modalHeading('Buat Berkas Publik Bukti Dukung Multi-Hari')
+                        ->modalDescription('Gabungkan kegiatan-kegiatan terpilih (baik rentang tanggal berurutan maupun melompat) menjadi 1 berkas resmi dengan tautan publik yang dapat dilampirkan ke E-Kinerja BPS.')
+                        ->modalSubmitActionLabel('Buat Berkas & Tautan Publik 🚀')
+                        ->form([
+                            Forms\Components\TextInput::make('title')
+                                ->label('Judul Berkas Bukti Dukung')
+                                ->placeholder('Contoh: Pelaksanaan Ground Check SBR Kecamatan Wedung')
+                                ->required()
+                                ->default(function (\Illuminate\Database\Eloquent\Collection $records) {
+                                    $first = $records->first();
+                                    if ($first?->suratTugas?->keperluan) {
+                                        return $first->suratTugas->keperluan;
+                                    }
+                                    return 'Laporan Pelaksanaan Tugas Kegiatan';
+                                }),
+
+                            Forms\Components\Textarea::make('description')
+                                ->label('Keterangan / Catatan Tambahan (Opsional)')
+                                ->placeholder('Tuliskan ringkasan atau lingkup pekerjaan multi-hari ini...')
+                                ->rows(2),
+
+                            Forms\Components\Placeholder::make('summary_info')
+                                ->label('Ringkasan Kegiatan Terpilih')
+                                ->content(function (\Illuminate\Database\Eloquent\Collection $records) {
+                                    $count = $records->count();
+                                    $dates = $records->sortBy('activity_date')->pluck('activity_date')
+                                        ->map(fn($d) => \Carbon\Carbon::parse($d)->translatedFormat('d M Y'))
+                                        ->unique()
+                                        ->values()
+                                        ->join(', ');
+                                    $totalPhotos = $records->sum(fn($r) => $r->attachments->count());
+                                    return "{$count} catatan kegiatan ({$totalPhotos} foto bukti) pada tanggal: {$dates}";
+                                }),
+                        ])
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
+                            $user = Auth::user();
+                            if (!$user) return;
+
+                            $sortedIds = $records->sortBy('activity_date')->pluck('id')->values()->toArray();
+                            $stId = $records->firstWhere('surat_tugas_id', '!=', null)?->surat_tugas_id;
+
+                            $report = \App\Models\SharedWorkReport::create([
+                                'user_id' => $user->id,
+                                'title' => $data['title'],
+                                'description' => $data['description'] ?? null,
+                                'activity_ids' => $sortedIds,
+                                'surat_tugas_id' => $stId,
+                                'is_active' => true,
+                            ]);
+
+                            $url = route('shared-work-report.show', ['uuid' => $report->uuid]);
+
+                            Notification::make()
+                                ->success()
+                                ->persistent()
+                                ->title('🎉 Berkas Publik Berhasil Dibuat!')
+                                ->body("Tautan resmi untuk dilampirkan ke E-Kinerja:\n\n{$url}")
+                                ->actions([
+                                    \Filament\Notifications\Actions\Action::make('open_public_link')
+                                        ->label('🌐 Buka Halaman Publik')
+                                        ->url($url, shouldOpenInNewTab: true),
+                                ])
+                                ->send();
+                        }),
+
                     Tables\Actions\BulkAction::make('export_selected_docx')
                         ->label('Cetak Terpilih (Word .docx)')
                         ->icon('heroicon-m-document-arrow-down')

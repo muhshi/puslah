@@ -112,6 +112,17 @@ class ListDailyActivities extends ListRecords
                         ->send();
                 }),
 
+            Actions\Action::make('my_shared_reports')
+                ->label('Berkas Publik Saya 🔗')
+                ->color('success')
+                ->icon('heroicon-m-share')
+                ->modalHeading('Daftar Berkas Publik Bukti Dukung (E-Kinerja)')
+                ->modalDescription('Koleksi tautan publik resmi yang pernah Anda buat untuk dilampirkan sebagai bukti dukung di aplikasi E-Kinerja.')
+                ->modalWidth(\Filament\Support\Enums\MaxWidth::FourExtraLarge)
+                ->modalSubmitAction(false)
+                ->modalCancelActionLabel('Tutup')
+                ->modalContent(fn () => view('filament.pages.shared-reports-modal')),
+
             Actions\Action::make('export_monthly_docx')
                 ->label('Unduh Rekap Word 📄')
                 ->color('info')
