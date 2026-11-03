@@ -34,6 +34,18 @@ class DailyActivityAttachment extends Model
         'longitude' => 'float',
     ];
 
+    protected static function booted(): void
+    {
+        static::saved(function ($attachment) {
+            if (!$attachment->is_stamped && !empty($attachment->file_path)) {
+                $ext = strtolower(pathinfo($attachment->file_path, PATHINFO_EXTENSION));
+                if ($ext !== 'pdf') {
+                    $attachment->applyWatermark();
+                }
+            }
+        });
+    }
+
     public function dailyActivity(): BelongsTo
     {
         return $this->belongsTo(DailyActivity::class, 'daily_activity_id');

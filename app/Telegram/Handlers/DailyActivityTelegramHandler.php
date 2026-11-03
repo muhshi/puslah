@@ -162,8 +162,8 @@ class DailyActivityTelegramHandler
             return;
         }
 
-        // Auto-detect Surat Tugas aktif hari ini
-        $activeSt = $this->resolveActiveSuratTugas($user, Carbon::today());
+        // Deteksi Surat Tugas HANYA jika pesan menyebutkan indikasi ST/surat tugas atau penugasan spesifik
+        $activeSt = $this->resolveActiveSuratTugas($user, Carbon::today(), $rawText);
 
         // Auto-detect wadah KIPAPP jika ada hashtag (misal: #wilkerstat, #inovasi)
         $sharedReport = $this->resolveSharedWorkReport($user, $rawText);
@@ -321,7 +321,7 @@ class DailyActivityTelegramHandler
                 }
             }
 
-            $activeSt = $this->resolveActiveSuratTugas($user, Carbon::today());
+            $activeSt = $this->resolveActiveSuratTugas($user, Carbon::today(), $caption ?: '');
             $sharedReport = $this->resolveSharedWorkReport($user, $caption ?: '');
 
             $activity = DailyActivity::create([
@@ -494,10 +494,23 @@ class DailyActivityTelegramHandler
     }
 
     /**
-     * Auto-detect Surat Tugas aktif pegawai pada tanggal tertentu.
+     * Deteksi Surat Tugas aktif pegawai.
+     * Hanya mengaitkan jika pesan menyebutkan indikasi 'st' atau 'surat tugas', atau nomor spesifik,
+     * untuk mencegah pekerjaan rutin tersambung ke random surat tugas.
      */
-    public function resolveActiveSuratTugas(User $user, Carbon $date): ?SuratTugas
+    public function resolveActiveSuratTugas(User $user, Carbon $date, string $text = ''): ?SuratTugas
     {
+        $lowerText = strtolower($text);
+        $wantsSt = str_contains($lowerText, 'st') 
+            || str_contains($lowerText, 'surat tugas') 
+            || str_contains($lowerText, 'penugasan')
+            || str_contains($lowerText, 'dinas');
+
+        // Jika pesan tidak menyebutkan indikasi surat tugas, default-kan ke pekerjaan rutin kantor
+        if (!$wantsSt) {
+            return null;
+        }
+
         $todayStr = $date->toDateString();
         $startOfDay = $date->copy()->startOfDay();
         $endOfDay = $date->copy()->endOfDay();

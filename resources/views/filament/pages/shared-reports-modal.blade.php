@@ -40,15 +40,12 @@
         cancelForm() {
             this.showForm = false;
             this.isEditing = false;
-        },
-        toggleMenu(id) {
-            this.activeMenuId = this.activeMenuId === id ? null : id;
         }
     }"
     @click.away="activeMenuId = null"
 >
-    {{-- Header Modal & Tombol Aksi Tambah --}}
-    <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-50 dark:bg-slate-800/80 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700">
+    {{-- Header Banner & Tombol Tambah Wadah Baru --}}
+    <div class="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
         <div>
             <h4 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <span>📁</span> Wadah Butir Kegiatan KIPAPP / E-Kinerja
@@ -58,26 +55,27 @@
             </p>
         </div>
 
+        {{-- Tombol Tambah Wadah Baru (SELALU MUNCUL, Kontras Tinggi) --}}
         <button
             type="button"
             @click="openCreate()"
-            x-show="!showForm"
-            class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-lg bg-sky-600 text-white hover:bg-sky-700 shadow-sm transition-all"
+            style="background-color: #0284c7 !important; color: #ffffff !important;"
+            class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-lg shadow-sm hover:opacity-90 cursor-pointer transition-all"
         >
             <span>+ Buat Wadah Baru</span>
         </button>
     </div>
 
-    {{-- Form Inline Tambah / Ubah Wadah (Slide/Toggle) --}}
+    {{-- Form Inline Tambah / Ubah Wadah --}}
     <div
         x-show="showForm"
         x-cloak
         x-transition
-        class="p-4 rounded-xl border border-sky-300 dark:border-sky-800 bg-sky-50/60 dark:bg-sky-950/20 shadow-md space-y-3"
+        class="p-4 rounded-xl border border-sky-300 dark:border-sky-800 bg-sky-50/70 dark:bg-sky-950/30 shadow-md space-y-3"
     >
         <div class="flex items-center justify-between border-b border-sky-200 dark:border-sky-900/50 pb-2">
             <h5 class="text-xs font-bold text-sky-900 dark:text-sky-200 flex items-center gap-1.5" x-text="isEditing ? '✏️ Ubah Wadah KIPAPP' : '➕ Buat Wadah Butir KIPAPP Baru'"></h5>
-            <button type="button" @click="cancelForm()" class="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">Batal ✕</button>
+            <button type="button" @click="cancelForm()" class="text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer">Batal ✕</button>
         </div>
 
         <form
@@ -87,7 +85,7 @@
         >
             @csrf
             <div>
-                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Nama Butir Kegiatan KIPAPP *</label>
+                <label class="block font-bold text-slate-800 dark:text-slate-200 mb-1">Nama Butir Kegiatan KIPAPP *</label>
                 <input
                     type="text"
                     name="title"
@@ -100,7 +98,7 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                    <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Hashtag Telegram (#bot)</label>
+                    <label class="block font-bold text-slate-800 dark:text-slate-200 mb-1">Hashtag Telegram (#bot)</label>
                     <input
                         type="text"
                         name="tag_slug"
@@ -111,7 +109,7 @@
                     <span class="text-[10px] text-slate-500 mt-0.5 block">Ketik di bot: #wilkerstat</span>
                 </div>
                 <div>
-                    <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Periode Mulai (Opsional)</label>
+                    <label class="block font-bold text-slate-800 dark:text-slate-200 mb-1">Periode Mulai (Opsional)</label>
                     <input
                         type="date"
                         name="period_start"
@@ -120,7 +118,7 @@
                     />
                 </div>
                 <div>
-                    <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Periode Selesai (Opsional)</label>
+                    <label class="block font-bold text-slate-800 dark:text-slate-200 mb-1">Periode Selesai (Opsional)</label>
                     <input
                         type="date"
                         name="period_end"
@@ -131,7 +129,7 @@
             </div>
 
             <div>
-                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Catatan / Keterangan (Opsional)</label>
+                <label class="block font-bold text-slate-800 dark:text-slate-200 mb-1">Catatan / Keterangan (Opsional)</label>
                 <textarea
                     name="description"
                     x-model="formData.description"
@@ -141,19 +139,21 @@
                 ></textarea>
             </div>
 
-            <div class="flex items-center justify-end gap-2 pt-1">
+            <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-sky-200/60 dark:border-sky-900/40">
                 <button
                     type="button"
                     @click="cancelForm()"
-                    class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold"
+                    class="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 font-semibold cursor-pointer"
                 >
                     Batal
                 </button>
                 <button
                     type="submit"
-                    class="px-4 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-bold shadow-sm"
-                    x-text="isEditing ? 'Simpan Perubahan' : 'Buat Wadah KIPAPP 🚀'"
-                ></button>
+                    style="background-color: #0284c7 !important; color: #ffffff !important;"
+                    class="px-5 py-2 rounded-lg font-bold shadow-md hover:opacity-90 cursor-pointer"
+                >
+                    <span x-text="isEditing ? 'Simpan Perubahan' : 'Buat Wadah KIPAPP 🚀'">Simpan</span>
+                </button>
             </div>
         </form>
     </div>
@@ -170,7 +170,7 @@
     @else
         <div class="overflow-visible rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs">
             <table class="w-full text-left text-xs text-slate-700 dark:text-slate-200 divide-y divide-slate-200 dark:divide-slate-700">
-                <thead class="bg-slate-100/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold uppercase tracking-wider text-[11px]">
+                <thead class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold uppercase tracking-wider text-[11px]">
                     <tr>
                         <th class="px-4 py-3">Butir Kegiatan KIPAPP</th>
                         <th class="px-3 py-3 text-center">Kegiatan</th>
@@ -186,19 +186,17 @@
                             $actCount = $rep->getActivities()->count();
                         @endphp
                         <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
-                            {{-- Judul & Hashtag --}}
+                            {{-- Judul & Hashtag (Deskripsi langsung di bawah judul) --}}
                             <td class="px-4 py-3">
-                                <div class="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                    <span>{{ $rep->title }}</span>
-                                    @if($rep->tag_slug)
-                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
-                                            #{{ $rep->tag_slug }}
-                                        </span>
+                                <div class="font-bold text-slate-900 dark:text-white text-[13px]">
+                                    {{ $rep->title }}
+                                </div>
+                                <div class="text-[11px] text-sky-600 dark:text-sky-400 font-mono mt-0.5 flex items-center gap-1.5 flex-wrap">
+                                    <span class="font-bold">#{{ $rep->tag_slug ?: 'kegiatan' }}</span>
+                                    @if($rep->description)
+                                        <span class="text-slate-400 font-sans">&bull; {{ $rep->description }}</span>
                                     @endif
                                 </div>
-                                @if($rep->description)
-                                    <div class="text-[11px] text-slate-400 truncate max-w-sm mt-0.5">{{ $rep->description }}</div>
-                                @endif
                             </td>
 
                             {{-- Jumlah Hari Kegiatan --}}
@@ -225,8 +223,8 @@
                                         type="button"
                                         @click="open = !open"
                                         @click.away="open = false"
-                                        class="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                        title="Menu Aksi"
+                                        class="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
+                                        title="Pilihan Aksi"
                                     >
                                         {{-- Ikon Titik Tiga (Kebab Menu) --}}
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -244,13 +242,13 @@
                                         x-transition:leave="transition ease-in duration-75"
                                         x-transition:leave-start="transform opacity-100 scale-100"
                                         x-transition:leave-end="transform opacity-0 scale-95"
-                                        class="absolute right-0 mt-1 w-48 rounded-xl shadow-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 py-1.5 z-50 text-left text-xs"
+                                        class="absolute right-0 mt-1 w-48 rounded-xl shadow-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 py-1.5 z-50 text-left text-xs"
                                     >
                                         {{-- 1. Salin Link KIPAPP --}}
                                         <button
                                             type="button"
                                             @click="navigator.clipboard.writeText('{{ $shareUrl }}'); copiedId = {{ $rep->id }}; open = false; setTimeout(() => copiedId = null, 2500)"
-                                            class="w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-2 text-slate-700 dark:text-slate-200 transition-colors"
+                                            class="w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-2 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
                                         >
                                             <span class="text-emerald-600 font-bold">📋</span>
                                             <span x-text="copiedId === {{ $rep->id }} ? 'Tersalin! ✅' : 'Salin Link KIPAPP'">Salin Link KIPAPP</span>
@@ -261,7 +259,7 @@
                                             href="{{ $shareUrl }}"
                                             target="_blank"
                                             @click="open = false"
-                                            class="w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-2 text-slate-700 dark:text-slate-200 transition-colors"
+                                            class="w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-2 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
                                         >
                                             <span class="text-sky-600 font-bold">🌐</span>
                                             <span>Buka Halaman Publik</span>
@@ -271,7 +269,7 @@
                                         <a
                                             href="{{ route('shared-work-report.download', ['uuid' => $rep->uuid]) }}"
                                             @click="open = false"
-                                            class="w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-2 text-slate-700 dark:text-slate-200 transition-colors"
+                                            class="w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-2 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
                                         >
                                             <span class="text-blue-600 font-bold">📥</span>
                                             <span>Unduh Dokumen Word</span>
@@ -283,7 +281,7 @@
                                         <button
                                             type="button"
                                             @click="openEdit({{ json_encode($rep) }}); open = false;"
-                                            class="w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-2 text-amber-600 dark:text-amber-400 transition-colors"
+                                            class="w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700/60 flex items-center gap-2 text-amber-600 dark:text-amber-400 transition-colors cursor-pointer"
                                         >
                                             <span>✏️</span>
                                             <span>Ubah Wadah Ini</span>
@@ -298,7 +296,7 @@
                                             @csrf
                                             <button
                                                 type="submit"
-                                                class="w-full px-3 py-2 text-left hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center gap-2 text-red-600 dark:text-red-400 transition-colors"
+                                                class="w-full px-3 py-2 text-left hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center gap-2 text-red-600 dark:text-red-400 transition-colors cursor-pointer"
                                             >
                                                 <span>🗑️</span>
                                                 <span>Hapus Wadah</span>

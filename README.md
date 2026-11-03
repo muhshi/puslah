@@ -55,6 +55,11 @@ composer dev
 ## Changelog
 
 ### 2026-11-03
+- **Penyempurnaan Tombol Modal Wadah, TrueType Watermark & Pembersihan Auto-ST**:
+  - **Tombol Tambah & Simpan Kontras Tinggi:** Memperbaiki styling tombol `+ Buat Wadah Baru` dan `Simpan Perubahan` pada modal berkas publik agar selalu tampil solid (#0284c7) dan teks putih tegas tanpa terpengaruh override tema.
+  - **Hashtag sebagai Subteks Judul:** Menampilkan hashtag `#tag` sebagai deskripsi langsung di bawah judul butir kegiatan pada tabel wadah KIPAPP.
+  - **Cegah Random Surat Tugas:** Membatasi deteksi surat tugas di bot Telegram agar hanya mengaitkan jika pesan secara spesifik menyebutkan indikasi 'ST' atau 'surat tugas', sehingga kegiatan harian rutin tetap berstatus kegiatan rutin tanpa surat tugas liar.
+  - **Watermark TrueType Anti-Aliasing (Open Camera Style):** Memperbarui `PhotoWatermarkService` menggunakan font TrueType (Montserrat/DejaVu) dengan kalkulasi bounding box presisi di pojok kiri bawah, serta menghapus duplikasi preview gambar ganda di form Filament.
 - **Perbaikan Kolom Surat Tugas, Redesain Modal Wadah KIPAPP & Penyederhanaan Header**:
   - **Fix SQL Unknown Column:** Memperbaiki relasi `suratTugas.nomor_surat` (menggantikan `nomor_surat_tugas`) di form dan tabel, serta menambahkan accessor `nomor_surat_tugas` pada model `SuratTugas` agar selalu kompatibel.
   - **Penyederhanaan Header:** Menghapus tombol *Unduh Rekap Word* dan menyatukan tombol tes Telegram ke dalam modal status, sehingga header kini tampil bersih dan proporsional dengan 3 tombol utama (`Telegram`, `Wadah KIPAPP`, `+ Tambah Kegiatan`).

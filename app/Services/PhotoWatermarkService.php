@@ -9,6 +9,7 @@ class PhotoWatermarkService
 {
     /**
      * Terapkan watermark stempel koordinat dan waktu permanen ke file gambar menggunakan PHP GD.
+     * Menggunakan TrueType font (Montserrat/DejaVu) jika tersedia untuk hasil super tajam mirip Open Camera.
      *
      * @param string $fullPath Path absolut file gambar
      * @param array{
@@ -56,83 +57,133 @@ class PhotoWatermarkService
                 : (string) $capturedAt;
 
             $caption = trim($params['caption'] ?? 'Dokumentasi Kegiatan');
-            if (empty($caption) || $caption === 'Dokumentasi kegiatan') {
+            if (empty($caption) || strtolower($caption) === 'dokumentasi kegiatan') {
                 $caption = 'Dokumentasi Pelaksanaan Tugas Lapangan';
             }
             // Batasi panjang caption agar tidak overflow
-            $caption = mb_strimwidth($caption, 0, 60, '...');
+            $caption = mb_strimwidth($caption, 0, 55, '...');
 
             $office = trim($params['office_name'] ?? 'BPS KABUPATEN DEMAK');
 
-            // 2. Siapkan baris teks stempel
+            // 2. Baris teks stempel
             $lines = [
-                ['label' => 'STEMPEL RESMI BUKTI DUKUNG', 'type' => 'header'],
+                ['text' => 'STEMPEL RESMI BUKTI DUKUNG', 'type' => 'header'],
                 ['text' => "Lat: {$lat}  Long: {$lng}", 'type' => 'coord'],
                 ['text' => "Waktu: {$timeStr}", 'type' => 'time'],
                 ['text' => "Kegiatan: {$caption}", 'type' => 'caption'],
                 ['text' => $office, 'type' => 'office'],
             ];
 
-            // 3. Gambar background overlay semi-transparan di pojok bawah
             imagealphablending($image, true);
             imagesavealpha($image, true);
 
-            // Ukuran font dan kotak stempel (proporsional dengan resolusi foto)
-            $font = 4; // Built-in font GD 4 (tajam, terbaca jelas)
-            if ($width >= 1600 && $height >= 1200) {
-                $font = 5; // Built-in font GD 5 untuk foto resolusi tinggi
+            // 3. Tentukan font: prioritaskan TrueType font (.ttf) untuk hasil anti-aliasing tajam
+            $fontPath = null;
+            $possibleFonts = [
+                storage_path('fonts/Montserrat/static/Montserrat-Bold.ttf'),
+                base_path('vendor/dompdf/dompdf/lib/fonts/DejaVuSans-Bold.ttf'),
+                storage_path('fonts/Montserrat-Bold.ttf'),
+            ];
+            foreach ($possibleFonts as $f) {
+                if (file_exists($f)) {
+                    $fontPath = $f;
+                    break;
+                }
             }
-
-            $charWidth = imagefontwidth($font);
-            $charHeight = imagefontheight($font);
-
-            $lineHeight = $charHeight + 6;
-            $boxHeight = (count($lines) * $lineHeight) + 16;
-            $boxWidth = min((int) ($width * 0.85), max(400, (int) ($width * 0.65)));
-            if ($boxWidth > $width - 20) {
-                $boxWidth = $width - 20;
-            }
-
-            $boxX = 12;
-            $boxY = $height - $boxHeight - 14;
 
             // Alokasikan warna
-            $bgColor = imagecolorallocatealpha($image, 10, 15, 25, 45); // Gelap 70% opacity
-            $borderColor = imagecolorallocatealpha($image, 255, 255, 255, 75);
+            $bgColor = imagecolorallocatealpha($image, 15, 20, 30, 28); // Hitam pekat ~80% opacity
             $yellow = imagecolorallocate($image, 253, 224, 71); // Kuning terang
             $white = imagecolorallocate($image, 255, 255, 255);
             $cyan = imagecolorallocate($image, 103, 232, 249);  // Cyan
-            $green = imagecolorallocate($image, 110, 231, 183); // Mint green
+            $green = imagecolorallocate($image, 74, 222, 128);  // Mint green
 
-            // Gambar kotak stempel
-            imagefilledrectangle($image, $boxX, $boxY, $boxX + $boxWidth, $boxY + $boxHeight, $bgColor);
-            imagerectangle($image, $boxX, $boxY, $boxX + $boxWidth, $boxY + $boxHeight, $borderColor);
+            if ($fontPath && function_exists('imagettftext') && function_exists('imagettfbbox')) {
+                // Skala font dinamis proporsional terhadap resolusi foto
+                $fontSize = max(10, min(24, (int) round($width / 80)));
+                $lineSpacing = (int) round($fontSize * 1.55);
+                $padX = (int) round($fontSize * 1.2);
+                $padY = (int) round($fontSize * 1.0);
 
-            // 4. Tulis setiap baris teks
-            $currentY = $boxY + 8;
-            $textX = $boxX + 12;
-
-            foreach ($lines as $item) {
-                if ($item['type'] === 'header') {
-                    imagestring($image, $font, $textX, $currentY, "[ " . $item['label'] . " ]", $green);
-                } elseif ($item['type'] === 'coord') {
-                    imagestring($image, $font, $textX, $currentY, $item['text'], $yellow);
-                } elseif ($item['type'] === 'time') {
-                    imagestring($image, $font, $textX, $currentY, $item['text'], $yellow);
-                } elseif ($item['type'] === 'caption') {
-                    imagestring($image, $font, $textX, $currentY, $item['text'], $white);
-                } elseif ($item['type'] === 'office') {
-                    imagestring($image, $font, $textX, $currentY, $item['text'], $cyan);
+                // Hitung lebar kotak berdasarkan teks terpanjang
+                $maxTextWidth = 0;
+                foreach ($lines as $item) {
+                    $box = imagettfbbox($fontSize, 0, $fontPath, $item['text']);
+                    $itemW = abs($box[4] - $box[0]);
+                    if ($itemW > $maxTextWidth) {
+                        $maxTextWidth = $itemW;
+                    }
                 }
-                $currentY += $lineHeight;
+
+                $boxWidth = $maxTextWidth + ($padX * 2);
+                $boxHeight = (count($lines) * $lineSpacing) + ($padY * 2);
+
+                // Posisikan di pojok kiri bawah
+                $boxX = 16;
+                $boxY = $height - $boxHeight - 16;
+                if ($boxY < 10) $boxY = 10;
+
+                // Gambar background box
+                imagefilledrectangle($image, $boxX, $boxY, $boxX + $boxWidth, $boxY + $boxHeight, $bgColor);
+
+                // Tulis teks dengan imagettftext
+                $textX = $boxX + $padX;
+                $textY = $boxY + $padY + $fontSize;
+
+                foreach ($lines as $item) {
+                    $color = match ($item['type']) {
+                        'header' => $green,
+                        'coord', 'time' => $yellow,
+                        'caption' => $white,
+                        'office' => $cyan,
+                        default => $white,
+                    };
+
+                    imagettftext($image, $fontSize, 0, $textX, $textY, $color, $fontPath, $item['text']);
+                    $textY += $lineSpacing;
+                }
+            } else {
+                // Fallback GD built-in font
+                $font = ($width >= 1200) ? 5 : 4;
+                $charWidth = imagefontwidth($font);
+                $charHeight = imagefontheight($font);
+                $lineHeight = $charHeight + 5;
+
+                $maxChars = 0;
+                foreach ($lines as $l) {
+                    $maxChars = max($maxChars, strlen($l['text']));
+                }
+
+                $boxWidth = ($maxChars * $charWidth) + 24;
+                $boxHeight = (count($lines) * $lineHeight) + 16;
+
+                $boxX = 14;
+                $boxY = $height - $boxHeight - 14;
+
+                imagefilledrectangle($image, $boxX, $boxY, $boxX + $boxWidth, $boxY + $boxHeight, $bgColor);
+
+                $currentY = $boxY + 8;
+                $textX = $boxX + 12;
+
+                foreach ($lines as $item) {
+                    $color = match ($item['type']) {
+                        'header' => $green,
+                        'coord', 'time' => $yellow,
+                        'caption' => $white,
+                        'office' => $cyan,
+                        default => $white,
+                    };
+                    imagestring($image, $font, $textX, $currentY, $item['text'], $color);
+                    $currentY += $lineHeight;
+                }
             }
 
-            // 5. Simpan file gambar hasil stempel (timpa file asli)
+            // 4. Simpan kembali file gambar fisik (timpa file asli)
             $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
             if ($ext === 'png') {
                 imagepng($image, $fullPath, 8);
             } elseif ($ext === 'webp') {
-                imagewebp($image, $fullPath, 90);
+                imagewebp($image, $fullPath, 92);
             } else {
                 imagejpeg($image, $fullPath, 92);
             }

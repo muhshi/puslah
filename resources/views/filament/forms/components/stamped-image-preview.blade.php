@@ -22,23 +22,6 @@
         get isStamped() {
             return !!$wire.get('{{ $parentPath }}.is_stamped');
         },
-        get lat() {
-            let v = $wire.get('{{ $parentPath }}.latitude');
-            return v ? Number(v).toFixed(6) : '-6.894561';
-        },
-        get lng() {
-            let v = $wire.get('{{ $parentPath }}.longitude');
-            return v ? Number(v).toFixed(6) : '110.637492';
-        },
-        get time() {
-            let t = $wire.get('{{ $parentPath }}.captured_at');
-            if (!t) return '{{ now()->translatedFormat('d F Y H:i') }}';
-            return t;
-        },
-        get caption() {
-            let c = $wire.get('{{ $parentPath }}.caption');
-            return c && c.trim() ? c : 'Dokumentasi Pelaksanaan Tugas';
-        },
         get photoUrl() {
             let path = $wire.get('{{ $parentPath }}.file_path');
             if (!path) return this.fallbackUrl;
@@ -61,92 +44,38 @@
             return url.toLowerCase().includes('.pdf');
         }
     }"
-    class="w-full mt-2"
+    class="w-full mt-1.5"
 >
-    {{-- 1. Tampilan Jika File Berupa DOKUMEN PDF --}}
+    {{-- 1. Kartu Dokumen PDF --}}
     <template x-if="photoUrl && isPdf">
-        <div class="w-full rounded-xl p-5 border border-red-300 dark:border-red-900/60 bg-red-50/50 dark:bg-red-950/20 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div class="flex items-center gap-3.5">
-                <div class="w-12 h-12 rounded-xl bg-red-600 text-white flex items-center justify-center flex-shrink-0 shadow-md">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
+        <div class="w-full rounded-xl p-3.5 border border-red-300 dark:border-red-900/60 bg-red-50/70 dark:bg-red-950/30 shadow-xs flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-red-600 text-white flex items-center justify-center flex-shrink-0 font-bold text-xs shadow-xs">
+                    PDF
                 </div>
                 <div>
-                    <div class="flex items-center gap-2">
-                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-600 text-white tracking-wide uppercase">PDF</span>
-                        <span class="text-xs font-bold text-gray-800 dark:text-gray-200">Dokumen Bukti Dukung Resmi</span>
-                    </div>
-                    <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5" x-text="caption"></p>
+                    <span class="text-xs font-bold text-slate-900 dark:text-white">Dokumen Bukti Dukung PDF</span>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Berkas dokumen PDF siap dilampirkan ke laporan.</p>
                 </div>
             </div>
 
             <a
                 :href="photoUrl"
                 target="_blank"
-                class="px-4 py-2 text-xs font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors shadow-sm flex items-center gap-1.5 flex-shrink-0"
+                class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-700 text-white shadow-xs transition-colors flex-shrink-0"
             >
-                <span>Buka / Pratinjau PDF</span>
-                <span>↗</span>
+                Buka PDF ↗
             </a>
         </div>
     </template>
 
-    {{-- 2. Tampilan Jika File Berupa FOTO GAMBAR (Dengan Live Watermark Stempel) --}}
+    {{-- 2. Status Stempel Foto (Kompak & Bersih, Tanpa Dobel Gambar) --}}
     <template x-if="photoUrl && !isPdf">
-        <div class="relative w-full rounded-xl overflow-hidden border border-gray-300 dark:border-gray-700 shadow-md bg-gray-950 flex items-center justify-center min-h-[220px]">
-            {{-- Foto Utama --}}
-            <img
-                :src="photoUrl"
-                alt="Preview Foto Bukti Dukung"
-                class="w-full max-h-[380px] object-contain rounded-lg"
-            />
-
-            {{-- Watermark Overlay di Atas Gambar (Pojok Kiri Bawah) --}}
-            <div
-                x-show="!isStamped"
-                class="absolute bottom-2.5 left-2.5 max-w-[92%] sm:max-w-[78%] bg-black/80 backdrop-blur-[3px] border border-white/20 text-white rounded-lg p-2.5 shadow-2xl pointer-events-none transition-all"
-            >
-                <div class="flex items-center justify-between border-b border-white/20 pb-1 mb-1 text-[9px] font-sans font-bold text-emerald-400">
-                    <span>🏷️ STEMPEL WATERMARK RESMI</span>
-                    <span class="px-1 py-0.2 bg-emerald-950 text-emerald-300 rounded border border-emerald-500/40 text-[8px]">Aktif</span>
-                </div>
-                <div class="text-[10px] font-mono leading-relaxed space-y-0.5">
-                    <div class="text-yellow-300 font-semibold flex items-center gap-1 truncate">
-                        <span>📍</span>
-                        <span>Lat:</span> <span x-text="lat"></span>
-                        <span class="ml-1">Long:</span> <span x-text="lng"></span>
-                    </div>
-                    <div class="text-yellow-200 flex items-center gap-1 truncate text-[10px]">
-                        <span>🕒</span>
-                        <span x-text="time"></span>
-                        <span>WIB</span>
-                    </div>
-                    <div class="text-white font-medium truncate max-w-full text-[10px]" x-text="'📝 ' + caption"></div>
-                    <div class="text-emerald-400 font-bold tracking-wider text-[9px] pt-0.5">
-                        🏛️ BPS KABUPATEN DEMAK
-                    </div>
-                </div>
-            </div>
-
-            {{-- Badge jika sudah ada stempel bawaan / sudah dibakar --}}
-            <div
-                x-show="isStamped"
-                class="absolute bottom-2.5 left-2.5 bg-emerald-950/90 border border-emerald-500 text-emerald-300 rounded-lg px-2.5 py-1 text-[10px] font-bold shadow-lg flex items-center gap-1.5"
-            >
-                <span>✅</span>
-                <span>Watermark Bawaan Kamera (Open Camera) / Fisik Aktif</span>
-            </div>
-        </div>
-    </template>
-
-    {{-- 3. Tampilan Kosong (Belum Memilih File) --}}
-    <template x-if="!photoUrl">
-        <div class="w-full p-4 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 text-center text-xs text-gray-400 flex flex-col items-center justify-center gap-1.5 min-h-[140px]">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span>Pilih atau unggah Foto Kegiatan atau Dokumen PDF bukti dukung</span>
+        <div class="flex items-center gap-2 p-2.5 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 text-xs">
+            <span class="text-emerald-600 font-bold">✅</span>
+            <span class="font-medium">
+                Stempel Resmi BPS (Koordinat & Waktu) otomatis tercetak rapi di pojok kiri bawah file foto (Open Camera style).
+            </span>
         </div>
     </template>
 </div>
