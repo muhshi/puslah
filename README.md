@@ -54,6 +54,13 @@ composer dev
 
 ## Changelog
 
+### 2026-11-03
+- **Stabilisasi Handler Foto Telegram, Penanganan Polling Timeout & Fitur Tes Koneksi**:
+  - **Fix Download Foto Telegram:** Memperbaiki fatal error `BadMethodCallException: getToken()` pada `DailyActivityTelegramHandler` saat mendownload foto dari Telegram. Menggunakan method native Nutgram `$bot->downloadFile()` dengan fallback otomatis ke token environment dan pembuatan direktori penyimpanan otomatis.
+  - **Stabilisasi Polling Jaringan (cURL Error 28):** Mengoptimalkan konfigurasi Guzzle dan long polling pada `config/nutgram.php` (client timeout 30 detik, polling timeout 15 detik) untuk mencegah timeout socket cURL 28 pada jaringan server.
+  - **Tombol Uji Coba Koneksi (Ping Bot):** Menambahkan aksi **"Tes Koneksi Bot 🔔"** pada header menu Bukti Dukung Harian. Pengguna dapat mengirimkan pesan ping langsung dari web ke Telegram untuk memverifikasi secara instan bahwa bot aktif dan terhubung.
+  - **Proteksi Status Pairing:** Menyempurnakan antarmuka modal status Telegram agar pemutusan akun tidak terjadi secara tidak sengaja dan status keterhubungan ditampilkan secara visual (Chat ID terverifikasi).
+
 ### 2026-11-02
 - **Penyempurnaan Map Picker dengan Pencarian Wilayah & Perbaikan Respons Bot Telegram**:
   - **Pencarian Wilayah di Map Picker (Mirip Stempel Foto):** Menghadirkan komponen form peta interaktif `App\Filament\Forms\Components\MapWithSearch` (`map-with-search.blade.php`) di form bukti dukung. Pengguna kini dapat mencari nama wilayah, desa, atau kecamatan secara instan melalui OpenStreetMap Nominatim, menggunakan tombol cepat **GPS Saya**, beralih antara citra Satelit Google dan peta jalan OSM, serta menggeser marker koordinat secara mulus.

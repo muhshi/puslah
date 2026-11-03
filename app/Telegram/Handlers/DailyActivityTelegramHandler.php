@@ -195,26 +195,56 @@ class DailyActivityTelegramHandler
 
         // Download foto dari Telegram
         $file = $bot->getFile($photo->file_id);
-        $fileUrl = "https://api.telegram.org/file/bot" . $bot->getToken() . "/" . $file->file_path;
-
-        $ext = pathinfo($file->file_path, PATHINFO_EXTENSION) ?: 'jpg';
-        $todayStr = Carbon::today()->format('Y-m-d');
-        $fileName = 'activity_' . time() . '_' . uniqid() . '.' . $ext;
-        $relativePath = "daily-activities/{$user->id}/{$todayStr}/{$fileName}";
-
-        $fileContents = @file_get_contents($fileUrl);
-        if (!$fileContents) {
+        if (!$file || empty($file->file_path)) {
             $bot->sendMessage(
-                text: "⚠️ Gagal mengunduh foto dari Telegram. Silakan coba kirim ulang.",
+                text: "⚠️ Gagal membaca data file foto dari Telegram.",
                 chat_id: $bot->chatId()
             );
             return;
         }
 
-        Storage::disk('public')->put($relativePath, $fileContents);
+        $ext = pathinfo($file->file_path, PATHINFO_EXTENSION) ?: 'jpg';
+        $todayStr = Carbon::today()->format('Y-m-d');
+        $fileName = 'activity_' . time() . '_' . uniqid() . '.' . $ext;
+        $relativePath = "daily-activities/{$user->id}/{$todayStr}/{$fileName}";
+        $fullPath = storage_path('app/public/' . $relativePath);
+
+        // Pastikan folder penyimpanan ada
+        $dir = dirname($fullPath);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+
+        // 1. Coba download via Nutgram downloadFile
+        $downloaded = false;
+        try {
+            $downloaded = $bot->downloadFile($file, $fullPath);
+        } catch (\Throwable $e) {
+            Log::warning("Nutgram downloadFile error: " . $e->getMessage());
+        }
+
+        // 2. Fallback via URL jika belum terdownload
+        if (!$downloaded || !file_exists($fullPath) || filesize($fullPath) === 0) {
+            $token = config('nutgram.token');
+            $fileUrl = "https://api.telegram.org/file/bot{$token}/" . $file->file_path;
+            $fileContents = @file_get_contents($fileUrl);
+            if ($fileContents) {
+                file_put_contents($fullPath, $fileContents);
+                $downloaded = true;
+            }
+        }
+
+        if (!file_exists($fullPath) || filesize($fullPath) === 0) {
+            $bot->sendMessage(
+                text: "⚠️ Gagal mengunduh foto dari server Telegram. Silakan coba kirim ulang.",
+                chat_id: $bot->chatId()
+            );
+            return;
+        }
+
+        $fileSize = filesize($fullPath);
 
         // Ekstraksi EXIF GPS dan Waktu Pengambilan
-        $fullPath = storage_path('app/public/' . $relativePath);
         $exifService = app(ImageExifExtractorService::class);
         $exifData = $exifService->extract($fullPath);
 
@@ -265,7 +295,7 @@ class DailyActivityTelegramHandler
             'daily_activity_id' => $activity->id,
             'file_path' => $relativePath,
             'file_name' => $fileName,
-            'file_size' => strlen($fileContents),
+            'file_size' => $fileSize,
             'mime_type' => 'image/jpeg',
             'is_stamped' => false,
             'latitude' => $exifData['latitude'],
