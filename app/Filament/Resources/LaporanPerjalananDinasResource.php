@@ -400,8 +400,71 @@ class LaporanPerjalananDinasResource extends Resource
 
                     Forms\Components\RichEditor::make('uraian_kegiatan')
                         ->label('Uraian Kegiatan')
-                        ->helperText('Gunakan bullets, numbering, atau format teks. Klik "✨ Bantu Tulis AI" untuk merangkum catatan lapangan Anda secara otomatis.')
-                        ->hintAction(
+                        ->helperText('Gunakan format teks kronologis per jam. Klik "📥 Tarik Bukti Dukung Hari Ini" untuk mengimpor catatan lapangan harian Anda secara otomatis.')
+                        ->hintActions([
+                            Forms\Components\Actions\Action::make('import_from_daily_activity')
+                                ->label('📥 Tarik Bukti Dukung Hari Ini')
+                                ->icon('heroicon-m-arrow-down-tray')
+                                ->color('success')
+                                ->action(function (Forms\Set $set, Forms\Get $get, LpdAiService $aiService) {
+                                    $stId = $get('surat_tugas_id');
+                                    $tgl = $get('tanggal_kunjungan');
+                                    $userId = $get('user_id_temp') ?: Auth::id();
+
+                                    if (!$stId || !$tgl) {
+                                        \Filament\Notifications\Notification::make()
+                                            ->warning()
+                                            ->title('Lengkapi Pilihan Surat Tugas & Tanggal')
+                                            ->body('Silakan pilih Surat Tugas dan Tanggal Kunjungan terlebih dahulu untuk menarik bukti dukung yang relevan.')
+                                            ->send();
+                                        return;
+                                    }
+
+                                    $st = SuratTugas::find($stId);
+                                    $user = User::find($userId);
+
+                                    $acts = \App\Models\DailyActivity::where('user_id', $userId)
+                                        ->whereDate('activity_date', $tgl)
+                                        ->where('surat_tugas_id', $stId)
+                                        ->with('attachments')
+                                        ->get();
+
+                                    if ($acts->isEmpty()) {
+                                        \Filament\Notifications\Notification::make()
+                                            ->warning()
+                                            ->title('Bukti Dukung Belum Tersedia')
+                                            ->body('Tidak ditemukan catatan bukti dukung harian untuk Surat Tugas ini pada tanggal kunjungan terpilih.')
+                                            ->send();
+                                        return;
+                                    }
+
+                                    try {
+                                        $actDate = \Carbon\Carbon::parse($tgl);
+                                        $gen = $aiService->generateChronologicalFromActivities($acts, $st, $user, $actDate);
+
+                                        $set('uraian_kegiatan', $gen['narasi']);
+                                        if (!empty($gen['nama_pejabat']) && (empty($get('nama_pejabat')) || $get('nama_pejabat') === '-')) {
+                                            $set('nama_pejabat', $gen['nama_pejabat']);
+                                        }
+                                        if (!empty($gen['desa_pejabat']) && empty($get('desa_pejabat'))) {
+                                            $set('desa_pejabat', $gen['desa_pejabat']);
+                                        }
+
+                                        $totalPhotos = $acts->flatMap->attachments->count();
+                                        \Filament\Notifications\Notification::make()
+                                            ->success()
+                                            ->title('Bukti Dukung Berhasil Ditarik! ✨')
+                                            ->body("Telah disintesis dari {$acts->count()} catatan harian dan {$totalPhotos} foto dokumentasi menjadi narasi kronologis standar BPS.")
+                                            ->send();
+                                    } catch (\Throwable $e) {
+                                        \Filament\Notifications\Notification::make()
+                                            ->danger()
+                                            ->title('Gagal Menyintesis Bukti Dukung')
+                                            ->body($e->getMessage())
+                                            ->send();
+                                    }
+                                }),
+
                             Forms\Components\Actions\Action::make('ai_generate')
                                 ->label('✨ Bantu Tulis AI')
                                 ->icon('heroicon-m-sparkles')
@@ -471,8 +534,8 @@ class LaporanPerjalananDinasResource extends Resource
 
                                         $action->halt();
                                     }
-                                })
-                        )
+                                }),
+                        ])
                         ->required()
                         ->toolbarButtons([
                             'bold',
