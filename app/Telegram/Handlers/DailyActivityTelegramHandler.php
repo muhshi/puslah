@@ -216,12 +216,111 @@ class DailyActivityTelegramHandler
             "Kirim foto kegiatan lapangan atau layar kerja. Bot akan membalas dengan konfirmasi lampiran, jam jepret, dan koordinat lokasi.\n\n" .
             "📌 *Perintah Cepat:*\n" .
             "• `/today` - Lihat rekap seluruh kegiatan Anda hari ini\n" .
+            "• `/rekap` - Lihat capaian hari kerja dan tanggal kosong bulan ini\n" .
+            "• `/stempel` - Atur stempel foto (matikan jika kamera HP sudah ber-watermark)\n" .
             "• `/help` - Buka panduan ini\n\n" .
             "🏛️ _Akses web Puslah untuk mengunduh rekap Word atau menyalin ke Laporan Perjalanan Dinas (LPD)._";
 
         $bot->sendMessage(
             text: $text,
             chat_id: $bot->chatId(),
+            parse_mode: 'Markdown'
+        );
+    }
+
+    /**
+     * Handle command /stempel: Mengatur preferensi auto-stempel foto (on/off/posisi)
+     */
+    public function handleStempel(Nutgram $bot, ?string $mode = null): void
+    {
+        $user = $this->getAuthenticatedUser($bot);
+        if (!$user) return;
+
+        $chatId = $bot->chatId();
+        $arg = strtolower(trim($mode ?? ''));
+
+        if (in_array($arg, ['off', 'mati', 'disable', 'nonaktif'])) {
+            Cache::forever("tg_user_stamp_pref_{$user->id}", false);
+
+            $bot->sendMessage(
+                text: "🔕 *Auto-Stempel Foto Dinonaktifkan!*\n\n" .
+                "Mulai sekarang, foto kegiatan yang Anda kirim ke bot *tidak akan dibakar stempel lagi* oleh sistem Puslah.\n\n" .
+                "✅ *Anti Dobel Watermark:* Sangat cocok untuk Anda yang kameranya sudah memiliki watermark bawaan ponsel (seperti iQOO, Xiaomi, Samsung, Vivo) atau aplikasi Open Camera agar *foto tetap bersih dan tidak timbul watermark bertumpuk*.\n\n" .
+                "💡 Ketik `/stempel on` kapan pun Anda ingin mengaktifkan stempel kembali.",
+                chat_id: $chatId,
+                parse_mode: 'Markdown'
+            );
+            return;
+        }
+
+        if (in_array($arg, ['on', 'aktif', 'enable', 'hidup'])) {
+            Cache::forever("tg_user_stamp_pref_{$user->id}", true);
+
+            $bot->sendMessage(
+                text: "🔔 *Auto-Stempel Foto Diaktifkan!*\n\n" .
+                "Setiap foto kegiatan yang Anda kirim ke bot akan otomatis dibubuhi stempel resmi BPS (koordinat GPS dan waktu WIB).\n\n" .
+                "💡 Ketik `/stempel off` jika ingin mematikannya kembali.",
+                chat_id: $chatId,
+                parse_mode: 'Markdown'
+            );
+            return;
+        }
+
+        if (str_starts_with($arg, 'posisi') || in_array($arg, ['kanan-bawah', 'kiri-bawah', 'kiri-atas', 'kanan-atas', 'br', 'bl', 'tl', 'tr'])) {
+            $pos = str_replace('posisi', '', $arg);
+            $pos = trim($pos);
+
+            $mappedPos = match ($pos) {
+                'kiri-bawah', 'bl' => 'bottom-left',
+                'kiri-atas', 'tl' => 'top-left',
+                'kanan-atas', 'tr' => 'top-right',
+                default => 'bottom-right',
+            };
+
+            $label = match ($mappedPos) {
+                'bottom-left' => 'Pojok Kiri Bawah',
+                'top-left' => 'Pojok Kiri Atas',
+                'top-right' => 'Pojok Kanan Atas',
+                default => 'Pojok Kanan Bawah (Standar Aman)',
+            };
+
+            Cache::forever("tg_user_stamp_pos_{$user->id}", $mappedPos);
+
+            $bot->sendMessage(
+                text: "📍 *Posisi Stempel Diperbarui!*\n\nPosisi stempel foto Anda sekarang: *{$label}*.\nStempel akan ditempatkan pada posisi ini sehingga tidak menimpa objek penting atau watermark ponsel Anda.",
+                chat_id: $chatId,
+                parse_mode: 'Markdown'
+            );
+            return;
+        }
+
+        // Tampilkan status & menu bantuan
+        $isStamped = Cache::get("tg_user_stamp_pref_{$user->id}", true);
+        $currentPos = Cache::get("tg_user_stamp_pos_{$user->id}", 'bottom-right');
+        $posLabel = match ($currentPos) {
+            'bottom-left' => 'Pojok Kiri Bawah',
+            'top-left' => 'Pojok Kiri Atas',
+            'top-right' => 'Pojok Kanan Atas',
+            default => 'Pojok Kanan Bawah (Standar Aman)',
+        };
+
+        $statusBadge = $isStamped ? "🟢 *AKTIF* (Foto otomatis distempel)" : "🔴 *NONAKTIF* (Foto asli tanpa stempel)";
+
+        $text = "⚙️ *Pengaturan Stempel Foto Bukti Dukung*\n\n" .
+            "Pegawai: *{$user->name}*\n" .
+            "Status Stempel: {$statusBadge}\n" .
+            "Posisi Stempel: *{$posLabel}*\n\n" .
+            "📌 *Perintah Cepat:*\n" .
+            "• `/stempel off` - Matikan stempel (cegah dobel watermark jika kamera HP sudah ber-watermark)\n" .
+            "• `/stempel on` - Nyalakan stempel otomatis\n" .
+            "• `/stempel posisi kanan-bawah` - Ubah posisi ke kanan bawah\n" .
+            "• `/stempel posisi kiri-atas` - Ubah posisi ke kiri atas\n" .
+            "• `/stempel posisi kanan-atas` - Ubah posisi ke kanan atas\n\n" .
+            "💡 _Anda juga bisa menggunakan hashtag langsung pada caption foto: `#nostamp` untuk tanpa stempel, `#kiriatas`, `#kananatas`, atau `#kananbawah`._";
+
+        $bot->sendMessage(
+            text: $text,
+            chat_id: $chatId,
             parse_mode: 'Markdown'
         );
     }
@@ -386,8 +485,8 @@ class DailyActivityTelegramHandler
         $albumLock = null;
         if (!empty($mediaGroupId)) {
             try {
-                $albumLock = Cache::lock("tg_album_{$bot->chatId()}_{$mediaGroupId}", 15);
-                $albumLock->block(5);
+                $albumLock = Cache::lock("tg_album_{$bot->chatId()}_{$mediaGroupId}", 30);
+                $albumLock->block(15);
             } catch (\Throwable $e) {
                 Log::warning('Album lock warning: ' . $e->getMessage());
             }
@@ -502,8 +601,8 @@ class DailyActivityTelegramHandler
                 }
             }
 
-            // Tentukan waktu foto: gunakan EXIF jika ada, atau waktu pesan Telegram saat dikirim
-            $capturedAt = $exifData['captured_at'] ?? Carbon::createFromTimestamp($msg->date ?? time());
+            // Tentukan waktu foto: gunakan EXIF jika ada, atau waktu pesan Telegram saat dikirim (konversi ke WIB)
+            $capturedAt = $exifData['captured_at'] ?? Carbon::createFromTimestamp($msg->date ?? time(), 'Asia/Jakarta')->setTimezone('Asia/Jakarta');
 
             // Tentukan koordinat: gunakan EXIF jika ada; jika kosong (kamera in-app Telegram), gunakan default kantor
             $officeCoords = $this->getOfficeCoordinates();
@@ -518,13 +617,19 @@ class DailyActivityTelegramHandler
                 $isDefaultOffice = true;
             }
 
-            // Cek instruksi hashtag watermark (posisi atau tanpa watermark)
+            // Cek preferensi auto-stempel pengguna dan instruksi hashtag caption
+            $userAutoStamp = Cache::get("tg_user_stamp_pref_{$user->id}", true);
             $effectiveCaption = !empty($caption) ? $caption : $activity->raw_content;
             $noStampRequested = str_contains(strtolower($effectiveCaption), '#nostamp') 
                 || str_contains(strtolower($effectiveCaption), '#nowatermark') 
                 || str_contains(strtolower($effectiveCaption), '#tanpastempel');
 
-            $stampPosition = 'bottom-right'; // Default aman: pojok kanan bawah agar tidak menimpa watermark ponsel (iQOO, Xiaomi, Vivo, Samsung ada di pojok kiri bawah)
+            $shouldStamp = $userAutoStamp && !$noStampRequested;
+
+            // Posisi stempel: prioritaskan hashtag di caption, lalu preferensi user, fallback bottom-right
+            $userPrefPos = Cache::get("tg_user_stamp_pos_{$user->id}", 'bottom-right');
+            $stampPosition = $userPrefPos;
+
             if (str_contains(strtolower($effectiveCaption), '#kiribawah') || str_contains(strtolower($effectiveCaption), '#bl')) {
                 $stampPosition = 'bottom-left';
             } elseif (str_contains(strtolower($effectiveCaption), '#kiriatas') || str_contains(strtolower($effectiveCaption), '#tl')) {
@@ -535,9 +640,9 @@ class DailyActivityTelegramHandler
                 $stampPosition = 'bottom-right';
             }
 
-            // Terapkan watermark stempel fisik permanen ke file foto (PHP GD)
+            // Terapkan watermark stempel fisik permanen ke file foto (PHP GD) jika diizinkan
             $watermarkSuccess = false;
-            if (!$noStampRequested) {
+            if ($shouldStamp) {
                 try {
                     $watermarkService = app(\App\Services\PhotoWatermarkService::class);
                     $watermarkSuccess = $watermarkService->applyWatermark($fullPath, [
@@ -557,14 +662,16 @@ class DailyActivityTelegramHandler
                 }
             }
 
-            // Buat attachment dengan status is_stamped = true jika berhasil distempel
+            // Buat attachment: jika sengaja tidak distempel (misal kamera sudah ada watermark bawaan),
+            // set is_stamped = true agar event booted model tidak membakar stempel otomatis di database
             DailyActivityAttachment::create([
                 'daily_activity_id' => $activity->id,
                 'file_path' => $relativePath,
                 'file_name' => $fileName,
                 'file_size' => $fileSize,
                 'mime_type' => 'image/jpeg',
-                'is_stamped' => $watermarkSuccess,
+                'is_stamped' => $watermarkSuccess || !$shouldStamp,
+                'stamp_position' => $stampPosition,
                 'latitude' => $latitude,
                 'longitude' => $longitude,
                 'captured_at' => $capturedAt,
@@ -608,6 +715,8 @@ class DailyActivityTelegramHandler
 
             $dateBadge = "\n📅 *Tanggal Kegiatan:* " . $activity->activity_date->translatedFormat('l, d F Y') . (!$activity->activity_date->isToday() ? " _(Backdate)_" : "");
 
+            $stampBadge = $shouldStamp ? "" : "\n🛡️ *Watermark:* _Asli Kamera Bawaan (Anti Dobel Stempel)_";
+
             $responseMsgText = "📸 *Foto Berhasil Disimpan!*\n" .
                 $captionInfo .
                 "🖼️ *Lampiran:* {$totalPhotos} berkas" .
@@ -615,7 +724,8 @@ class DailyActivityTelegramHandler
                 $stBadge .
                 $kipappBadge .
                 $gpsBadge .
-                $timeBadge . "\n\n" .
+                $timeBadge .
+                $stampBadge . "\n\n" .
                 "✅ _Tersimpan otomatis di bukti dukung Puslah._";
 
             if (empty($mediaGroupId)) {

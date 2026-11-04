@@ -44,16 +44,16 @@ class PhotoWatermarkService
             $lat = !empty($params['latitude']) ? number_format((float) $params['latitude'], 6, '.', '') : '-6.894561';
             $lng = !empty($params['longitude']) ? number_format((float) $params['longitude'], 6, '.', '') : '110.637492';
             
-            $capturedAt = $params['captured_at'] ?? now();
+            $capturedAt = $params['captured_at'] ?? now('Asia/Jakarta');
             if (is_string($capturedAt)) {
                 try {
-                    $capturedAt = Carbon::parse($capturedAt);
+                    $capturedAt = Carbon::parse($capturedAt, 'Asia/Jakarta');
                 } catch (\Throwable $e) {
-                    $capturedAt = now();
+                    $capturedAt = now('Asia/Jakarta');
                 }
             }
             $timeStr = ($capturedAt instanceof Carbon)
-                ? $capturedAt->translatedFormat('d M Y H:i:s') . ' WIB'
+                ? $capturedAt->copy()->setTimezone('Asia/Jakarta')->translatedFormat('d M Y H:i:s') . ' WIB'
                 : (string) $capturedAt;
 
             $caption = trim($params['caption'] ?? 'Dokumentasi Kegiatan');

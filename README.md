@@ -55,6 +55,11 @@ composer dev
 ## Changelog
 
 ### 2026-11-04
+- **Resilient SafePolling Engine untuk Bot Telegram & Solusi Anti Dobel Watermark**:
+  - **Arsitektur SafePolling (`App\Telegram\SafePolling`):** Mengatasi crash loop worker Telegram akibat timeout Guzzle cURL error 28 (16002ms) dan Telegram 502 Bad Gateway. SafePolling membungkus `getUpdates` dalam exception handler mandiri dan menyimpan progress offset secara persisten di Redis (`nutgram_safe_polling_offset`), sehingga antrean foto album multi-berkas tidak lagi terbuang atau hilang saat bot terhubung kembali.
+  - **Custom Console Command (`App\Console\Commands\RunTelegramSafePollingCommand`):** Meng-override `nutgram:run` agar container `puslah-telegram-bot` otomatis menjalankan SafePolling mode dengan konfigurasi client timeout 45s dan polling 10s yang aman dari jitter jaringan.
+  - **Command Telegram `/stempel` & Kontrol Anti-Dobel Watermark:** Menambahkan fitur pengelolaan stempel foto bagi pegawai. Pegawai yang kameranya sudah memiliki watermark hardware bawaan (seperti iQOO, Xiaomi, Samsung, Open Camera) dapat mengetik `/stempel off` agar bot tidak menimpa foto dengan watermark stempel tambahan. Dilengkapi perintah `/stempel on`, `/stempel posisi [kanan-bawah|kiri-bawah|kiri-atas|kanan-atas]`, dan `/stempel` untuk melihat status preferensi.
+  - **Koreksi Timezone Jam Stempel (Asia/Jakarta):** Memperbaiki pencetakan waktu stempel foto agar selalu menggunakan zona waktu Indonesia Barat (`Asia/Jakarta`) sehingga tidak lagi menampilkan jam UTC sebagai WIB (misal jam 08:03 tercetak benar 08:03 WIB, bukan 01:03 WIB).
 - **Alur Pembuatan LPD Terpadu via Menu Tindakan (Bulk Action Multi-Baris Kegiatan)**:
   - **Pemilihan Multi-Baris Kegiatan & Aksi Tindakan Masal:** Pegawai kini dapat mencentang beberapa baris kegiatan bukti dukung sekaligus di tabel dan mengklik tombol *"📝 Buat Laporan Perjalanan Dinas (LPD)"* pada menu dropdown *Tindakan*.
   - **Modal Interaktif Pemilihan Survey & Surat Tugas:** Menampilkan modal terpadu yang memungkinkan pemilihan Survei dan Surat Tugas terkait (otomatis pre-filled jika kegiatan sudah ber-ST), penentuan tanggal tugas, tujuan, instansi/desa, serta pejabat yang ditemui.

@@ -10,13 +10,13 @@ return [
 
     // Extra or specific configurations
     'config' => [
-        'timeout' => 30,
+        'timeout' => 45,
         'polling' => [
-            'timeout' => 15,
+            'timeout' => 10,
         ],
         'client' => [
-            'timeout' => 30,
-            'connect_timeout' => 10,
+            'timeout' => 45,
+            'connect_timeout' => 15,
         ],
     ],
 

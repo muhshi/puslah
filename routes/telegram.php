@@ -23,6 +23,13 @@ $bot->onCommand('today', [$handler, 'handleToday'])
 $bot->onCommand('rekap', [$handler, 'handleRekap'])
     ->description('Lihat rekapan capaian hari kerja dan tanggal kosong bulan ini');
 
+// Command /stempel dan /stempel {mode}
+$bot->onCommand('stempel {mode}', [$handler, 'handleStempel'])
+    ->description('Atur preferensi stempel foto: on, off, atau posisi');
+
+$bot->onCommand('stempel', [$handler, 'handleStempel'])
+    ->description('Cek status preferensi stempel watermark foto');
+
 // Command /help
 $bot->onCommand('help', [$handler, 'handleHelp'])
     ->description('Panduan interaktif penggunaan bot');
