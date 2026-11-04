@@ -273,4 +273,160 @@ EOT;
             'desa_pejabat' => null,
         ];
     }
+
+    /**
+     * Generate narasi kronologis LPD terpadu dari kumpulan bukti dukung harian (DailyActivity).
+     * Menyintesis multi-kegiatan satu hari menjadi 4 segmen waktu resmi BPS:
+     * Keberangkatan, Pelaksanaan Substansi/Koordinasi Teknis, ISHOMA, dan Kepulangan.
+     *
+     * @param iterable<\App\Models\DailyActivity> $activities
+     * @param \App\Models\SuratTugas $suratTugas
+     * @param \App\Models\User $user
+     * @param \Carbon\Carbon $activityDate
+     * @return array{narasi: string, nama_pejabat: ?string, desa_pejabat: ?string, summary_items: array}
+     */
+    public function generateChronologicalFromActivities($activities, SuratTugas $suratTugas, User $user, \Carbon\Carbon $activityDate): array
+    {
+        $activitiesCol = collect($activities)->sortBy(function ($act) {
+            $firstAttTime = $act->attachments->first()?->captured_at;
+            if ($firstAttTime) return \Carbon\Carbon::parse($firstAttTime)->timestamp;
+            if ($act->started_at) return \Carbon\Carbon::parse($act->activity_date->format('Y-m-d') . ' ' . $act->started_at)->timestamp;
+            return $act->created_at?->timestamp ?? 0;
+        });
+
+        // 1. Kumpulkan poin kegiatan dan estimasi jam
+        $poinList = [];
+        $totalPhotos = 0;
+        foreach ($activitiesCol as $idx => $act) {
+            $timeStr = "";
+            $firstAtt = $act->attachments->first();
+            if ($firstAtt && $firstAtt->captured_at) {
+                $timeStr = " (Foto jam " . \Carbon\Carbon::parse($firstAtt->captured_at)->format('H:i') . " WIB)";
+            } elseif ($act->started_at) {
+                $timeStr = " (Pukul " . substr($act->started_at, 0, 5) . " WIB)";
+            }
+
+            $raw = !empty($act->raw_content) && $act->raw_content !== 'Dokumentasi kegiatan'
+                ? $act->raw_content
+                : ($act->final_content ?: 'Dokumentasi kegiatan lapangan');
+
+            $totalPhotos += $act->attachments->count();
+            $poinList[] = "- [Bukti Dukung " . ($idx + 1) . "{$timeStr}]: " . $raw;
+        }
+
+        $gabunganCatatan = implode("\n", $poinList);
+        if (empty(trim($gabunganCatatan))) {
+            $gabunganCatatan = "- Pelaksanaan tugas kedinasan sesuai Surat Tugas No. " . ($suratTugas->nomor_surat_tugas ?: 'DRAFT');
+        }
+
+        $surveyName = $suratTugas->survey?->name ?? 'Kegiatan Dinas BPS';
+        $tujuan = $suratTugas->keperluan ?: $suratTugas->tempat_tugas ?: 'Pelaksanaan Penugasan Lapangan';
+        $tanggalFormatted = $activityDate->translatedFormat('l, d F Y');
+        $desaTujuan = $suratTugas->tempat_tugas ?: 'Kabupaten Demak';
+
+        $apiKey = $this->getApiKey();
+
+        // 2. Jika ada API Key Gemini, susun prompt khusus kronologis BPS
+        if (!empty($apiKey)) {
+            $prompt = <<<EOT
+Anda adalah asisten AI resmi Badan Pusat Statistik (BPS) Kabupaten Demak.
+Tugas Anda adalah menyusun narasi 'Uraian Kegiatan' untuk Laporan Perjalanan Dinas (LPD) yang formal, terstruktur kronologis per jam, berwibawa, dan akuntabel berdasarkan kumpulan catatan bukti dukung harian pegawai pada hari tugas tersebut.
+
+DATA PENUGASAN:
+- Nama Pegawai: {$user->name}
+- Kegiatan/Survei: {$surveyName}
+- Keperluan Surat Tugas: {$tujuan}
+- Lokasi Tujuan: {$desaTujuan}
+- Tanggal Pelaksanaan: {$tanggalFormatted}
+- Total Berkas Foto Tersedia: {$totalPhotos} foto
+
+CATATAN BUKTI DUKUNG DARI LAPANGAN PADA HARI INI:
+{$gabunganCatatan}
+
+ATURAN STRUKTUR & GAYA BAHASA (MUTLAK):
+1. DILARANG KERAS menggunakan tag <ul>, <ol>, <li>, simbol bullet (•, -, *), maupun nomor urut (1., 2., dst.).
+2. Setiap sesi jam HARUS menjadi paragraf <p> tersendiri.
+3. Awali setiap paragraf dengan jam tebal, contoh: <p><strong>Pukul HH.MM–HH.MM WIB:</strong> ...</p>
+4. STRUKTUR HARUS RUNTUT MENJADI 4 SEGMEN WAKTU:
+   - SEGMEN 1 (Pagi): Perjalanan keberangkatan petugas dari Kabupaten Demak menuju tempat penugasan.
+   - SEGMEN 2 (Pagi-Siang): Pelaksanaan substansi kegiatan utama, koordinasi teknis dengan pejabat/narasumber yang ditemui, poin-poin hasil pembahasan/kesepakatan, dan tindak lanjut lapangan. Uraikan secara spesifik dan teknis sesuai catatan.
+   - SEGMEN 3 (Siang): Waktu istirahat, salat, dan makan siang (ISHOMA) sekitar pukul 12.00–13.00 WIB, serta kelanjutan kegiatan setelahnya.
+   - SEGMEN 4 (Sore): Seluruh rangkaian kegiatan selesai, petugas bertolak kembali dalam perjalanan menuju Kabupaten Demak dan menyelesaikan administrasi pelaporan perjalanan dinas.
+5. Bahasa: Bahasa Indonesia resmi kedinasan BPS yang mengalir, lugas, dan akuntabel.
+6. Deteksi Nama Pejabat & Lokasi Pejabat dari catatan di atas jika ada yang disebutkan.
+
+HASIL HARUS DALAM FORMAT JSON BERSIH BERIKUT (tanpa markdown backtick):
+{
+  "narasi": "<p><strong>Pukul 06.00–08.00 WIB:</strong> ...</p><p><strong>Pukul 08.00–11.30 WIB:</strong> ...</p><p><strong>Pukul 11.30–13.30 WIB:</strong> ...</p><p><strong>Pukul 13.30–15.30 WIB:</strong> ...</p>",
+  "nama_pejabat": "Nama pejabat yang ditemui beserta jabatan atau '-' jika tidak spesifik",
+  "desa_pejabat": "Nama instansi/lokasi/desa pejabat atau '{$desaTujuan}'"
+}
+EOT;
+
+            try {
+                $model = $this->getModel();
+                $modelsToTry = array_unique([$model, 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-3.8-flash']);
+                $response = null;
+
+                foreach ($modelsToTry as $currentModel) {
+                    $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$currentModel}:generateContent?key={$apiKey}";
+                    try {
+                        $res = Http::withHeaders(['Content-Type' => 'application/json'])
+                            ->timeout(25)
+                            ->post($endpoint, [
+                                'contents' => [
+                                    ['role' => 'user', 'parts' => [['text' => $prompt]]]
+                                ],
+                                'generationConfig' => [
+                                    'responseMimeType' => 'application/json',
+                                    'temperature' => 0.3,
+                                ],
+                            ]);
+
+                        if ($res->successful()) {
+                            $response = $res;
+                            break;
+                        }
+                    } catch (\Throwable $e) {
+                        Log::warning("Gemini chronological LPD model {$currentModel} failed: " . $e->getMessage());
+                    }
+                }
+
+                if ($response && $response->successful()) {
+                    $rawText = $response->json('candidates.0.content.parts.0.text');
+                    $decoded = json_decode($rawText, true);
+                    if (!is_array($decoded) || !isset($decoded['narasi'])) {
+                        $cleaned = preg_replace('/^```(?:json)?\s*/i', '', trim($rawText));
+                        $cleaned = preg_replace('/\s*```$/i', '', $cleaned);
+                        $decoded = json_decode($cleaned, true);
+                    }
+
+                    if (is_array($decoded) && !empty($decoded['narasi'])) {
+                        return [
+                            'narasi' => $decoded['narasi'],
+                            'nama_pejabat' => !empty($decoded['nama_pejabat']) && $decoded['nama_pejabat'] !== '-' ? $decoded['nama_pejabat'] : null,
+                            'desa_pejabat' => !empty($decoded['desa_pejabat']) ? $decoded['desa_pejabat'] : $desaTujuan,
+                            'summary_items' => $poinList,
+                        ];
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('LpdAiService chronological generation error: ' . $e->getMessage());
+            }
+        }
+
+        // 3. Fallback Kronologis Lokal Terstruktur (jika tanpa AI atau API error)
+        $narasiFallback = "<p><strong>Pukul 07.30–08.30 WIB:</strong> Petugas melakukan perjalanan dari Kantor BPS Kabupaten Demak menuju lokasi tujuan di {$desaTujuan} dalam rangka melaksanakan agenda {$tujuan}.</p>";
+        $narasiFallback .= "<p><strong>Pukul 08.30–12.00 WIB:</strong> Pelaksanaan koordinasi teknis dan kegiatan penugasan lapangan: " . htmlspecialchars(implode('. ', array_map(fn($p) => preg_replace('/^- \[.*?\]:\s*/', '', $p), $poinList))) . ".</p>";
+        $narasiFallback .= "<p><strong>Pukul 12.00–13.00 WIB:</strong> Petugas melaksanakan istirahat, salat, dan makan siang (ISHOMA) di sekitar lokasi kegiatan penugasan.</p>";
+        $narasiFallback .= "<p><strong>Pukul 13.00–15.00 WIB:</strong> Melanjutkan evaluasi penyelesaian pekerjaan serta perapian berkas dokumentasi dan bukti dukung lapangan.</p>";
+        $narasiFallback .= "<p><strong>Pukul 15.00–16.30 WIB:</strong> Seluruh rangkaian kegiatan telah selesai, petugas bertolak kembali menuju Kantor BPS Kabupaten Demak dan segera menyelesaikan administrasi laporan perjalanan dinas.</p>";
+
+        return [
+            'narasi' => $narasiFallback,
+            'nama_pejabat' => null,
+            'desa_pejabat' => $desaTujuan,
+            'summary_items' => $poinList,
+        ];
+    }
 }
