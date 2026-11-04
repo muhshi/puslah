@@ -115,7 +115,7 @@ class SharedWorkReportResource extends Resource
                     ->badge()
                     ->color('success')
                     ->icon('heroicon-m-calendar-days')
-                    ->getStateUsing(fn (SharedWorkReport $record) => $record->getActivities()->count() . ' Hari'),
+                    ->getStateUsing(fn (SharedWorkReport $record) => $record->activities_count . ' Hari'),
 
                 Tables\Columns\TextColumn::make('period')
                     ->label('Periode')

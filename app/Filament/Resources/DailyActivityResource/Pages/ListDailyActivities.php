@@ -65,7 +65,21 @@ class ListDailyActivities extends ListRecords
                             }
                         }),
                 ])
-                ->modalSubmitActionLabel(fn () => !empty(Auth::user()?->telegram_chat_id) ? 'Putus Hubungan Akun' : 'Dapatkan Tautan Bot')
+                ->modalSubmitAction(function (\Filament\Actions\StaticAction $action) {
+                    $currentUser = Auth::user();
+                    if (!empty($currentUser?->telegram_chat_id)) {
+                        return $action
+                            ->label('Putus Hubungan Akun')
+                            ->color('danger')
+                            ->requiresConfirmation()
+                            ->modalHeading('Putus Hubungan Akun Telegram?')
+                            ->modalDescription('Anda tidak akan lagi menerima reminder pengingat bukti dukung atau dapat mengirim laporan lewat bot Telegram. Lanjutkan?');
+                    }
+
+                    return $action
+                        ->label('Dapatkan Tautan Bot')
+                        ->color('primary');
+                })
                 ->action(function () use ($botUsername) {
                     $currentUser = Auth::user();
                     if (!$currentUser) return;

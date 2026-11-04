@@ -54,6 +54,20 @@ composer dev
 
 ## Changelog
 
+### 2026-11-04
+- **Perbaikan Bug & Optimalisasi UI/UX Modul Bukti Dukung Harian & Wadah KIPAPP**:
+  - **Fix Sinkronisasi Relasi Pivot Wadah (Bulk Action):** Aksi masal *"🔗 Buat Berkas Publik Multi-Hari"* kini otomatis menyinkronkan tabel pivot many-to-many `daily_activity_shared_work_report` dan field `shared_work_report_id`, sehingga kegiatan yang dibundel langsung terdeteksi oleh filter `wadah_kipapp` di tabel web dan badge wadah terbarui seketika.
+  - **Eliminasi N+1 Query & Beban Memori (`SharedWorkReportResource`):** Menghapus eager-loading berat `getActivities()->count()` pada kolom jumlah kegiatan di tabel wadah dan menggantikannya dengan accessor SQL `activities_count` instan, mencegah pemborosan RAM server.
+  - **Pencegahan Over-Watermarking Foto:** Menambahkan proteksi pencegahan stempel ganda pada tombol *"Cap Stempel Permanen"* di form input. Jika foto sudah memiliki stempel resmi BPS, tombol otomatis berstatus dinonaktifkan (`disabled`) dengan badge hijau ramah agar ketajaman gambar fisik tidak rusak akibat teks stempel bertumpuk.
+  - **Keamanan Disconnect Akun Telegram:** Tombol *"Putus Hubungan Akun"* pada modal Telegram header kini dilengkapi konfirmasi ganda (`requiresConfirmation`) dan warna peringatan tegas (`danger`) agar pengguna tidak sengaja memutuskan integrasi bot.
+  - **Penataan Margin & Spacing Tombol Form (Anti-Nempel):** Memberikan margin vertikal yang proporsional pada tombol *"Pilih Titik di Peta 📍"* (`my-3`) dan tombol *"Cap Stempel"* (`mt-3 mb-1`) sehingga tidak lagi menempel rapat pada input koordinat dan toggle stempel bawaan.
+  - **Penyederhanaan Aksi Baris Tabel (*ActionGroup*):** Mengelompokkan aksi sekunder (*Unduh Dokumen Word*, *Ubah*, *Hapus*) ke dalam dropdown `ActionGroup` (`⋮`) yang rapi, memangkas lebar kolom aksi dari 360px+ menjadi kompak, serta mempertahankan tombol cepat *"Salin ke LPD"* tetap menonjol.
+  - **Harmonisasi Warna Semantik Antarmuka:**
+    - Mengganti warna badge *"Belum Masuk Wadah"* dari merah menyala (`danger`) menjadi abu-abu netral (`gray`) dengan ikon folder terbuka yang tenang.
+    - Menyesuaikan tombol *"✨ Poles dengan Gemini AI"* menjadi warna `primary` dan *"Pilih Titik di Peta 📍"* menjadi `info` (biru lokasi).
+  - **Responsivitas Header Berkas Publik Mobile:** Menambahkan pembungkusan `flex-wrap` dan teks tombol ringkas pada header halaman publik `/bukti-dukung/share/{uuid}` agar rapi dan tidak meluap (*overflow*) di layar smartphone.
+
+
 ### 2026-11-03
 - **Fitur Ekosistem KIPAPP Lengkap: Voice Note Telegram, Filter Wadah, Salin Tautan Cepat, AI Ringkasan SKP & Ekspor PDF**:
   - **Pelaporan Pesan Suara Telegram (Gemini Multimodal Audio):** Pegawai kini dapat mengirimkan Voice Note / pesan audio langsung via Telegram bot; sistem mentranskripsikan suara secara presisi dan memolesnya langsung menjadi narasi laporan kedinasan formal aktif menggunakan Google Gemini Audio API.

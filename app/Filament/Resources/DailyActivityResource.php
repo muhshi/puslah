@@ -109,7 +109,7 @@ class DailyActivityResource extends Resource
                             ->hintAction(
                                 Forms\Components\Actions\Action::make('ai_polish')
                                     ->label('✨ Poles dengan Gemini AI')
-                                    ->color('warning')
+                                    ->color('primary')
                                     ->icon('heroicon-m-sparkles')
                                     ->action(function (Forms\Get $get, Forms\Set $set) {
                                         $raw = trim($get('raw_content') ?? '');
@@ -210,13 +210,19 @@ class DailyActivityResource extends Resource
 
                                         Forms\Components\Actions::make([
                                             Forms\Components\Actions\Action::make('burn_stamp_now')
-                                                ->label('⚡ Cap Stempel Permanen ke File Gambar')
-                                                ->icon('heroicon-m-sparkles')
-                                                ->color('warning')
+                                                ->label(fn (Forms\Get $get) => $get('is_stamped') ? '✅ Foto Sudah Berstempel Resmi' : '⚡ Cap Stempel Permanen ke File')
+                                                ->icon(fn (Forms\Get $get) => $get('is_stamped') ? 'heroicon-m-check-badge' : 'heroicon-m-sparkles')
+                                                ->color(fn (Forms\Get $get) => $get('is_stamped') ? 'gray' : 'warning')
+                                                ->disabled(fn (Forms\Get $get) => (bool) $get('is_stamped'))
                                                 ->requiresConfirmation()
                                                 ->modalHeading('Cap Stempel Permanen ke File')
                                                 ->modalDescription('Koordinat, waktu, dan logo instansi akan digambar langsung (burn-in) secara permanen ke dalam file foto menggunakan PHP GD. Lanjutkan?')
                                                 ->action(function (Forms\Get $get, Forms\Set $set) {
+                                                    if ($get('is_stamped')) {
+                                                        Notification::make()->info()->title('Foto Sudah Berstempel')->body('Foto ini sudah memiliki stempel resmi BPS.')->send();
+                                                        return;
+                                                    }
+
                                                     $filePath = $get('file_path');
                                                     if (!$filePath) {
                                                         Notification::make()->warning()->title('Belum Ada File')->body('Unggah berkas bukti kegiatan terlebih dahulu.')->send();
@@ -254,7 +260,7 @@ class DailyActivityResource extends Resource
                                                         Notification::make()->danger()->title('Gagal Mencap Stempel')->body('Terjadi kendala saat memproses gambar fisik.')->send();
                                                     }
                                                 }),
-                                        ]),
+                                        ])->extraAttributes(['class' => 'mt-3 mb-1']),
                                     ])
                                     ->columnSpan(1),
 
@@ -289,7 +295,7 @@ class DailyActivityResource extends Resource
                                             Forms\Components\Actions\Action::make('pick_coordinate_map')
                                                 ->label('Pilih Titik di Peta 📍')
                                                 ->icon('heroicon-m-map-pin')
-                                                ->color('warning')
+                                                ->color('info')
                                                 ->modalHeading('Pilih Titik Koordinat Lokasi di Peta')
                                                 ->modalDescription('Cari nama wilayah/desa/kecamatan atau klik & geser penanda (marker) pada peta.')
                                                 ->modalWidth(\Filament\Support\Enums\MaxWidth::FourExtraLarge)
@@ -310,7 +316,7 @@ class DailyActivityResource extends Resource
                                                         $set('longitude', round((float)$data['map_location']['lng'], 8));
                                                     }
                                                 }),
-                                        ]),
+                                        ])->extraAttributes(['class' => 'my-3']),
 
                                         Forms\Components\Toggle::make('is_stamped')
                                             ->label('Sudah Ada Stempel Bawaan')
@@ -518,25 +524,30 @@ class DailyActivityResource extends Resource
                             ->send();
                     }),
 
-                // Aksi Unduh DOCX
-                Tables\Actions\Action::make('export_docx')
-                    ->label('Unduh Word')
-                    ->icon('heroicon-m-document-arrow-down')
-                    ->color('info')
-                    ->action(function (DailyActivity $record) {
-                        try {
-                            $generator = app(\App\Services\WorkReportGeneratorService::class);
-                            $user = $record->user ?? Auth::user();
-                            $res = $generator->generateWordReport($user, [$record], $record->activity_date->translatedFormat('d F Y'));
+                // Kelompok Aksi Manajemen & Ekspor Dokumen
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('export_docx')
+                        ->label('Unduh Dokumen Word')
+                        ->icon('heroicon-m-document-arrow-down')
+                        ->color('info')
+                        ->action(function (DailyActivity $record) {
+                            try {
+                                $generator = app(\App\Services\WorkReportGeneratorService::class);
+                                $user = $record->user ?? Auth::user();
+                                $res = $generator->generateWordReport($user, [$record], $record->activity_date->translatedFormat('d F Y'));
 
-                            return response()->download($res['path'], $res['name']);
-                        } catch (\Throwable $e) {
-                            Notification::make()->danger()->title('Gagal Membuat Dokumen')->body($e->getMessage())->send();
-                        }
-                    }),
+                                return response()->download($res['path'], $res['name']);
+                            } catch (\Throwable $e) {
+                                Notification::make()->danger()->title('Gagal Membuat Dokumen')->body($e->getMessage())->send();
+                            }
+                        }),
 
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make(),
+                ])
+                ->tooltip('Pilihan Aksi')
+                ->icon('heroicon-m-ellipsis-vertical')
+                ->color('gray'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -626,6 +637,13 @@ class DailyActivityResource extends Resource
                                 'surat_tugas_id' => $stId,
                                 'is_active' => true,
                             ]);
+
+                            // Sinkronkan ke tabel pivot many-to-many dan relasi kegiatan
+                            $report->dailyActivities()->syncWithoutDetaching($sortedIds);
+                            foreach ($records as $rec) {
+                                $rec->update(['shared_work_report_id' => $report->id]);
+                                $rec->sharedWorkReports()->syncWithoutDetaching([$report->id]);
+                            }
 
                             $url = route('shared-work-report.show', ['uuid' => $report->uuid]);
 

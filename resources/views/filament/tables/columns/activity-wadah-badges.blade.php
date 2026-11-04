@@ -37,8 +37,8 @@
             </button>
         </div>
     @empty
-        <x-filament::badge color="danger" size="sm" icon="heroicon-m-x-circle">
-            Belum Ada Wadah KIPAPP
+        <x-filament::badge color="gray" size="sm" icon="heroicon-m-folder-open">
+            Belum Masuk Wadah
         </x-filament::badge>
     @endforelse
 </div>
