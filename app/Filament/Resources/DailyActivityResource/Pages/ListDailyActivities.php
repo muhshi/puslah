@@ -64,31 +64,36 @@ class ListDailyActivities extends ListRecords
                                 Notification::make()->danger()->title('Gagal Kirim Pesan')->body($e->getMessage())->send();
                             }
                         }),
+
+                    Actions\Action::make('disconnect_telegram')
+                        ->label('Putus Hubungan Akun')
+                        ->color('danger')
+                        ->icon('heroicon-m-link-slash')
+                        ->requiresConfirmation()
+                        ->modalHeading('Putus Hubungan Akun Telegram?')
+                        ->modalDescription('Anda tidak akan lagi menerima reminder pengingat bukti dukung atau dapat mengirim laporan lewat bot Telegram. Lanjutkan?')
+                        ->visible(fn () => !empty(Auth::user()?->telegram_chat_id))
+                        ->action(function () {
+                            $currentUser = Auth::user();
+                            if ($currentUser) {
+                                $currentUser->update(['telegram_chat_id' => null, 'telegram_auth_token' => null]);
+                                Notification::make()->success()->title('Hubungan Telegram Berhasil Diputus')->send();
+                            }
+                        }),
                 ])
                 ->modalSubmitAction(function (\Filament\Actions\StaticAction $action) {
                     $currentUser = Auth::user();
                     if (!empty($currentUser?->telegram_chat_id)) {
-                        return $action
-                            ->label('Putus Hubungan Akun')
-                            ->color('danger')
-                            ->requiresConfirmation()
-                            ->modalHeading('Putus Hubungan Akun Telegram?')
-                            ->modalDescription('Anda tidak akan lagi menerima reminder pengingat bukti dukung atau dapat mengirim laporan lewat bot Telegram. Lanjutkan?');
+                        return false;
                     }
 
                     return $action
-                        ->label('Dapatkan Tautan Bot')
+                        ->label('Dapatkan Tautan Bot 🚀')
                         ->color('primary');
                 })
                 ->action(function () use ($botUsername) {
                     $currentUser = Auth::user();
-                    if (!$currentUser) return;
-
-                    if (!empty($currentUser->telegram_chat_id)) {
-                        $currentUser->update(['telegram_chat_id' => null, 'telegram_auth_token' => null]);
-                        Notification::make()->success()->title('Hubungan Telegram Berhasil Diputus')->send();
-                        return;
-                    }
+                    if (!$currentUser || !empty($currentUser->telegram_chat_id)) return;
 
                     // Generate token baru
                     $token = Str::random(24);

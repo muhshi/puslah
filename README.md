@@ -55,6 +55,9 @@ composer dev
 ## Changelog
 
 ### 2026-11-04
+- **Fix Modal Action Hubungkan Telegram & Penyederhanaan Form Bukti Dukung**:
+  - **Fix Error Modal Tombol Telegram (`BadMethodCallException: StaticAction::requiresConfirmation`):** Memindahkan tombol konfirmasi putus akun ke `extraModalFooterActions` sebagai `Actions\Action` resmi Filament yang mendukung `requiresConfirmation()`, dan mengembalikan `false` pada `modalSubmitAction` saat akun sudah terhubung.
+  - **Penyederhanaan Form (Hapus Tombol Template BPS):** Menghilangkan tombol *Template BPS* dari hint action draft kegiatan sesuai arahan agar input tetap fleksibel dan terwadahi rapi melalui fitur Wadah KIPAPP.
 - **Perbaikan Album Foto Telegram, Pemisahan Stempel Watermark & Stop Propagation Badge Tabel**:
   - **Dukungan Album Multi-Foto Telegram (`media_group_id`) & Ekstraksi Caption Dinamis:**
     - Bot Telegram kini secara cerdas mendeteksi pengiriman album 2 foto atau lebih sekaligus. Jika caption berada di foto ke-2 atau seterusnya, sistem otomatis memperbarui rekaman kegiatan dengan narasi asli yang dipoles AI, memperbarui deteksi tanggal (termasuk backdate), dan menghubungkan Surat Tugas serta wadah KIPAPP.
