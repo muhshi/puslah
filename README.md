@@ -55,6 +55,16 @@ composer dev
 ## Changelog
 
 ### 2026-11-04
+- **Agregator Cerdas Bukti Dukung Harian ke LPD & Generator Narasi Kronologis (AI Timeline)**:
+  - **Generator Narasi Kronologis 4 Segmen Waktu BPS (`LpdAiService`):**
+    - Mengintegrasikan fungsi sintesis multi-kegiatan satu hari (`generateChronologicalFromActivities`) untuk merangkai seluruh catatan lapangan dan waktu foto menjadi 4 segmen baku perjalanan dinas BPS berjam tebal (`Pukul HH.MM–HH.MM WIB`): Keberangkatan pagi dari Demak, Pelaksanaan Koordinasi & Substansi Teknis bersama Pejabat/Narasumber terkait, ISHOMA siang, serta Kepulangan sore dan penyelesaian SPPD.
+    - Dilengkapi fallback algoritma kronologis lokal jika API key AI tidak tersedia atau jaringan offline.
+  - **Transformasi Aksi "Salin ke LPD" Menjadi Modal Agregator Cerdas (`DailyActivityResource`):**
+    - Aksi *Salin ke LPD* kini membuka modal interaktif yang otomatis mengumpulkan seluruh bukti dukung dan dokumentasi foto pegawai pada tanggal yang sama dengan Surat Tugas yang sama.
+    - Menyediakan tombol *✨ Susun Ulang Kronologis via AI* dan editor interaktif agar pegawai dapat menyempurnakan narasi sebelum LPD resmi diterbitkan.
+    - Sekali klik, seluruh foto dari semua kegiatan hari itu otomatis disalin dan diurutkan kronologis ke `laporan_foto`, serta seluruh kegiatan harian terkait otomatis ditandai statusnya (`laporan_perjalanan_dinas_id`).
+  - **Sinkronisasi Dua Arah di Form Input LPD (`LaporanPerjalananDinasResource`):**
+    - Menambahkan tombol aksi *📥 Tarik Bukti Dukung Hari Ini* pada form input LPD manual untuk menarik dan menyintesis data kegiatan harian langsung dari form LPD.
 - **Fix Modal Action Hubungkan Telegram & Penyederhanaan Form Bukti Dukung**:
   - **Fix Error Modal Tombol Telegram (`BadMethodCallException: StaticAction::requiresConfirmation`):** Memindahkan tombol konfirmasi putus akun ke `extraModalFooterActions` sebagai `Actions\Action` resmi Filament yang mendukung `requiresConfirmation()`, dan mengembalikan `false` pada `modalSubmitAction` saat akun sudah terhubung.
   - **Penyederhanaan Form (Hapus Tombol Template BPS):** Menghilangkan tombol *Template BPS* dari hint action draft kegiatan sesuai arahan agar input tetap fleksibel dan terwadahi rapi melalui fitur Wadah KIPAPP.
