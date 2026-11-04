@@ -55,6 +55,11 @@ composer dev
 ## Changelog
 
 ### 2026-11-04
+- **Alur Pembuatan LPD Terpadu via Menu Tindakan (Bulk Action Multi-Baris Kegiatan)**:
+  - **Pemilihan Multi-Baris Kegiatan & Aksi Tindakan Masal:** Pegawai kini dapat mencentang beberapa baris kegiatan bukti dukung sekaligus di tabel dan mengklik tombol *"📝 Buat Laporan Perjalanan Dinas (LPD)"* pada menu dropdown *Tindakan*.
+  - **Modal Interaktif Pemilihan Survey & Surat Tugas:** Menampilkan modal terpadu yang memungkinkan pemilihan Survei dan Surat Tugas terkait (otomatis pre-filled jika kegiatan sudah ber-ST), penentuan tanggal tugas, tujuan, instansi/desa, serta pejabat yang ditemui.
+  - **Sintesis Narasi Kronologis Otomatis:** RichEditor narasi terisi otomatis oleh narasi kronologis 4 segmen per jam AI dari seluruh baris terpilih, dengan tombol *✨ Susun Ulang Kronologis via AI*.
+  - **Lampiran Foto Otomatis & Pembaruan Relasi:** Seluruh foto dokumentasi dari semua kegiatan yang dicentang otomatis disalin dan diurutkan kronologis ke berkas LPD, seluruh kegiatan terkait otomatis terhubung ke LPD (`laporan_perjalanan_dinas_id`), dan notifikasi sukses menyediakan tombol langsung *"Buka & Edit LPD 🚀"* untuk memeriksa/mengedit hasil di menu LPD.
 - **Agregator Cerdas Bukti Dukung Harian ke LPD & Generator Narasi Kronologis (AI Timeline)**:
   - **Generator Narasi Kronologis 4 Segmen Waktu BPS (`LpdAiService`):**
     - Mengintegrasikan fungsi sintesis multi-kegiatan satu hari (`generateChronologicalFromActivities`) untuk merangkai seluruh catatan lapangan dan waktu foto menjadi 4 segmen baku perjalanan dinas BPS berjam tebal (`Pukul HH.MM–HH.MM WIB`): Keberangkatan pagi dari Demak, Pelaksanaan Koordinasi & Substansi Teknis bersama Pejabat/Narasumber terkait, ISHOMA siang, serta Kepulangan sore dan penyelesaian SPPD.

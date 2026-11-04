@@ -438,241 +438,240 @@ class DailyActivityResource extends Resource
                     }),
             ])
             ->actions([
-                // Aksi Agregator Cerdas Salin ke LPD (Multi-Kegiatan & Narasi Kronologis)
-                Tables\Actions\Action::make('convert_to_lpd')
-                    ->label('Salin ke LPD')
-                    ->icon('heroicon-m-arrow-top-right-on-square')
-                    ->color('success')
-                    ->visible(fn (DailyActivity $record) => !empty($record->surat_tugas_id) && empty($record->laporan_perjalanan_dinas_id))
-                    ->modalHeading('Konversi Bukti Dukung ke Laporan Perjalanan Dinas (LPD)')
-                    ->modalDescription('Gabungkan seluruh catatan kegiatan dan dokumentasi foto pada tanggal ini menjadi satu berkas LPD resmi.')
-                    ->modalWidth(\Filament\Support\Enums\MaxWidth::FourExtraLarge)
-                    ->modalSubmitActionLabel('Buat LPD Resmi 🚀')
-                    ->fillForm(function (DailyActivity $record): array {
-                        $st = $record->suratTugas;
-                        if (!$st) return [];
-
-                        $sameDayActivities = DailyActivity::where('user_id', $record->user_id)
-                            ->whereDate('activity_date', $record->activity_date)
-                            ->where('surat_tugas_id', $record->surat_tugas_id)
-                            ->with('attachments')
-                            ->get();
-
-                        $lpdAiService = app(LpdAiService::class);
-                        $actDate = \Carbon\Carbon::parse($record->activity_date);
-                        $user = $record->user ?? Auth::user();
-
-                        $generated = $lpdAiService->generateChronologicalFromActivities(
-                            $sameDayActivities,
-                            $st,
-                            $user,
-                            $actDate
-                        );
-
-                        return [
-                            'tujuan' => $st->keperluan ?: $st->tempat_tugas ?: 'Pelaksanaan Penugasan Lapangan',
-                            'desa_pejabat' => $generated['desa_pejabat'] ?? ($st->tempat_tugas ?: 'Kabupaten Demak'),
-                            'nama_pejabat' => $generated['nama_pejabat'] ?? '-',
-                            'uraian_kegiatan' => $generated['narasi'],
-                        ];
-                    })
-                    ->form(function (DailyActivity $record): array {
-                        $st = $record->suratTugas;
-                        $sameDayActivities = DailyActivity::where('user_id', $record->user_id)
-                            ->whereDate('activity_date', $record->activity_date)
-                            ->where('surat_tugas_id', $record->surat_tugas_id)
-                            ->with('attachments')
-                            ->get();
-
-                        $totalAct = $sameDayActivities->count();
-                        $totalPhotos = $sameDayActivities->flatMap->attachments->count();
-                        $dateStr = \Carbon\Carbon::parse($record->activity_date)->translatedFormat('l, d F Y');
-                        $stNo = $st?->nomor_surat_tugas ?: 'DRAFT';
-
-                        return [
-                            Forms\Components\Placeholder::make('agregator_info')
-                                ->hiddenLabel()
-                                ->content(new \Illuminate\Support\HtmlString("
-                                    <div class='p-3.5 rounded-xl border border-primary-200 bg-primary-50/60 dark:bg-primary-950/20 text-xs space-y-1.5'>
-                                        <div class='font-bold text-primary-900 dark:text-primary-200 flex items-center gap-1.5'>
-                                            <span>⚡ Agregator Bukti Dukung Harian BPS</span>
-                                        </div>
-                                        <div class='text-slate-600 dark:text-slate-400'>
-                                            📅 <strong>Tanggal:</strong> {$dateStr} &bull; 🔖 <strong>Surat Tugas:</strong> No. {$stNo}
-                                        </div>
-                                        <div class='text-emerald-700 dark:text-emerald-400 font-medium'>
-                                            ✅ Ditemukan <strong>{$totalAct} catatan bukti dukung</strong> dan <strong>{$totalPhotos} berkas foto</strong> pada hari ini yang akan otomatis disintesis secara kronologis dan dilampirkan ke LPD.
-                                        </div>
-                                    </div>
-                                ")),
-
-                            Forms\Components\Grid::make(3)->schema([
-                                Forms\Components\TextInput::make('tujuan')
-                                    ->label('Tujuan / Keperluan')
-                                    ->required()
-                                    ->columnSpan(2),
-
-                                Forms\Components\TextInput::make('desa_pejabat')
-                                    ->label('Lokasi / Instansi Tujuan')
-                                    ->required()
-                                    ->columnSpan(1),
-
-                                Forms\Components\TextInput::make('nama_pejabat')
-                                    ->label('Nama Pejabat yang Ditemui')
-                                    ->placeholder('Contoh: Bapak Iman Teguh Raharto, S.Si, M.Si (atau - jika umum)')
-                                    ->columnSpan(3),
-                            ]),
-
-                            Forms\Components\RichEditor::make('uraian_kegiatan')
-                                ->label('Uraian Narasi Kronologis LPD (Per Jam)')
-                                ->required()
-                                ->helperText('Format standar BPS: Runtut per jam dari keberangkatan pagi, substansi & koordinasi teknis, ISHOMA, hingga kepulangan.')
-                                ->hintAction(
-                                    Forms\Components\Actions\Action::make('regenerate_ai')
-                                        ->label('✨ Susun Ulang Kronologis via AI')
-                                        ->icon('heroicon-m-sparkles')
-                                        ->color('primary')
-                                        ->action(function (Forms\Set $set, DailyActivity $record) {
-                                            $st = $record->suratTugas;
-                                            if (!$st) return;
-
-                                            $sameDayActivities = DailyActivity::where('user_id', $record->user_id)
-                                                ->whereDate('activity_date', $record->activity_date)
-                                                ->where('surat_tugas_id', $record->surat_tugas_id)
-                                                ->with('attachments')
-                                                ->get();
-
-                                            $lpdAiService = app(LpdAiService::class);
-                                            $actDate = \Carbon\Carbon::parse($record->activity_date);
-                                            $user = $record->user ?? Auth::user();
-
-                                            $gen = $lpdAiService->generateChronologicalFromActivities(
-                                                $sameDayActivities,
-                                                $st,
-                                                $user,
-                                                $actDate
-                                            );
-
-                                            $set('uraian_kegiatan', $gen['narasi']);
-                                            if (!empty($gen['nama_pejabat'])) {
-                                                $set('nama_pejabat', $gen['nama_pejabat']);
-                                            }
-                                            if (!empty($gen['desa_pejabat'])) {
-                                                $set('desa_pejabat', $gen['desa_pejabat']);
-                                            }
-
-                                            Notification::make()->success()->title('Narasi Kronologis Diperbarui! ✨')->send();
-                                        })
-                                ),
-                        ];
-                    })
-                    ->action(function (DailyActivity $record, array $data) {
-                        $st = $record->suratTugas;
-                        if (!$st) {
-                            Notification::make()->danger()->title('Surat Tugas Tidak Ditemukan')->send();
-                            return;
-                        }
-
-                        // 1. Validasi Kuota LPD Surat Tugas (1 hari = 1 LPD, N hari = N LPD)
-                        if (!LaporanPerjalananDinas::canCreateLpd($st)) {
-                            $max = LaporanPerjalananDinas::getMaxLpdCount($st);
-                            $msg = $max === 1
-                                ? "Surat Tugas ini memiliki durasi 1 hari dan sudah memiliki 1 laporan LPD. Tidak dapat menambah LPD lagi."
-                                : "Surat Tugas ini memiliki durasi {$max} hari dan telah mencapai batas maksimal {$max} laporan LPD.";
-
-                            Notification::make()
-                                ->danger()
-                                ->title('Batas Kuota LPD Tercapai')
-                                ->body($msg)
-                                ->send();
-                            return;
-                        }
-
-                        // 2. Validasi Rentang Tanggal Surat Tugas
-                        $range = LaporanPerjalananDinas::getDateRangeForSuratTugas($st);
-                        $actDate = \Carbon\Carbon::parse($record->activity_date)->startOfDay();
-
-                        if ($range['start'] && $actDate->lt($range['start'])) {
-                            Notification::make()
-                                ->danger()
-                                ->title('Tanggal di Luar Penugasan')
-                                ->body("Tanggal kegiatan (" . $actDate->translatedFormat('d F Y') . ") mendahului rentang tanggal Surat Tugas (" . $range['start']->translatedFormat('d F Y') . ").")
-                                ->send();
-                            return;
-                        }
-
-                        if ($range['end'] && $actDate->gt($range['end'])) {
-                            Notification::make()
-                                ->danger()
-                                ->title('Tanggal di Luar Penugasan')
-                                ->body("Tanggal kegiatan (" . $actDate->translatedFormat('d F Y') . ") melebihi rentang tanggal Surat Tugas (" . $range['end']->translatedFormat('d F Y') . ").")
-                                ->send();
-                            return;
-                        }
-
-                        // 3. Validasi Konflik LPD pada Tanggal yang Sama untuk Pegawai yang Sama
-                        $duplicateLpd = LaporanPerjalananDinas::getDuplicateForUser($record->user_id, $record->activity_date);
-                        if ($duplicateLpd) {
-                            Notification::make()
-                                ->danger()
-                                ->title('Bentrok Jadwal LPD')
-                                ->body("Pegawai sudah memiliki Laporan Perjalanan Dinas pada tanggal " . $actDate->translatedFormat('d F Y') . " (No. ST: " . ($duplicateLpd->nomor_surat_tugas ?: 'Draft') . "). Satu pegawai hanya dapat memiliki 1 LPD per tanggal.")
-                                ->send();
-                            return;
-                        }
-
-                        // 4. Buat Laporan Perjalanan Dinas dengan narasi kronologis & data terverifikasi
-                        $lpd = LaporanPerjalananDinas::create([
-                            'surat_tugas_id' => $st->id,
-                            'nomor_surat_tugas' => $st->nomor_surat_tugas ?? '',
-                            'tujuan' => $data['tujuan'] ?? ($st->keperluan ?: $st->tempat_tugas ?: 'Pelaksanaan Penugasan Lapangan'),
-                            'tanggal_kunjungan' => $record->activity_date,
-                            'uraian_kegiatan' => $data['uraian_kegiatan'],
-                            'nama_pejabat' => $data['nama_pejabat'] ?? '-',
-                            'desa_pejabat' => $data['desa_pejabat'] ?? ($st->tempat_tugas ?: '-'),
-                        ]);
-
-                        // 5. Agregasi seluruh foto dari semua kegiatan pada hari & ST yang sama
-                        $sameDayActivities = DailyActivity::where('user_id', $record->user_id)
-                            ->whereDate('activity_date', $record->activity_date)
-                            ->where('surat_tugas_id', $record->surat_tugas_id)
-                            ->with('attachments')
-                            ->get();
-
-                        $allAttachments = $sameDayActivities->flatMap->attachments->sortBy(function ($att) {
-                            return $att->captured_at ? \Carbon\Carbon::parse($att->captured_at)->timestamp : ($att->created_at?->timestamp ?? 0);
-                        });
-
-                        $fotoOrder = 1;
-                        foreach ($allAttachments as $att) {
-                            LaporanFoto::create([
-                                'laporan_perjalanan_dinas_id' => $lpd->id,
-                                'file_path' => $att->file_path,
-                                'keterangan' => $att->caption ?: ('Dokumentasi Lapangan ' . $fotoOrder),
-                                'urutan' => $fotoOrder,
-                            ]);
-                            $fotoOrder++;
-                        }
-
-                        // 6. Tandai seluruh kegiatan hari tersebut bahwa sudah disalin ke LPD
-                        DailyActivity::whereIn('id', $sameDayActivities->pluck('id'))
-                            ->update(['laporan_perjalanan_dinas_id' => $lpd->id]);
-
-                        $totalFotoDisalin = $fotoOrder - 1;
-                        Notification::make()
-                            ->success()
-                            ->title('LPD Berhasil Diterbitkan! 🎉')
-                            ->body("Data {$sameDayActivities->count()} bukti dukung dan {$totalFotoDisalin} foto dokumentasi hari ini telah berhasil disintesis ke LPD resmi.")
-                            ->actions([
-                                \Filament\Notifications\Actions\Action::make('buka_lpd')
-                                    ->label('Buka LPD')
-                                    ->url(route('filament.admin.resources.laporan-perjalanan-dinas.edit', ['record' => $lpd->id])),
-                            ])
-                            ->send();
-                    }),
-
-                // Kelompok Aksi Manajemen & Ekspor Dokumen
+                // Kelompok Aksi Manajemen Baris Kegiatan
                 Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('convert_to_lpd')
+                        ->label('Salin Baris Ini ke LPD')
+                        ->icon('heroicon-m-arrow-top-right-on-square')
+                        ->color('success')
+                        ->visible(fn (DailyActivity $record) => !empty($record->surat_tugas_id) && empty($record->laporan_perjalanan_dinas_id))
+                        ->modalHeading('Konversi Bukti Dukung ke Laporan Perjalanan Dinas (LPD)')
+                        ->modalDescription('Gabungkan seluruh catatan kegiatan dan dokumentasi foto pada tanggal ini menjadi satu berkas LPD resmi.')
+                        ->modalWidth(\Filament\Support\Enums\MaxWidth::FourExtraLarge)
+                        ->modalSubmitActionLabel('Buat LPD Resmi 🚀')
+                        ->fillForm(function (DailyActivity $record): array {
+                            $st = $record->suratTugas;
+                            if (!$st) return [];
+
+                            $sameDayActivities = DailyActivity::where('user_id', $record->user_id)
+                                ->whereDate('activity_date', $record->activity_date)
+                                ->where('surat_tugas_id', $record->surat_tugas_id)
+                                ->with('attachments')
+                                ->get();
+
+                            $lpdAiService = app(LpdAiService::class);
+                            $actDate = \Carbon\Carbon::parse($record->activity_date);
+                            $user = $record->user ?? Auth::user();
+
+                            $generated = $lpdAiService->generateChronologicalFromActivities(
+                                $sameDayActivities,
+                                $st,
+                                $user,
+                                $actDate
+                            );
+
+                            return [
+                                'tujuan' => $st->keperluan ?: $st->tempat_tugas ?: 'Pelaksanaan Penugasan Lapangan',
+                                'desa_pejabat' => $generated['desa_pejabat'] ?? ($st->tempat_tugas ?: 'Kabupaten Demak'),
+                                'nama_pejabat' => $generated['nama_pejabat'] ?? '-',
+                                'uraian_kegiatan' => $generated['narasi'],
+                            ];
+                        })
+                        ->form(function (DailyActivity $record): array {
+                            $st = $record->suratTugas;
+                            $sameDayActivities = DailyActivity::where('user_id', $record->user_id)
+                                ->whereDate('activity_date', $record->activity_date)
+                                ->where('surat_tugas_id', $record->surat_tugas_id)
+                                ->with('attachments')
+                                ->get();
+
+                            $totalAct = $sameDayActivities->count();
+                            $totalPhotos = $sameDayActivities->flatMap->attachments->count();
+                            $dateStr = \Carbon\Carbon::parse($record->activity_date)->translatedFormat('l, d F Y');
+                            $stNo = $st?->nomor_surat_tugas ?: 'DRAFT';
+
+                            return [
+                                Forms\Components\Placeholder::make('agregator_info')
+                                    ->hiddenLabel()
+                                    ->content(new \Illuminate\Support\HtmlString("
+                                        <div class='p-3.5 rounded-xl border border-primary-200 bg-primary-50/60 dark:bg-primary-950/20 text-xs space-y-1.5'>
+                                            <div class='font-bold text-primary-900 dark:text-primary-200 flex items-center gap-1.5'>
+                                                <span>⚡ Agregator Bukti Dukung Harian BPS</span>
+                                            </div>
+                                            <div class='text-slate-600 dark:text-slate-400'>
+                                                📅 <strong>Tanggal:</strong> {$dateStr} &bull; 🔖 <strong>Surat Tugas:</strong> No. {$stNo}
+                                            </div>
+                                            <div class='text-emerald-700 dark:text-emerald-400 font-medium'>
+                                                ✅ Ditemukan <strong>{$totalAct} catatan bukti dukung</strong> dan <strong>{$totalPhotos} berkas foto</strong> pada hari ini yang akan otomatis disintesis secara kronologis dan dilampirkan ke LPD.
+                                            </div>
+                                        </div>
+                                    ")),
+
+                                Forms\Components\Grid::make(3)->schema([
+                                    Forms\Components\TextInput::make('tujuan')
+                                        ->label('Tujuan / Keperluan')
+                                        ->required()
+                                        ->columnSpan(2),
+
+                                    Forms\Components\TextInput::make('desa_pejabat')
+                                        ->label('Lokasi / Instansi Tujuan')
+                                        ->required()
+                                        ->columnSpan(1),
+
+                                    Forms\Components\TextInput::make('nama_pejabat')
+                                        ->label('Nama Pejabat yang Ditemui')
+                                        ->placeholder('Contoh: Bapak Iman Teguh Raharto, S.Si, M.Si (atau - jika umum)')
+                                        ->columnSpan(3),
+                                ]),
+
+                                Forms\Components\RichEditor::make('uraian_kegiatan')
+                                    ->label('Uraian Narasi Kronologis LPD (Per Jam)')
+                                    ->required()
+                                    ->helperText('Format standar BPS: Runtut per jam dari keberangkatan pagi, substansi & koordinasi teknis, ISHOMA, hingga kepulangan.')
+                                    ->hintAction(
+                                        Forms\Components\Actions\Action::make('regenerate_ai')
+                                            ->label('✨ Susun Ulang Kronologis via AI')
+                                            ->icon('heroicon-m-sparkles')
+                                            ->color('primary')
+                                            ->action(function (Forms\Set $set, DailyActivity $record) {
+                                                $st = $record->suratTugas;
+                                                if (!$st) return;
+
+                                                $sameDayActivities = DailyActivity::where('user_id', $record->user_id)
+                                                    ->whereDate('activity_date', $record->activity_date)
+                                                    ->where('surat_tugas_id', $record->surat_tugas_id)
+                                                    ->with('attachments')
+                                                    ->get();
+
+                                                $lpdAiService = app(LpdAiService::class);
+                                                $actDate = \Carbon\Carbon::parse($record->activity_date);
+                                                $user = $record->user ?? Auth::user();
+
+                                                $gen = $lpdAiService->generateChronologicalFromActivities(
+                                                    $sameDayActivities,
+                                                    $st,
+                                                    $user,
+                                                    $actDate
+                                                );
+
+                                                $set('uraian_kegiatan', $gen['narasi']);
+                                                if (!empty($gen['nama_pejabat'])) {
+                                                    $set('nama_pejabat', $gen['nama_pejabat']);
+                                                }
+                                                if (!empty($gen['desa_pejabat'])) {
+                                                    $set('desa_pejabat', $gen['desa_pejabat']);
+                                                }
+
+                                                Notification::make()->success()->title('Narasi Kronologis Diperbarui! ✨')->send();
+                                            })
+                                    ),
+                            ];
+                        })
+                        ->action(function (DailyActivity $record, array $data) {
+                            $st = $record->suratTugas;
+                            if (!$st) {
+                                Notification::make()->danger()->title('Surat Tugas Tidak Ditemukan')->send();
+                                return;
+                            }
+
+                            // 1. Validasi Kuota LPD Surat Tugas (1 hari = 1 LPD, N hari = N LPD)
+                            if (!LaporanPerjalananDinas::canCreateLpd($st)) {
+                                $max = LaporanPerjalananDinas::getMaxLpdCount($st);
+                                $msg = $max === 1
+                                    ? "Surat Tugas ini memiliki durasi 1 hari dan sudah memiliki 1 laporan LPD. Tidak dapat menambah LPD lagi."
+                                    : "Surat Tugas ini memiliki durasi {$max} hari dan telah mencapai batas maksimal {$max} laporan LPD.";
+
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Batas Kuota LPD Tercapai')
+                                    ->body($msg)
+                                    ->send();
+                                return;
+                            }
+
+                            // 2. Validasi Rentang Tanggal Surat Tugas
+                            $range = LaporanPerjalananDinas::getDateRangeForSuratTugas($st);
+                            $actDate = \Carbon\Carbon::parse($record->activity_date)->startOfDay();
+
+                            if ($range['start'] && $actDate->lt($range['start'])) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Tanggal di Luar Penugasan')
+                                    ->body("Tanggal kegiatan (" . $actDate->translatedFormat('d F Y') . ") mendahului rentang tanggal Surat Tugas (" . $range['start']->translatedFormat('d F Y') . ").")
+                                    ->send();
+                                return;
+                            }
+
+                            if ($range['end'] && $actDate->gt($range['end'])) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Tanggal di Luar Penugasan')
+                                    ->body("Tanggal kegiatan (" . $actDate->translatedFormat('d F Y') . ") melebihi rentang tanggal Surat Tugas (" . $range['end']->translatedFormat('d F Y') . ").")
+                                    ->send();
+                                return;
+                            }
+
+                            // 3. Validasi Konflik LPD pada Tanggal yang Sama untuk Pegawai yang Sama
+                            $duplicateLpd = LaporanPerjalananDinas::getDuplicateForUser($record->user_id, $record->activity_date);
+                            if ($duplicateLpd) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Bentrok Jadwal LPD')
+                                    ->body("Pegawai sudah memiliki Laporan Perjalanan Dinas pada tanggal " . $actDate->translatedFormat('d F Y') . " (No. ST: " . ($duplicateLpd->nomor_surat_tugas ?: 'Draft') . "). Satu pegawai hanya dapat memiliki 1 LPD per tanggal.")
+                                    ->send();
+                                return;
+                            }
+
+                            // 4. Buat Laporan Perjalanan Dinas
+                            $lpd = LaporanPerjalananDinas::create([
+                                'surat_tugas_id' => $st->id,
+                                'nomor_surat_tugas' => $st->nomor_surat_tugas ?? '',
+                                'tujuan' => $data['tujuan'] ?? ($st->keperluan ?: $st->tempat_tugas ?: 'Pelaksanaan Penugasan Lapangan'),
+                                'tanggal_kunjungan' => $record->activity_date,
+                                'uraian_kegiatan' => $data['uraian_kegiatan'],
+                                'nama_pejabat' => $data['nama_pejabat'] ?? '-',
+                                'desa_pejabat' => $data['desa_pejabat'] ?? ($st->tempat_tugas ?: '-'),
+                            ]);
+
+                            // 5. Agregasi seluruh foto dari semua kegiatan pada hari & ST yang sama
+                            $sameDayActivities = DailyActivity::where('user_id', $record->user_id)
+                                ->whereDate('activity_date', $record->activity_date)
+                                ->where('surat_tugas_id', $record->surat_tugas_id)
+                                ->with('attachments')
+                                ->get();
+
+                            $allAttachments = $sameDayActivities->flatMap->attachments->sortBy(function ($att) {
+                                return $att->captured_at ? \Carbon\Carbon::parse($att->captured_at)->timestamp : ($att->created_at?->timestamp ?? 0);
+                            });
+
+                            $fotoOrder = 1;
+                            foreach ($allAttachments as $att) {
+                                LaporanFoto::create([
+                                    'laporan_perjalanan_dinas_id' => $lpd->id,
+                                    'file_path' => $att->file_path,
+                                    'keterangan' => $att->caption ?: ('Dokumentasi Lapangan ' . $fotoOrder),
+                                    'urutan' => $fotoOrder,
+                                ]);
+                                $fotoOrder++;
+                            }
+
+                            // 6. Tandai seluruh kegiatan hari tersebut bahwa sudah disalin ke LPD
+                            DailyActivity::whereIn('id', $sameDayActivities->pluck('id'))
+                                ->update(['laporan_perjalanan_dinas_id' => $lpd->id]);
+
+                            $totalFotoDisalin = $fotoOrder - 1;
+                            Notification::make()
+                                ->success()
+                                ->title('LPD Berhasil Diterbitkan! 🎉')
+                                ->body("Data {$sameDayActivities->count()} bukti dukung dan {$totalFotoDisalin} foto dokumentasi hari ini telah berhasil disintesis ke LPD resmi.")
+                                ->actions([
+                                    \Filament\Notifications\Actions\Action::make('buka_lpd')
+                                        ->label('Buka LPD')
+                                        ->url(route('filament.admin.resources.laporan-perjalanan-dinas.edit', ['record' => $lpd->id])),
+                                ])
+                                ->send();
+                        }),
+
                     Tables\Actions\Action::make('export_docx')
                         ->label('Unduh Dokumen Word')
                         ->icon('heroicon-m-document-arrow-down')
@@ -698,6 +697,305 @@ class DailyActivityResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    // 1. Buat Laporan Perjalanan Dinas (LPD) dari Baris Terpilih
+                    Tables\Actions\BulkAction::make('create_lpd_from_selected')
+                        ->label('📝 Buat Laporan Perjalanan Dinas (LPD)')
+                        ->icon('heroicon-m-document-text')
+                        ->color('success')
+                        ->modalHeading('Buat Laporan Perjalanan Dinas (LPD) dari Kegiatan Terpilih')
+                        ->modalDescription('Pilih Survey & Surat Tugas untuk menyatukan kegiatan dan dokumentasi foto terpilih menjadi satu berkas LPD resmi.')
+                        ->modalWidth(\Filament\Support\Enums\MaxWidth::FourExtraLarge)
+                        ->modalSubmitActionLabel('Buat LPD Resmi & Lampirkan Foto 🚀')
+                        ->fillForm(function (\Illuminate\Database\Eloquent\Collection $records): array {
+                            $user = Auth::user();
+                            $firstRecord = $records->sortBy('activity_date')->first();
+                            $existingStId = $records->firstWhere('surat_tugas_id', '!=', null)?->surat_tugas_id;
+                            $st = $existingStId ? \App\Models\SuratTugas::find($existingStId) : null;
+
+                            $tanggalKunjungan = $firstRecord?->activity_date
+                                ? \Carbon\Carbon::parse($firstRecord->activity_date)->format('Y-m-d')
+                                : now()->format('Y-m-d');
+
+                            $narasiAwal = '';
+                            $namaPejabat = '-';
+                            $desaPejabat = $st?->tempat_tugas ?: 'Kabupaten Demak';
+
+                            if ($st && $user) {
+                                try {
+                                    $lpdAiService = app(LpdAiService::class);
+                                    $actDate = \Carbon\Carbon::parse($tanggalKunjungan);
+                                    $gen = $lpdAiService->generateChronologicalFromActivities(
+                                        $records,
+                                        $st,
+                                        $user,
+                                        $actDate
+                                    );
+                                    $narasiAwal = $gen['narasi'];
+                                    if (!empty($gen['nama_pejabat'])) $namaPejabat = $gen['nama_pejabat'];
+                                    if (!empty($gen['desa_pejabat'])) $desaPejabat = $gen['desa_pejabat'];
+                                } catch (\Throwable $e) {
+                                    // fallback jika ai error
+                                }
+                            }
+
+                            if (empty($narasiAwal)) {
+                                $poinList = [];
+                                foreach ($records as $rec) {
+                                    $poinList[] = $rec->final_content ?: $rec->raw_content;
+                                }
+                                $narasiAwal = "<p><strong>Pukul 08.00–16.00 WIB:</strong> " . htmlspecialchars(implode('. ', array_filter($poinList))) . ".</p>";
+                            }
+
+                            return [
+                                'survey_id' => $st?->survey_id,
+                                'surat_tugas_id' => $st?->id,
+                                'tanggal_kunjungan' => $tanggalKunjungan,
+                                'tujuan' => $st?->keperluan ?: ($st?->tempat_tugas ?: 'Pelaksanaan Penugasan Lapangan'),
+                                'desa_pejabat' => $desaPejabat,
+                                'nama_pejabat' => $namaPejabat,
+                                'uraian_kegiatan' => $narasiAwal,
+                            ];
+                        })
+                        ->form([
+                            Forms\Components\Placeholder::make('selected_summary')
+                                ->hiddenLabel()
+                                ->content(function (\Illuminate\Database\Eloquent\Collection $records) {
+                                    $count = $records->count();
+                                    $totalPhotos = $records->sum(fn($r) => $r->attachments->count());
+                                    $dates = $records->sortBy('activity_date')->pluck('activity_date')
+                                        ->map(fn($d) => \Carbon\Carbon::parse($d)->translatedFormat('d F Y'))
+                                        ->unique()
+                                        ->values()
+                                        ->join(', ');
+
+                                    return new \Illuminate\Support\HtmlString("
+                                        <div class='p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/70 dark:bg-emerald-950/20 text-xs space-y-1.5'>
+                                            <div class='font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5'>
+                                                <span>📋 Seleksi Baris Kegiatan ({$count} Catatan Bukti Dukung)</span>
+                                            </div>
+                                            <div class='text-slate-600 dark:text-slate-400'>
+                                                📅 <strong>Tanggal Kegiatan Terpilih:</strong> {$dates}
+                                            </div>
+                                            <div class='text-emerald-700 dark:text-emerald-400 font-medium'>
+                                                📸 Sebanyak <strong>{$totalPhotos} berkas foto</strong> dari kegiatan-kegiatan ini akan otomatis dilampirkan ke LPD dan diurutkan secara kronologis.
+                                            </div>
+                                        </div>
+                                    ");
+                                }),
+
+                            Forms\Components\Section::make('Penugasan & Identitas Surat Tugas')
+                                ->schema([
+                                    Forms\Components\Grid::make(2)->schema([
+                                        Forms\Components\Select::make('survey_id')
+                                            ->label('Filter Survei / Kegiatan')
+                                            ->placeholder('Semua Kegiatan / Survei')
+                                            ->options(fn () => \App\Models\Survey::orderBy('name')->pluck('name', 'id'))
+                                            ->searchable()
+                                            ->preload()
+                                            ->live()
+                                            ->afterStateUpdated(fn (Forms\Set $set) => $set('surat_tugas_id', null)),
+
+                                        Forms\Components\Select::make('surat_tugas_id')
+                                            ->label('Pilih Nomor Surat Tugas Terkait')
+                                            ->placeholder('Pilih Surat Tugas...')
+                                            ->options(function (Forms\Get $get) {
+                                                $surveyId = $get('survey_id');
+                                                $userId = Auth::id();
+                                                $q = \App\Models\SuratTugas::query();
+                                                if ($userId && !Auth::user()->hasRole('super_admin')) {
+                                                    $q->where('user_id', $userId);
+                                                }
+                                                if ($surveyId) {
+                                                    $q->where('survey_id', $surveyId);
+                                                }
+                                                return $q->latest()->take(60)->get()->mapWithKeys(function ($st) {
+                                                    $no = $st->nomor_surat_tugas ?: 'DRAFT';
+                                                    $kep = $st->keperluan ?: $st->tempat_tugas ?: 'Penugasan';
+                                                    return [$st->id => "No. {$no} — {$kep}"];
+                                                });
+                                            })
+                                            ->required()
+                                            ->searchable()
+                                            ->preload()
+                                            ->live()
+                                            ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get, \Illuminate\Database\Eloquent\Collection $records) {
+                                                if (!$state) return;
+                                                $st = \App\Models\SuratTugas::find($state);
+                                                if ($st) {
+                                                    if ($st->survey_id) $set('survey_id', $st->survey_id);
+                                                    $set('tujuan', $st->keperluan ?: $st->tempat_tugas ?: 'Pelaksanaan Penugasan Lapangan');
+                                                    $set('desa_pejabat', $st->tempat_tugas ?: 'Kabupaten Demak');
+
+                                                    // Trigger penyusunan narasi AI otomatis berdasarkan ST baru
+                                                    try {
+                                                        $lpdAiService = app(LpdAiService::class);
+                                                        $tgl = $get('tanggal_kunjungan') ?: now();
+                                                        $gen = $lpdAiService->generateChronologicalFromActivities(
+                                                            $records,
+                                                            $st,
+                                                            Auth::user(),
+                                                            \Carbon\Carbon::parse($tgl)
+                                                        );
+                                                        $set('uraian_kegiatan', $gen['narasi']);
+                                                        if (!empty($gen['nama_pejabat'])) $set('nama_pejabat', $gen['nama_pejabat']);
+                                                        if (!empty($gen['desa_pejabat'])) $set('desa_pejabat', $gen['desa_pejabat']);
+                                                    } catch (\Throwable $e) {}
+                                                }
+                                            }),
+                                    ]),
+                                ])
+                                ->compact(),
+
+                            Forms\Components\Section::make('Rincian Kunjungan & Laporan')
+                                ->schema([
+                                    Forms\Components\Grid::make(3)->schema([
+                                        Forms\Components\DatePicker::make('tanggal_kunjungan')
+                                            ->label('Tanggal Kunjungan')
+                                            ->required()
+                                            ->live()
+                                            ->columnSpan(1),
+
+                                        Forms\Components\TextInput::make('tujuan')
+                                            ->label('Tujuan / Keperluan Tugas')
+                                            ->required()
+                                            ->columnSpan(2),
+
+                                        Forms\Components\TextInput::make('desa_pejabat')
+                                            ->label('Lokasi / Instansi Tujuan')
+                                            ->required()
+                                            ->columnSpan(1),
+
+                                        Forms\Components\TextInput::make('nama_pejabat')
+                                            ->label('Nama Pejabat yang Ditemui')
+                                            ->placeholder('Contoh: Bapak Iman Teguh Raharto, S.Si, M.Si (atau - jika umum)')
+                                            ->columnSpan(2),
+                                    ]),
+
+                                    Forms\Components\RichEditor::make('uraian_kegiatan')
+                                        ->label('Uraian Narasi Kronologis LPD (Per Jam)')
+                                        ->required()
+                                        ->helperText('Format standar BPS: Runtut per jam dari keberangkatan pagi, substansi & koordinasi teknis, ISHOMA, hingga kepulangan.')
+                                        ->hintAction(
+                                            Forms\Components\Actions\Action::make('regenerate_ai')
+                                                ->label('✨ Susun Ulang Kronologis via AI')
+                                                ->icon('heroicon-m-sparkles')
+                                                ->color('primary')
+                                                ->action(function (Forms\Set $set, Forms\Get $get, \Illuminate\Database\Eloquent\Collection $records) {
+                                                    $stId = $get('surat_tugas_id');
+                                                    $st = $stId ? \App\Models\SuratTugas::find($stId) : null;
+                                                    if (!$st) {
+                                                        Notification::make()->warning()->title('Pilih Surat Tugas Terlebih Dahulu')->send();
+                                                        return;
+                                                    }
+
+                                                    $lpdAiService = app(LpdAiService::class);
+                                                    $tgl = $get('tanggal_kunjungan') ?: now();
+                                                    $actDate = \Carbon\Carbon::parse($tgl);
+                                                    $user = Auth::user();
+
+                                                    $gen = $lpdAiService->generateChronologicalFromActivities(
+                                                        $records,
+                                                        $st,
+                                                        $user,
+                                                        $actDate
+                                                    );
+
+                                                    $set('uraian_kegiatan', $gen['narasi']);
+                                                    if (!empty($gen['nama_pejabat'])) $set('nama_pejabat', $gen['nama_pejabat']);
+                                                    if (!empty($gen['desa_pejabat'])) $set('desa_pejabat', $gen['desa_pejabat']);
+
+                                                    Notification::make()->success()->title('Narasi Kronologis Diperbarui! ✨')->send();
+                                                })
+                                        ),
+                                ])
+                                ->compact(),
+                        ])
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
+                            $user = Auth::user();
+                            if (!$user) return;
+
+                            $stId = $data['surat_tugas_id'] ?? null;
+                            $st = $stId ? \App\Models\SuratTugas::find($stId) : null;
+                            if (!$st) {
+                                Notification::make()->danger()->title('Surat Tugas Wajib Dipilih')->send();
+                                return;
+                            }
+
+                            $tglKunjungan = $data['tanggal_kunjungan'];
+                            $actDate = \Carbon\Carbon::parse($tglKunjungan)->startOfDay();
+
+                            // 1. Validasi Kuota LPD
+                            if (!\App\Models\LaporanPerjalananDinas::canCreateLpd($st)) {
+                                $max = \App\Models\LaporanPerjalananDinas::getMaxLpdCount($st);
+                                $msg = $max === 1
+                                    ? "Surat Tugas ini memiliki durasi 1 hari dan sudah memiliki 1 laporan LPD. Tidak dapat menambah LPD lagi."
+                                    : "Surat Tugas ini memiliki durasi {$max} hari dan telah mencapai batas maksimal {$max} laporan LPD.";
+
+                                Notification::make()->danger()->title('Batas Kuota LPD Tercapai')->body($msg)->send();
+                                return;
+                            }
+
+                            // 2. Validasi Konflik LPD pada Tanggal yang Sama untuk Pegawai yang Sama
+                            $duplicateLpd = \App\Models\LaporanPerjalananDinas::getDuplicateForUser($user->id, $tglKunjungan);
+                            if ($duplicateLpd) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Bentrok Jadwal LPD')
+                                    ->body("Anda sudah memiliki Laporan Perjalanan Dinas pada tanggal " . $actDate->translatedFormat('d F Y') . " (No. ST: " . ($duplicateLpd->nomor_surat_tugas ?: 'Draft') . "). Satu pegawai hanya dapat memiliki 1 LPD per tanggal.")
+                                    ->send();
+                                return;
+                            }
+
+                            // 3. Buat Laporan Perjalanan Dinas
+                            $lpd = \App\Models\LaporanPerjalananDinas::create([
+                                'surat_tugas_id' => $st->id,
+                                'nomor_surat_tugas' => $st->nomor_surat_tugas ?? '',
+                                'tujuan' => $data['tujuan'] ?? ($st->keperluan ?: $st->tempat_tugas ?: 'Pelaksanaan Penugasan Lapangan'),
+                                'tanggal_kunjungan' => $tglKunjungan,
+                                'uraian_kegiatan' => $data['uraian_kegiatan'],
+                                'nama_pejabat' => $data['nama_pejabat'] ?? '-',
+                                'desa_pejabat' => $data['desa_pejabat'] ?? ($st->tempat_tugas ?: '-'),
+                            ]);
+
+                            // 4. Salin seluruh foto lampiran dari semua baris yang dipilih ke LaporanFoto
+                            $allAttachments = $records->flatMap->attachments->sortBy(function ($att) {
+                                return $att->captured_at ? \Carbon\Carbon::parse($att->captured_at)->timestamp : ($att->created_at?->timestamp ?? 0);
+                            });
+
+                            $fotoOrder = 1;
+                            foreach ($allAttachments as $att) {
+                                \App\Models\LaporanFoto::create([
+                                    'laporan_perjalanan_dinas_id' => $lpd->id,
+                                    'file_path' => $att->file_path,
+                                    'keterangan' => $att->caption ?: ('Dokumentasi Lapangan ' . $fotoOrder),
+                                    'urutan' => $fotoOrder,
+                                ]);
+                                $fotoOrder++;
+                            }
+
+                            // 5. Update seluruh baris kegiatan yang dipilih: kaitkan LPD dan Surat Tugas
+                            foreach ($records as $rec) {
+                                $updateData = ['laporan_perjalanan_dinas_id' => $lpd->id];
+                                if (empty($rec->surat_tugas_id)) {
+                                    $updateData['surat_tugas_id'] = $st->id;
+                                }
+                                $rec->update($updateData);
+                            }
+
+                            $totalFoto = $fotoOrder - 1;
+                            Notification::make()
+                                ->success()
+                                ->persistent()
+                                ->title('LPD Berhasil Diterbitkan! 🎉')
+                                ->body("Laporan Perjalanan Dinas telah dibuat dari {$records->count()} kegiatan dengan {$totalFoto} foto terlampir otomatis. Anda dapat langsung mengedit atau menambahkan berkas di menu LPD.")
+                                ->actions([
+                                    \Filament\Notifications\Actions\Action::make('buka_lpd')
+                                        ->label('Buka & Edit LPD 🚀')
+                                        ->url(route('filament.admin.resources.laporan-perjalanan-dinas.edit', ['record' => $lpd->id]), shouldOpenInNewTab: false),
+                                ])
+                                ->send();
+                        }),
+
                     Tables\Actions\BulkAction::make('assign_to_shared_report')
                         ->label('📁 Tautkan ke Wadah KIPAPP')
                         ->icon('heroicon-m-folder-plus')
