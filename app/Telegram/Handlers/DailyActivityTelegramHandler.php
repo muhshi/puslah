@@ -124,6 +124,82 @@ class DailyActivityTelegramHandler
     }
 
     /**
+     * Handle command /rekap: Rekap capaian hari kerja dan daftar hari kosong bulan berjalan
+     */
+    public function handleRekap(Nutgram $bot): void
+    {
+        $user = $this->getAuthenticatedUser($bot);
+        if (!$user) return;
+
+        $startOfMonth = Carbon::today()->startOfMonth();
+        $today = Carbon::today();
+
+        // Kumpulkan hari kerja (Senin - Jumat) dari awal bulan sampai hari ini
+        $workdays = [];
+        $cur = $startOfMonth->copy();
+        while ($cur->lte($today)) {
+            if (!$cur->isWeekend()) {
+                $workdays[] = $cur->copy();
+            }
+            $cur->addDay();
+        }
+
+        $totalWorkdays = count($workdays);
+        if ($totalWorkdays === 0) {
+            $bot->sendMessage(
+                text: "Belum ada hari kerja pada bulan ini.",
+                chat_id: $bot->chatId()
+            );
+            return;
+        }
+
+        // Ambil semua tanggal yang memiliki kegiatan
+        $filledDates = DailyActivity::query()
+            ->where('user_id', $user->id)
+            ->whereBetween('activity_date', [$startOfMonth->toDateString(), $today->toDateString()])
+            ->pluck('activity_date')
+            ->map(fn ($d) => Carbon::parse($d)->toDateString())
+            ->unique()
+            ->toArray();
+
+        $filledCount = 0;
+        $missingDays = [];
+
+        foreach ($workdays as $wd) {
+            $dateStr = $wd->toDateString();
+            if (in_array($dateStr, $filledDates)) {
+                $filledCount++;
+            } else {
+                $missingDays[] = $wd;
+            }
+        }
+
+        $percent = round(($filledCount / $totalWorkdays) * 100);
+        $monthName = $today->translatedFormat('F Y');
+
+        $message = "📊 *Rekap Bukti Dukung Bulan {$monthName}*\n";
+        $message .= "Pegawai: *{$user->name}*\n\n";
+        $message .= "📈 *Capaian:* {$filledCount} dari {$totalWorkdays} hari kerja terisi (*{$percent}%*)\n";
+
+        if (empty($missingDays)) {
+            $message .= "\n🎉 *Luar Biasa!* Seluruh hari kerja bulan ini sudah terisi lengkap dengan laporan bukti dukung. Kinerja Anda siap dievaluasi!";
+        } else {
+            $missingCount = count($missingDays);
+            $message .= "\n⚠️ *{$missingCount} Hari Kerja Belum Ada Laporan:*\n";
+            foreach ($missingDays as $md) {
+                $message .= "• " . $md->translatedFormat('l, d F Y') . "\n";
+            }
+            $message .= "\n💡 _Kirim foto dokumentasi atau ketik laporan dengan menyebut tanggalnya (misal: \"tgl " . $missingDays[0]->format('d/m') . ": kegiatan...\") untuk melengkapi backdate!_";
+        }
+
+        $bot->sendMessage(
+            text: $message,
+            chat_id: $bot->chatId(),
+            parse_mode: 'Markdown'
+        );
+    }
+
+    /**
      * Handle command /help
      */
     public function handleHelp(Nutgram $bot): void
@@ -162,8 +238,11 @@ class DailyActivityTelegramHandler
             return;
         }
 
+        // Parse tanggal kegiatan cerdas (hari ini atau backdate lampau)
+        $activityDate = $this->resolveActivityDate($rawText);
+
         // Deteksi Surat Tugas HANYA jika pesan menyebutkan indikasi ST/surat tugas atau penugasan spesifik
-        $activeSt = $this->resolveActiveSuratTugas($user, Carbon::today(), $rawText);
+        $activeSt = $this->resolveActiveSuratTugas($user, $activityDate, $rawText);
 
         // Auto-detect wadah KIPAPP jika ada hashtag (misal: #wilkerstat, #inovasi)
         $sharedReports = $this->resolveSharedWorkReports($user, $rawText);
@@ -174,7 +253,7 @@ class DailyActivityTelegramHandler
             $aiService = app(DailyActivityAiService::class);
             $formalContent = $aiService->formalize($rawText, [
                 'user_name' => $user->name,
-                'tanggal' => Carbon::today()->translatedFormat('d F Y'),
+                'tanggal' => $activityDate->translatedFormat('d F Y'),
             ]);
         } catch (\Throwable $e) {
             Log::warning('AI Polish direct error: ' . $e->getMessage());
@@ -185,7 +264,7 @@ class DailyActivityTelegramHandler
             'user_id' => $user->id,
             'surat_tugas_id' => $activeSt?->id,
             'shared_work_report_id' => $sharedReports->first()?->id,
-            'activity_date' => Carbon::today(),
+            'activity_date' => $activityDate,
             'raw_content' => $rawText,
             'ai_formal_content' => $formalContent,
             'final_content' => $formalContent,
@@ -195,6 +274,11 @@ class DailyActivityTelegramHandler
 
         if ($sharedReports->isNotEmpty()) {
             $activity->sharedWorkReports()->sync($sharedReports->pluck('id'));
+        }
+
+        $dateNotice = "📅 *Tanggal Kegiatan:* " . $activityDate->translatedFormat('l, d F Y');
+        if (!$activityDate->isToday()) {
+            $dateNotice .= " _(Backdate)_";
         }
 
         $stInfo = "";
@@ -212,6 +296,7 @@ class DailyActivityTelegramHandler
 
         $bot->sendMessage(
             text: "✅ *Kegiatan Berhasil Dicatat & Dipoles AI!*\n\n" .
+            $dateNotice . "\n\n" .
             "📝 *Catatan Kasar:*\n_{$rawText}_\n\n" .
             "✨ *Narasi Laporan Formal (AI):*\n*\"{$formalContent}\"*" .
             $stInfo . $kipappInfo . "\n\n" .
@@ -293,6 +378,9 @@ class DailyActivityTelegramHandler
         $exifService = app(ImageExifExtractorService::class);
         $exifData = $exifService->extract($fullPath);
 
+        // Parse tanggal kegiatan cerdas (dari caption atau tanggal EXIF foto asli)
+        $activityDate = $this->resolveActivityDate($caption ?: '', $exifData['captured_at'] ?? null);
+
         // Cari atau buat DailyActivity yang relevan
         $activity = null;
 
@@ -319,21 +407,21 @@ class DailyActivityTelegramHandler
                     $aiService = app(DailyActivityAiService::class);
                     $formalContent = $aiService->formalize($caption, [
                         'user_name' => $user->name,
-                        'tanggal' => Carbon::today()->translatedFormat('d F Y'),
+                        'tanggal' => $activityDate->translatedFormat('d F Y'),
                     ]);
                 } catch (\Throwable $e) {
                     Log::warning('AI Polish photo caption error: ' . $e->getMessage());
                 }
             }
 
-            $activeSt = $this->resolveActiveSuratTugas($user, Carbon::today(), $caption ?: '');
+            $activeSt = $this->resolveActiveSuratTugas($user, $activityDate, $caption ?: '');
             $sharedReports = $this->resolveSharedWorkReports($user, $caption ?: '');
 
             $activity = DailyActivity::create([
                 'user_id' => $user->id,
                 'surat_tugas_id' => $activeSt?->id,
                 'shared_work_report_id' => $sharedReports->first()?->id,
-                'activity_date' => Carbon::today(),
+                'activity_date' => $activityDate,
                 'raw_content' => $rawContent,
                 'ai_formal_content' => $formalContent,
                 'final_content' => $formalContent,
@@ -442,10 +530,13 @@ class DailyActivityTelegramHandler
                 $captionInfo = "\n📝 *Kegiatan:* {$activity->final_content}\n";
             }
 
+            $dateBadge = "\n📅 *Tanggal Kegiatan:* " . $activity->activity_date->translatedFormat('l, d F Y') . (!$activity->activity_date->isToday() ? " _(Backdate)_" : "");
+
             $bot->sendMessage(
                 text: "📸 *Foto Berhasil Disimpan!*\n" .
                 $captionInfo .
                 "🖼️ *Lampiran:* {$totalPhotos} berkas" .
+                $dateBadge .
                 $stBadge .
                 $kipappBadge .
                 $gpsBadge .
@@ -516,16 +607,17 @@ class DailyActivityTelegramHandler
             $rawTranscript = $aiResult['raw_transcript'];
             $formalContent = $aiResult['formal_content'];
 
-            // Deteksi ST dan Wadah KIPAPP
+            // Deteksi Tanggal, ST dan Wadah KIPAPP
             $combinedText = $rawTranscript . " " . ($msg->caption ?? '');
-            $activeSt = $this->resolveActiveSuratTugas($user, Carbon::today(), $combinedText);
+            $activityDate = $this->resolveActivityDate($combinedText);
+            $activeSt = $this->resolveActiveSuratTugas($user, $activityDate, $combinedText);
             $sharedReports = $this->resolveSharedWorkReports($user, $combinedText);
 
             $activity = DailyActivity::create([
                 'user_id' => $user->id,
                 'surat_tugas_id' => $activeSt?->id,
                 'shared_work_report_id' => $sharedReports->first()?->id,
-                'activity_date' => Carbon::today(),
+                'activity_date' => $activityDate,
                 'raw_content' => '[Pesan Suara] ' . $rawTranscript,
                 'ai_formal_content' => $formalContent,
                 'final_content' => $formalContent,
@@ -536,6 +628,8 @@ class DailyActivityTelegramHandler
             if ($sharedReports->isNotEmpty()) {
                 $activity->sharedWorkReports()->sync($sharedReports->pluck('id'));
             }
+
+            $dateNotice = "📅 *Tanggal Kegiatan:* " . $activityDate->translatedFormat('l, d F Y') . (!$activityDate->isToday() ? " _(Backdate)_" : "");
 
             $stInfo = "";
             if ($activeSt) {
@@ -551,6 +645,7 @@ class DailyActivityTelegramHandler
 
             $bot->sendMessage(
                 text: "🎙️ *Laporan Suara Berhasil Dicatat!*\n\n" .
+                $dateNotice . "\n\n" .
                 "🗣️ *Transkrip Ucapan:*\n_{$rawTranscript}_\n\n" .
                 "✨ *Narasi Laporan Formal (AI):*\n*\"{$formalContent}\"*" .
                 $stInfo . $kipappInfo . "\n\n" .
@@ -748,5 +843,82 @@ class DailyActivityTelegramHandler
     protected function resolveSharedWorkReport(User $user, string $text): ?\App\Models\SharedWorkReport
     {
         return $this->resolveSharedWorkReports($user, $text)->first();
+    }
+
+    /**
+     * Parse tanggal kegiatan secara cerdas (Natural Date Parsing):
+     * - Mendukung kata relatif: "kemarin", "kemarin lusa", "X hari yang lalu"
+     * - Mendukung pola nama bulan Indo: "28 Oktober", "tgl 5 mei 2026", "28 okt"
+     * - Mendukung pola numerik: "28/10", "28-10-2026", "28.10.2026"
+     * - Fallback ke metadata EXIF foto jika foto diambil di hari lampau
+     * - Default ke Carbon::today()
+     */
+    public function resolveActivityDate(string $text, ?Carbon $exifCapturedAt = null): Carbon
+    {
+        $lower = strtolower(trim($text));
+
+        // 1. Relatif: kemarin lusa
+        if (preg_match('/\bkemarin\s+lusa\b/i', $lower)) {
+            return Carbon::yesterday()->subDay()->startOfDay();
+        }
+
+        // 2. Relatif: kemarin
+        if (preg_match('/\bkemarin\b/i', $lower)) {
+            return Carbon::yesterday()->startOfDay();
+        }
+
+        // 3. Relatif: (\d+) hari (yang) lalu
+        if (preg_match('/(\d+)\s*(?:hari|hr)\s*(?:yang\s*)?lalu/i', $lower, $m)) {
+            $days = (int) $m[1];
+            if ($days > 0 && $days <= 365) {
+                return Carbon::today()->subDays($days)->startOfDay();
+            }
+        }
+
+        // 4. Pola Nama Bulan Indonesia
+        $monthMap = [
+            'januari' => 1, 'jan' => 1,
+            'februari' => 2, 'feb' => 2,
+            'maret' => 3, 'mar' => 3,
+            'april' => 4, 'apr' => 4,
+            'mei' => 5,
+            'juni' => 6, 'jun' => 6,
+            'juli' => 7, 'jul' => 7,
+            'agustus' => 8, 'agu' => 8, 'ags' => 8,
+            'september' => 9, 'sep' => 9,
+            'oktober' => 10, 'okt' => 10,
+            'november' => 11, 'nov' => 11,
+            'desember' => 12, 'des' => 12,
+        ];
+        $monthPattern = implode('|', array_keys($monthMap));
+
+        if (preg_match('/(?:tgl|tanggal)?\s*(\d{1,2})\s+(' . $monthPattern . ')(?:\s+(\d{4}))?/i', $lower, $m)) {
+            $day = (int) $m[1];
+            $month = $monthMap[strtolower($m[2])] ?? null;
+            $year = !empty($m[3]) ? (int) $m[3] : (int) date('Y');
+
+            if ($month && checkdate($month, $day, $year)) {
+                return Carbon::createFromDate($year, $month, $day)->startOfDay();
+            }
+        }
+
+        // 5. Pola Numerik: "28/10", "28/10/2026", "28-10-2026", "28.10.2026"
+        if (preg_match('/(?:tgl|tanggal)?\s*(\d{1,2})[\/\-\.](\d{1,2})(?:[\/\-\.](\d{2,4}))?/i', $lower, $m)) {
+            $day = (int) $m[1];
+            $month = (int) $m[2];
+            $rawYear = !empty($m[3]) ? (int) $m[3] : (int) date('Y');
+            $year = ($rawYear < 100) ? (2000 + $rawYear) : $rawYear;
+
+            if ($month >= 1 && $month <= 12 && $day >= 1 && $day <= 31 && checkdate($month, $day, $year)) {
+                return Carbon::createFromDate($year, $month, $day)->startOfDay();
+            }
+        }
+
+        // 6. Fallback EXIF metadata foto jika diambil sebelum hari ini (backdate foto asli)
+        if ($exifCapturedAt instanceof Carbon && $exifCapturedAt->lt(Carbon::today())) {
+            return $exifCapturedAt->copy()->startOfDay();
+        }
+
+        return Carbon::today();
     }
 }

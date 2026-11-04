@@ -64,10 +64,21 @@ class SharedWorkReportController extends Controller
         $activities = $report->getActivities();
         $user = $report->user;
 
+        $publicUrl = route('shared-work-report.show', ['uuid' => $report->uuid]);
+        $qrBase64 = null;
+        try {
+            $qrSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(90)->margin(0)->generate($publicUrl);
+            $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('QR Code generation in PDF error: ' . $e->getMessage());
+        }
+
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.shared-work-report-book', [
             'report' => $report,
             'activities' => $activities,
             'user' => $user,
+            'qrBase64' => $qrBase64,
+            'publicUrl' => $publicUrl,
         ])->setPaper('a4', 'portrait');
 
         $safeTitle = \Illuminate\Support\Str::slug($report->title) ?: 'bukti-dukung';

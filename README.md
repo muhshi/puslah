@@ -55,6 +55,22 @@ composer dev
 ## Changelog
 
 ### 2026-11-04
+- **Fitur Lanjutan Bukti Dukung: Telegram Backdate, Smart Watermark, QR-Code PDF, Template BPS & Rekapan Akhir Bulan**:
+  - **Deteksi Tanggal Alami & Backdate di Telegram Bot (Natural Date Parsing):**
+    - Bot Telegram kini cerdas mengenali tanggal dari teks/caption santai baik kata relatif (`kemarin`, `kemarin lusa`, `X hari lalu`), nama bulan Indonesia (`tanggal 28 Oktober`, `tgl 15 nov 2026`), maupun numerik (`tgl 28/10`, `28-10-2026`).
+    - *Auto-detect dari EXIF:* Foto lampau yang dikirim tanpa tanggal di teks otomatis dicatat berdasarkan tanggal asli pengambilan foto di kamera HP.
+  - **Smart Position Watermark Foto (Kiri Bawah, Kanan Bawah, Kiri Atas):**
+    - Menambahkan opsi pilihan penempatan stempel watermark pada repeater foto form bukti dukung (`stamp_position`). Pegawai dapat memilih pojok kanan bawah atau pojok kiri atas agar stempel tidak menutupi wajah atau objek penting foto.
+  - **QR-Code Verifikasi Digital Resmi pada Berkas PDF:**
+    - Lembar pengesahan buku bukti dukung PDF (*Merged Evidence Book*) kini dilengkapi cetakan stempel QR-Code digital resmi. Pindai QR-Code langsung membuka halaman verifikasi berkas publik online untuk membuktikan keaslian dokumen tanpa perlu login.
+  - **Katalog Template Kegiatan BPS (Rutin Tahunan vs Berkala/Sensus):**
+    - Menghadirkan tombol aksi *"📋 Template BPS"* pada form input kegiatan untuk memilih preset narasi standar BPS:
+      - *Rutin Tahunan:* Sakernas, Susenas, Survei Harga (SHPB/HKD), KSA Padi & Jagung, Kompilasi PDRB, Pelayanan Umum TU.
+      - *Berkala / Sensus:* Sensus Ekonomi, Updating SBR, Peta Wilkerstat, SKLNP, dan Pengembangan Sistem IT Puslah.
+  - **Rekapan Hari Kosong Akhir Bulan (Telegram Command `/rekap` & Visual Kalender):**
+    - Command `/rekap` di bot Telegram untuk mengecek persentase capaian hari kerja sebulan berjalan dan merinci tanggal-tanggal kerja (Senin–Jumat) yang belum ada laporannya.
+    - Console artisan command `daily-activity:send-monthly-recap` untuk pengingat otomatis akhir bulan via Telegram.
+    - Penanda visual otomatis pada FullCalendar web: hari kerja lampau yang belum ada laporannya diberi badge peringatan kuning (`⚠️ Kosong: Belum Ada Bukti`) yang dapat diklik langsung untuk input backdate instan.
 - **Perbaikan Bug & Optimalisasi UI/UX Modul Bukti Dukung Harian & Wadah KIPAPP**:
   - **Fix Sinkronisasi Relasi Pivot Wadah (Bulk Action):** Aksi masal *"🔗 Buat Berkas Publik Multi-Hari"* kini otomatis menyinkronkan tabel pivot many-to-many `daily_activity_shared_work_report` dan field `shared_work_report_id`, sehingga kegiatan yang dibundel langsung terdeteksi oleh filter `wadah_kipapp` di tabel web dan badge wadah terbarui seketika.
   - **Eliminasi N+1 Query & Beban Memori (`SharedWorkReportResource`):** Menghapus eager-loading berat `getActivities()->count()` pada kolom jumlah kegiatan di tabel wadah dan menggantikannya dengan accessor SQL `activities_count` instan, mencegah pemborosan RAM server.

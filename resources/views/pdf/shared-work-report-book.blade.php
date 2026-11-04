@@ -248,14 +248,29 @@
         </div>
     @endif
 
-    {{-- Lembar Pengesahan --}}
+    {{-- Lembar Pengesahan & QR Code Verifikasi Digital --}}
     <table class="signature-table">
         <tr>
-            <td></td>
-            <td style="text-align: center;">
+            <td style="width: 52%; vertical-align: bottom; padding-bottom: 5px;">
+                @if(!empty($qrBase64))
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="width: 75px; vertical-align: middle; padding: 0;">
+                                <img src="{{ $qrBase64 }}" style="width: 70px; height: 70px; display: block;" alt="QR Code">
+                            </td>
+                            <td style="vertical-align: middle; padding-left: 8px; font-size: 7.5pt; color: #475569; line-height: 1.25;">
+                                <strong style="color: #0f172a;">VERIFIKASI RESMI PUSLAH BPS</strong><br>
+                                Pindai QR-Code untuk memeriksa keaslian berkas bukti dukung secara digital.<br>
+                                <span style="font-size: 6.5pt; color: #64748b; font-family: monospace;">UUID: {{ $report->uuid }}</span>
+                            </td>
+                        </tr>
+                    </table>
+                @endif
+            </td>
+            <td style="text-align: center; width: 48%; vertical-align: top;">
                 Demak, {{ \Carbon\Carbon::now()->translatedFormat('d F Y') }}<br>
                 Pegawai yang bersangkutan,<br>
-                <br><br><br><br>
+                <br><br><br>
                 <strong><u>{{ $user->name }}</u></strong><br>
                 NIP. {{ $user->nip ?? $user->profile?->nip ?? '-' }}
             </td>

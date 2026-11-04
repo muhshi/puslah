@@ -118,9 +118,19 @@ class PhotoWatermarkService
                 $boxWidth = $maxTextWidth + ($padX * 2);
                 $boxHeight = (count($lines) * $lineSpacing) + ($padY * 2);
 
-                // Posisikan di pojok kiri bawah
-                $boxX = 16;
-                $boxY = $height - $boxHeight - 16;
+                // Hitung posisi stempel sesuai opsi (Smart Position)
+                $position = $params['position'] ?? 'bottom-left';
+                if ($position === 'bottom-right') {
+                    $boxX = $width - $boxWidth - 16;
+                    $boxY = $height - $boxHeight - 16;
+                } elseif ($position === 'top-left') {
+                    $boxX = 16;
+                    $boxY = 16;
+                } else {
+                    $boxX = 16;
+                    $boxY = $height - $boxHeight - 16;
+                }
+                if ($boxX < 10) $boxX = 10;
                 if ($boxY < 10) $boxY = 10;
 
                 // Gambar background box
@@ -157,8 +167,20 @@ class PhotoWatermarkService
                 $boxWidth = ($maxChars * $charWidth) + 24;
                 $boxHeight = (count($lines) * $lineHeight) + 16;
 
-                $boxX = 14;
-                $boxY = $height - $boxHeight - 14;
+                // Hitung posisi stempel sesuai opsi (Smart Position fallback)
+                $position = $params['position'] ?? 'bottom-left';
+                if ($position === 'bottom-right') {
+                    $boxX = $width - $boxWidth - 14;
+                    $boxY = $height - $boxHeight - 14;
+                } elseif ($position === 'top-left') {
+                    $boxX = 14;
+                    $boxY = 14;
+                } else {
+                    $boxX = 14;
+                    $boxY = $height - $boxHeight - 14;
+                }
+                if ($boxX < 10) $boxX = 10;
+                if ($boxY < 10) $boxY = 10;
 
                 imagefilledrectangle($image, $boxX, $boxY, $boxX + $boxWidth, $boxY + $boxHeight, $bgColor);
 

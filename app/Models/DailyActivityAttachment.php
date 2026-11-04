@@ -20,6 +20,7 @@ class DailyActivityAttachment extends Model
         'file_size',
         'mime_type',
         'is_stamped',
+        'stamp_position',
         'latitude',
         'longitude',
         'captured_at',
@@ -76,6 +77,7 @@ class DailyActivityAttachment extends Model
             'captured_at' => $this->captured_at ?: now(),
             'caption' => $caption ?: 'Dokumentasi Kegiatan BPS',
             'office_name' => 'BPS KABUPATEN DEMAK',
+            'position' => $this->stamp_position ?: 'bottom-left',
         ]);
 
         if ($success) {

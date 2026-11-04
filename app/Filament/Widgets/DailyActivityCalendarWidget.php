@@ -99,6 +99,36 @@ class DailyActivityCalendarWidget extends FullCalendarWidget implements HasActio
             ];
         }
 
+        // Tambahkan penanda visual untuk hari kerja lampau (Senin - Jumat) yang belum diisi kegiatan
+        $today = Carbon::today();
+        $startDate = Carbon::parse($fetchInfo['start'])->startOfDay();
+        $endDate = Carbon::parse($fetchInfo['end'])->endOfDay();
+        $maxPastDate = $today->copy()->subDay()->endOfDay();
+
+        $filledDatesMap = $activities->pluck('activity_date')
+            ->map(fn ($d) => Carbon::parse($d)->toDateString())
+            ->flip()
+            ->toArray();
+
+        $cursor = $startDate->copy();
+        while ($cursor->lte($endDate) && $cursor->lte($maxPastDate)) {
+            $dateStr = $cursor->toDateString();
+            if (!$cursor->isWeekend() && !isset($filledDatesMap[$dateStr])) {
+                $events[] = [
+                    'id' => 'missing-' . $dateStr,
+                    'title' => '⚠️ Kosong: Belum Ada Bukti',
+                    'start' => $dateStr,
+                    'allDay' => true,
+                    'color' => '#F59E0B',
+                    'url' => route('filament.admin.resources.daily-activities.create', ['activity_date' => $dateStr]),
+                    'extendedProps' => [
+                        'is_empty_workday' => true,
+                    ],
+                ];
+            }
+            $cursor->addDay();
+        }
+
         return $events;
     }
 

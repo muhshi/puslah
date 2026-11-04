@@ -19,6 +19,10 @@ $bot->onCommand('start', [$handler, 'handleStart'])
 $bot->onCommand('today', [$handler, 'handleToday'])
     ->description('Lihat daftar kegiatan dan bukti dukung hari ini');
 
+// Command /rekap
+$bot->onCommand('rekap', [$handler, 'handleRekap'])
+    ->description('Lihat rekapan capaian hari kerja dan tanggal kosong bulan ini');
+
 // Command /help
 $bot->onCommand('help', [$handler, 'handleHelp'])
     ->description('Panduan interaktif penggunaan bot');
