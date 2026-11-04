@@ -241,21 +241,29 @@
                                                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                                 />
 
-                                                {{-- Overlay Stempel Pojok Kiri Bawah (Mirip OpenCamera) --}}
-                                                <div class="absolute bottom-2 left-2 right-2 bg-black/80 backdrop-blur-[2px] p-2 rounded-lg border border-white/20 text-white pointer-events-none text-[9px] font-mono leading-tight space-y-0.5">
-                                                    <div class="text-yellow-300 font-bold truncate">
-                                                        📍 Lat: {{ number_format($lat, 6) }} Long: {{ number_format($lng, 6) }}
+                                                {{-- Stempel Bukti Dukung --}}
+                                                @if($photo->is_stamped)
+                                                    {{-- Foto sudah berstempel fisik asli (mencegah double watermark) --}}
+                                                    <div class="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-emerald-950/80 backdrop-blur-xs border border-emerald-500/40 text-[9px] font-semibold text-emerald-300 pointer-events-none flex items-center gap-1 shadow-xs">
+                                                        <span>✓</span> Stempel GPS Asli
                                                     </div>
-                                                    <div class="text-yellow-200 truncate">
-                                                        🕒 {{ $timeStr }}
+                                                @else
+                                                    {{-- Overlay Stempel khusus bagi foto yang belum berstempel fisik --}}
+                                                    <div class="absolute bottom-2 left-2 right-2 bg-black/80 backdrop-blur-[2px] p-2 rounded-lg border border-white/20 text-white pointer-events-none text-[9px] font-mono leading-tight space-y-0.5">
+                                                        <div class="text-yellow-300 font-bold truncate">
+                                                            📍 Lat: {{ number_format($lat, 6) }} Long: {{ number_format($lng, 6) }}
+                                                        </div>
+                                                        <div class="text-yellow-200 truncate">
+                                                            🕒 {{ $timeStr }}
+                                                        </div>
+                                                        <div class="text-white font-medium truncate">
+                                                            📝 {{ $captionText }}
+                                                        </div>
+                                                        <div class="text-emerald-400 font-bold tracking-wider pt-0.5 text-[8px]">
+                                                            🏛️ BPS KABUPATEN DEMAK
+                                                        </div>
                                                     </div>
-                                                    <div class="text-white font-medium truncate">
-                                                        📝 {{ $captionText }}
-                                                    </div>
-                                                    <div class="text-emerald-400 font-bold tracking-wider pt-0.5 text-[8px]">
-                                                        🏛️ BPS KABUPATEN DEMAK
-                                                    </div>
-                                                </div>
+                                                @endif
                                             </div>
 
                                             @if($photo->caption)

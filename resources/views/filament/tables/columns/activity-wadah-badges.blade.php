@@ -5,24 +5,43 @@
     }
 @endphp
 
-<div class="flex flex-wrap items-center gap-1.5 mt-1">
+<div 
+    class="flex flex-wrap items-center gap-1.5 mt-1"
+    @click.stop="$event.stopPropagation()"
+    @mousedown.stop="$event.stopPropagation()"
+>
     @forelse($reports as $rep)
         @php
             $shareUrl = route('shared-work-report.show', ['uuid' => $rep->uuid]);
         @endphp
         <div
             x-data="{ copied: false }"
-            class="inline-block"
+            class="inline-block relative z-10"
+            @click.stop="$event.stopPropagation()"
+            @mousedown.stop="$event.stopPropagation()"
         >
             <button
                 type="button"
-                @click.stop="
-                    navigator.clipboard.writeText('{{ $shareUrl }}');
+                @click.stop.prevent="
+                    $event.stopPropagation();
+                    $event.preventDefault();
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText('{{ $shareUrl }}');
+                    } else {
+                        const el = document.createElement('textarea');
+                        el.value = '{{ $shareUrl }}';
+                        document.body.appendChild(el);
+                        el.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(el);
+                    }
                     copied = true;
                     setTimeout(() => copied = false, 2000);
                 "
+                @mousedown.stop="$event.stopPropagation()"
+                @mouseup.stop="$event.stopPropagation()"
                 title="Klik untuk salin tautan publik bukti dukung KIPAPP"
-                class="transition-transform active:scale-95 cursor-pointer focus:outline-none"
+                class="transition-transform active:scale-95 cursor-pointer focus:outline-none select-none"
             >
                 <span x-show="!copied">
                     <x-filament::badge color="success" size="sm" icon="heroicon-m-folder">

@@ -55,6 +55,17 @@ composer dev
 ## Changelog
 
 ### 2026-11-04
+- **Perbaikan Album Foto Telegram, Pemisahan Stempel Watermark & Stop Propagation Badge Tabel**:
+  - **Dukungan Album Multi-Foto Telegram (`media_group_id`) & Ekstraksi Caption Dinamis:**
+    - Bot Telegram kini secara cerdas mendeteksi pengiriman album 2 foto atau lebih sekaligus. Jika caption berada di foto ke-2 atau seterusnya, sistem otomatis memperbarui rekaman kegiatan dengan narasi asli yang dipoles AI, memperbarui deteksi tanggal (termasuk backdate), dan menghubungkan Surat Tugas serta wadah KIPAPP.
+    - Mengintegrasikan atomic cache lock (`Cache::lock`) untuk mencegah race condition antar foto dalam satu album yang sama.
+    - Bot secara real-time memperbarui pesan konfirmasinya (`editMessageText`) sehingga menampilkan jumlah total lampiran berkas yang sebenarnya (misal "2 berkas") dan narasi kegiatan AI yang akurat.
+  - **Pencegahan Double Watermark & Smart Watermark Positioning:**
+    - Mengubah posisi default stempel fisik watermark menjadi `bottom-right` (kanan bawah) agar tidak bertabrakan dengan watermark bawaan kamera ponsel cerdas (seperti iQOO, Xiaomi, Vivo, Samsung yang selalu terletak di pojok kiri bawah).
+    - Menghilangkan duplikasi overlay HTML stempel di galeri publik web berkas KIPAPP (`shared-work-report`) untuk foto yang sudah memiliki stempel fisik permanen (`is_stamped = true`), digantikan oleh badge verifikasi GPS asli di sudut atas.
+    - Menambahkan dukungan hashtag perintah stempel pada pesan Telegram: `#nostamp` / `#tanpastempel` (tanpa stempel jika kamera HP sudah berstempel), `#kiribawah` / `#bl`, `#kananbawah` / `#br`, `#kiriatas` / `#tl`, `#kananatas` / `#tr`.
+  - **Stop Event Propagation Badge Wadah KIPAPP di Tabel:**
+    - Memperbaiki komponen badge tautan KIPAPP pada tabel kegiatan: menambahkan pemutus event propagasi penuh (`@click.stop.prevent`, `@mousedown.stop`, `@mouseup.stop`) sehingga saat badge diklik untuk menyalin tautan, browser hanya menyalin tautan ke clipboard tanpa memicu pembukaan halaman edit baris kegiatan.
 - **Fitur Lanjutan Bukti Dukung: Telegram Backdate, Smart Watermark, QR-Code PDF, Template BPS & Rekapan Akhir Bulan**:
   - **Deteksi Tanggal Alami & Backdate di Telegram Bot (Natural Date Parsing):**
     - Bot Telegram kini cerdas mengenali tanggal dari teks/caption santai baik kata relatif (`kemarin`, `kemarin lusa`, `X hari lalu`), nama bulan Indonesia (`tanggal 28 Oktober`, `tgl 15 nov 2026`), maupun numerik (`tgl 28/10`, `28-10-2026`).

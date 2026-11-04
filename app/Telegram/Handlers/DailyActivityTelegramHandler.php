@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\DailyActivityAiService;
 use App\Services\ImageExifExtractorService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use SergiX44\Nutgram\Nutgram;
@@ -381,123 +382,198 @@ class DailyActivityTelegramHandler
         // Parse tanggal kegiatan cerdas (dari caption atau tanggal EXIF foto asli)
         $activityDate = $this->resolveActivityDate($caption ?: '', $exifData['captured_at'] ?? null);
 
-        // Cari atau buat DailyActivity yang relevan
-        $activity = null;
-
-        // Jika bagian dari media_group (album), cari kegiatan yang baru dibuat dengan media_group_id yang sama
+        // Kunci atomic lock jika media_group (album) untuk mencegah race condition antar foto
+        $albumLock = null;
         if (!empty($mediaGroupId)) {
-            $existingUpdate = TelegramUpdate::where('chat_id', $bot->chatId())
-                ->where('media_group_id', $mediaGroupId)
-                ->where('created_at', '>=', Carbon::now()->subMinutes(5))
-                ->first();
-
-            if ($existingUpdate && !empty($existingUpdate->payload['activity_id'])) {
-                $activity = DailyActivity::find($existingUpdate->payload['activity_id']);
+            try {
+                $albumLock = Cache::lock("tg_album_{$bot->chatId()}_{$mediaGroupId}", 15);
+                $albumLock->block(5);
+            } catch (\Throwable $e) {
+                Log::warning('Album lock warning: ' . $e->getMessage());
             }
         }
 
-        // Jika belum ada activity dari album, atau single photo:
-        if (!$activity) {
-            $rawContent = !empty($caption) ? $caption : 'Dokumentasi kegiatan';
-            $formalContent = $rawContent;
+        try {
+            // Cari atau buat DailyActivity yang relevan
+            $activity = null;
+            $existingUpdate = null;
 
-            // Jika ada caption, poles otomatis dengan AI
-            if (!empty($caption)) {
-                try {
-                    $aiService = app(DailyActivityAiService::class);
-                    $formalContent = $aiService->formalize($caption, [
-                        'user_name' => $user->name,
-                        'tanggal' => $activityDate->translatedFormat('d F Y'),
-                    ]);
-                } catch (\Throwable $e) {
-                    Log::warning('AI Polish photo caption error: ' . $e->getMessage());
+            // Jika bagian dari media_group (album), cari kegiatan yang baru dibuat dengan media_group_id yang sama
+            if (!empty($mediaGroupId)) {
+                $existingUpdate = TelegramUpdate::where('chat_id', $bot->chatId())
+                    ->where('media_group_id', $mediaGroupId)
+                    ->where('created_at', '>=', Carbon::now()->subMinutes(10))
+                    ->latest()
+                    ->first();
+
+                if ($existingUpdate && !empty($existingUpdate->payload['activity_id'])) {
+                    $activity = DailyActivity::find($existingUpdate->payload['activity_id']);
                 }
             }
 
-            $activeSt = $this->resolveActiveSuratTugas($user, $activityDate, $caption ?: '');
-            $sharedReports = $this->resolveSharedWorkReports($user, $caption ?: '');
+            // Jika activity sudah ada (foto ke-2 dst di album) dan ada caption baru:
+            // Telegram hanya menempelkan caption pada 1 foto di album (bisa foto pertama atau foto berikutnya).
+            // Jika foto berikutnya membawa caption, update activity yang ada agar caption tidak hilang!
+            if ($activity && !empty($caption)) {
+                $isOldDefault = empty($activity->raw_content) || $activity->raw_content === 'Dokumentasi kegiatan';
+                if ($isOldDefault || strlen($caption) > strlen($activity->raw_content)) {
+                    $activity->raw_content = $caption;
 
-            $activity = DailyActivity::create([
-                'user_id' => $user->id,
-                'surat_tugas_id' => $activeSt?->id,
-                'shared_work_report_id' => $sharedReports->first()?->id,
-                'activity_date' => $activityDate,
-                'raw_content' => $rawContent,
-                'ai_formal_content' => $formalContent,
-                'final_content' => $formalContent,
-                'status' => 'submitted',
-                'source' => 'telegram',
-            ]);
+                    // Update tanggal kegiatan jika di caption baru ada keterangan backdate
+                    $newActivityDate = $this->resolveActivityDate($caption, $exifData['captured_at'] ?? null);
+                    $activity->activity_date = $newActivityDate;
 
-            if ($sharedReports->isNotEmpty()) {
-                $activity->sharedWorkReports()->sync($sharedReports->pluck('id'));
+                    // Poles caption baru dengan AI
+                    try {
+                        $aiService = app(DailyActivityAiService::class);
+                        $formalContent = $aiService->formalize($caption, [
+                            'user_name' => $user->name,
+                            'tanggal' => $activity->activity_date->translatedFormat('d F Y'),
+                        ]);
+                        $activity->ai_formal_content = $formalContent;
+                        $activity->final_content = $formalContent;
+                    } catch (\Throwable $e) {
+                        Log::warning('AI Polish album caption error: ' . $e->getMessage());
+                        $activity->ai_formal_content = $caption;
+                        $activity->final_content = $caption;
+                    }
+
+                    // Update Surat Tugas dan Wadah KIPAPP
+                    $activeSt = $this->resolveActiveSuratTugas($user, $activity->activity_date, $caption);
+                    if ($activeSt) {
+                        $activity->surat_tugas_id = $activeSt->id;
+                    }
+                    $sharedReports = $this->resolveSharedWorkReports($user, $caption);
+                    if ($sharedReports->isNotEmpty()) {
+                        $activity->shared_work_report_id = $sharedReports->first()->id;
+                        $activity->sharedWorkReports()->sync($sharedReports->pluck('id'));
+                    }
+
+                    $activity->save();
+                }
             }
 
-            if (!empty($mediaGroupId)) {
-                TelegramUpdate::create([
-                    'update_id' => $bot->updateId() ?? time(),
-                    'chat_id' => $bot->chatId(),
-                    'message_id' => $msg->message_id,
-                    'media_group_id' => $mediaGroupId,
-                    'payload' => ['activity_id' => $activity->id],
-                    'processed_at' => Carbon::now(),
+            // Jika belum ada activity dari album, atau single photo:
+            if (!$activity) {
+                $rawContent = !empty($caption) ? $caption : 'Dokumentasi kegiatan';
+                $formalContent = $rawContent;
+
+                // Jika ada caption, poles otomatis dengan AI
+                if (!empty($caption)) {
+                    try {
+                        $aiService = app(DailyActivityAiService::class);
+                        $formalContent = $aiService->formalize($caption, [
+                            'user_name' => $user->name,
+                            'tanggal' => $activityDate->translatedFormat('d F Y'),
+                        ]);
+                    } catch (\Throwable $e) {
+                        Log::warning('AI Polish photo caption error: ' . $e->getMessage());
+                    }
+                }
+
+                $activeSt = $this->resolveActiveSuratTugas($user, $activityDate, $caption ?: '');
+                $sharedReports = $this->resolveSharedWorkReports($user, $caption ?: '');
+
+                $activity = DailyActivity::create([
+                    'user_id' => $user->id,
+                    'surat_tugas_id' => $activeSt?->id,
+                    'shared_work_report_id' => $sharedReports->first()?->id,
+                    'activity_date' => $activityDate,
+                    'raw_content' => $rawContent,
+                    'ai_formal_content' => $formalContent,
+                    'final_content' => $formalContent,
+                    'status' => 'submitted',
+                    'source' => 'telegram',
                 ]);
+
+                if ($sharedReports->isNotEmpty()) {
+                    $activity->sharedWorkReports()->sync($sharedReports->pluck('id'));
+                }
+
+                if (!empty($mediaGroupId)) {
+                    $existingUpdate = TelegramUpdate::create([
+                        'update_id' => $bot->updateId() ?? time(),
+                        'chat_id' => $bot->chatId(),
+                        'message_id' => $msg->message_id,
+                        'media_group_id' => $mediaGroupId,
+                        'payload' => ['activity_id' => $activity->id],
+                        'processed_at' => Carbon::now(),
+                    ]);
+                }
             }
-        }
 
-        // Tentukan waktu foto: gunakan EXIF jika ada, atau waktu pesan Telegram saat dikirim
-        $capturedAt = $exifData['captured_at'] ?? Carbon::createFromTimestamp($msg->date ?? time());
+            // Tentukan waktu foto: gunakan EXIF jika ada, atau waktu pesan Telegram saat dikirim
+            $capturedAt = $exifData['captured_at'] ?? Carbon::createFromTimestamp($msg->date ?? time());
 
-        // Tentukan koordinat: gunakan EXIF jika ada; jika kosong (kamera in-app Telegram), gunakan default kantor
-        $officeCoords = $this->getOfficeCoordinates();
-        $isDefaultOffice = false;
+            // Tentukan koordinat: gunakan EXIF jika ada; jika kosong (kamera in-app Telegram), gunakan default kantor
+            $officeCoords = $this->getOfficeCoordinates();
+            $isDefaultOffice = false;
 
-        if (!empty($exifData['latitude']) && !empty($exifData['longitude'])) {
-            $latitude = $exifData['latitude'];
-            $longitude = $exifData['longitude'];
-        } else {
-            $latitude = $officeCoords['latitude'];
-            $longitude = $officeCoords['longitude'];
-            $isDefaultOffice = true;
-        }
+            if (!empty($exifData['latitude']) && !empty($exifData['longitude'])) {
+                $latitude = $exifData['latitude'];
+                $longitude = $exifData['longitude'];
+            } else {
+                $latitude = $officeCoords['latitude'];
+                $longitude = $officeCoords['longitude'];
+                $isDefaultOffice = true;
+            }
 
-        // Terapkan watermark stempel fisik permanen ke file foto (PHP GD)
-        $watermarkSuccess = false;
-        try {
-            $watermarkService = app(\App\Services\PhotoWatermarkService::class);
-            $watermarkSuccess = $watermarkService->applyWatermark($fullPath, [
+            // Cek instruksi hashtag watermark (posisi atau tanpa watermark)
+            $effectiveCaption = !empty($caption) ? $caption : $activity->raw_content;
+            $noStampRequested = str_contains(strtolower($effectiveCaption), '#nostamp') 
+                || str_contains(strtolower($effectiveCaption), '#nowatermark') 
+                || str_contains(strtolower($effectiveCaption), '#tanpastempel');
+
+            $stampPosition = 'bottom-right'; // Default aman: pojok kanan bawah agar tidak menimpa watermark ponsel (iQOO, Xiaomi, Vivo, Samsung ada di pojok kiri bawah)
+            if (str_contains(strtolower($effectiveCaption), '#kiribawah') || str_contains(strtolower($effectiveCaption), '#bl')) {
+                $stampPosition = 'bottom-left';
+            } elseif (str_contains(strtolower($effectiveCaption), '#kiriatas') || str_contains(strtolower($effectiveCaption), '#tl')) {
+                $stampPosition = 'top-left';
+            } elseif (str_contains(strtolower($effectiveCaption), '#kananatas') || str_contains(strtolower($effectiveCaption), '#tr')) {
+                $stampPosition = 'top-right';
+            } elseif (str_contains(strtolower($effectiveCaption), '#kananbawah') || str_contains(strtolower($effectiveCaption), '#br')) {
+                $stampPosition = 'bottom-right';
+            }
+
+            // Terapkan watermark stempel fisik permanen ke file foto (PHP GD)
+            $watermarkSuccess = false;
+            if (!$noStampRequested) {
+                try {
+                    $watermarkService = app(\App\Services\PhotoWatermarkService::class);
+                    $watermarkSuccess = $watermarkService->applyWatermark($fullPath, [
+                        'latitude' => $latitude,
+                        'longitude' => $longitude,
+                        'captured_at' => $capturedAt,
+                        'caption' => $effectiveCaption,
+                        'office_name' => $officeCoords['name'] ?? 'BPS KABUPATEN DEMAK',
+                        'position' => $stampPosition,
+                    ]);
+                    if ($watermarkSuccess) {
+                        clearstatcache(true, $fullPath);
+                        $fileSize = filesize($fullPath);
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('Gagal membakar watermark foto telegram: ' . $e->getMessage());
+                }
+            }
+
+            // Buat attachment dengan status is_stamped = true jika berhasil distempel
+            DailyActivityAttachment::create([
+                'daily_activity_id' => $activity->id,
+                'file_path' => $relativePath,
+                'file_name' => $fileName,
+                'file_size' => $fileSize,
+                'mime_type' => 'image/jpeg',
+                'is_stamped' => $watermarkSuccess,
                 'latitude' => $latitude,
                 'longitude' => $longitude,
                 'captured_at' => $capturedAt,
-                'caption' => $caption ?: $activity->raw_content,
-                'office_name' => $officeCoords['name'] ?? 'BPS KABUPATEN DEMAK',
+                'caption' => $caption ?: null,
             ]);
-            if ($watermarkSuccess) {
-                // Update ukuran file setelah distempel
-                clearstatcache(true, $fullPath);
-                $fileSize = filesize($fullPath);
-            }
-        } catch (\Throwable $e) {
-            Log::warning('Gagal membakar watermark foto telegram: ' . $e->getMessage());
-        }
 
-        // Buat attachment dengan status is_stamped = true jika berhasil distempel
-        DailyActivityAttachment::create([
-            'daily_activity_id' => $activity->id,
-            'file_path' => $relativePath,
-            'file_name' => $fileName,
-            'file_size' => $fileSize,
-            'mime_type' => 'image/jpeg',
-            'is_stamped' => $watermarkSuccess,
-            'latitude' => $latitude,
-            'longitude' => $longitude,
-            'captured_at' => $capturedAt,
-            'caption' => $caption ?: null,
-        ]);
+            // Format data badge untuk pesan konfirmasi
+            $totalPhotos = $activity->attachments()->count();
 
-        // Kirim konfirmasi (hanya kirim jika single photo atau foto pertama dari album)
-        $totalPhotos = $activity->attachments()->count();
-        if (empty($mediaGroupId) || $totalPhotos === 1) {
             $stBadge = "";
             if ($activity->suratTugas) {
                 $stNo = $activity->suratTugas->nomor_surat_tugas ?: 'DRAFT';
@@ -524,16 +600,15 @@ class DailyActivityTelegramHandler
             $timeBadge = "\n🕒 *Waktu:* " . $capturedAt->translatedFormat('d M Y H:i') . " WIB";
 
             $captionInfo = "";
-            if (!empty($caption)) {
-                $captionInfo = "\n📝 *Catatan:* \"{$caption}\"\n✨ *Narasi AI:* \"{$activity->final_content}\"\n";
+            if (!empty($activity->raw_content) && $activity->raw_content !== 'Dokumentasi kegiatan') {
+                $captionInfo = "\n📝 *Catatan:* \"{$activity->raw_content}\"\n✨ *Narasi AI:* \"{$activity->final_content}\"\n";
             } else {
                 $captionInfo = "\n📝 *Kegiatan:* {$activity->final_content}\n";
             }
 
             $dateBadge = "\n📅 *Tanggal Kegiatan:* " . $activity->activity_date->translatedFormat('l, d F Y') . (!$activity->activity_date->isToday() ? " _(Backdate)_" : "");
 
-            $bot->sendMessage(
-                text: "📸 *Foto Berhasil Disimpan!*\n" .
+            $responseMsgText = "📸 *Foto Berhasil Disimpan!*\n" .
                 $captionInfo .
                 "🖼️ *Lampiran:* {$totalPhotos} berkas" .
                 $dateBadge .
@@ -541,10 +616,68 @@ class DailyActivityTelegramHandler
                 $kipappBadge .
                 $gpsBadge .
                 $timeBadge . "\n\n" .
-                "✅ _Tersimpan otomatis di bukti dukung Puslah._",
-                chat_id: $bot->chatId(),
-                parse_mode: 'Markdown'
-            );
+                "✅ _Tersimpan otomatis di bukti dukung Puslah._";
+
+            if (empty($mediaGroupId)) {
+                // Single photo: kirim konfirmasi langsung
+                $bot->sendMessage(
+                    text: $responseMsgText,
+                    chat_id: $bot->chatId(),
+                    parse_mode: 'Markdown'
+                );
+            } else {
+                // Album (Media Group): Coba edit pesan sebelumnya agar update real-time
+                $botMsgId = $existingUpdate?->payload['response_message_id'] ?? null;
+                $edited = false;
+
+                if ($botMsgId) {
+                    try {
+                        $bot->editMessageText(
+                            text: $responseMsgText,
+                            chat_id: $bot->chatId(),
+                            message_id: (int) $botMsgId,
+                            parse_mode: 'Markdown'
+                        );
+                        $edited = true;
+                    } catch (\Throwable $e) {
+                        Log::info("Nutgram editMessageText album note: " . $e->getMessage());
+                    }
+                }
+
+                // Jika belum diedit (misal foto pertama dari album, atau editMessageText gagal):
+                if (!$edited && $totalPhotos === 1) {
+                    $sent = $bot->sendMessage(
+                        text: $responseMsgText,
+                        chat_id: $bot->chatId(),
+                        parse_mode: 'Markdown'
+                    );
+                    if ($sent && $existingUpdate) {
+                        $payload = $existingUpdate->payload ?? [];
+                        $payload['response_message_id'] = $sent->message_id;
+                        $existingUpdate->update(['payload' => $payload]);
+                    }
+                } elseif (!$edited && $totalPhotos > 1) {
+                    // Jika edit gagal dan foto bertambah, kirim notifikasi pembaruan lampiran
+                    $sent = $bot->sendMessage(
+                        text: $responseMsgText,
+                        chat_id: $bot->chatId(),
+                        parse_mode: 'Markdown'
+                    );
+                    if ($sent && $existingUpdate) {
+                        $payload = $existingUpdate->payload ?? [];
+                        $payload['response_message_id'] = $sent->message_id;
+                        $existingUpdate->update(['payload' => $payload]);
+                    }
+                }
+            }
+        } finally {
+            if ($albumLock) {
+                try {
+                    $albumLock->release();
+                } catch (\Throwable $e) {
+                    // Abaikan release exception
+                }
+            }
         }
     }
 

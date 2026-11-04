@@ -118,13 +118,16 @@ class PhotoWatermarkService
                 $boxWidth = $maxTextWidth + ($padX * 2);
                 $boxHeight = (count($lines) * $lineSpacing) + ($padY * 2);
 
-                // Hitung posisi stempel sesuai opsi (Smart Position)
-                $position = $params['position'] ?? 'bottom-left';
+                // Hitung posisi stempel sesuai opsi (Smart Position: default bottom-right agar tidak menimpa watermark ponsel)
+                $position = $params['position'] ?? 'bottom-right';
                 if ($position === 'bottom-right') {
                     $boxX = $width - $boxWidth - 16;
                     $boxY = $height - $boxHeight - 16;
                 } elseif ($position === 'top-left') {
                     $boxX = 16;
+                    $boxY = 16;
+                } elseif ($position === 'top-right') {
+                    $boxX = $width - $boxWidth - 16;
                     $boxY = 16;
                 } else {
                     $boxX = 16;
@@ -167,13 +170,16 @@ class PhotoWatermarkService
                 $boxWidth = ($maxChars * $charWidth) + 24;
                 $boxHeight = (count($lines) * $lineHeight) + 16;
 
-                // Hitung posisi stempel sesuai opsi (Smart Position fallback)
-                $position = $params['position'] ?? 'bottom-left';
+                // Hitung posisi stempel sesuai opsi (Smart Position fallback: default bottom-right)
+                $position = $params['position'] ?? 'bottom-right';
                 if ($position === 'bottom-right') {
                     $boxX = $width - $boxWidth - 14;
                     $boxY = $height - $boxHeight - 14;
                 } elseif ($position === 'top-left') {
                     $boxX = 14;
+                    $boxY = 14;
+                } elseif ($position === 'top-right') {
+                    $boxX = $width - $boxWidth - 14;
                     $boxY = 14;
                 } else {
                     $boxX = 14;
