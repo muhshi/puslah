@@ -964,38 +964,28 @@ class DailyActivityTelegramHandler
      * Hanya mengaitkan jika pesan menyebutkan indikasi 'st' atau 'surat tugas', atau nomor spesifik,
      * untuk mencegah pekerjaan rutin tersambung ke random surat tugas.
      */
+    /**
+     * Resolusi Surat Tugas aktif:
+     * Default SELALU KOSONG (null) sesuai alur kedinasan BPS.
+     * Pekerjaan harian yang dikirim via Telegram default-nya adalah kegiatan rutin/internal kantor non-surat tugas.
+     * Surat Tugas hanya akan dikaitkan jika user secara EKSPLISIT menyertakan tag nomor ST (misal: #st4467 atau #st:4467).
+     */
     public function resolveActiveSuratTugas(User $user, Carbon $date, string $text = ''): ?SuratTugas
     {
-        $lowerText = strtolower($text);
-        $wantsSt = str_contains($lowerText, 'st') 
-            || str_contains($lowerText, 'surat tugas') 
-            || str_contains($lowerText, 'penugasan')
-            || str_contains($lowerText, 'dinas');
-
-        // Jika pesan tidak menyebutkan indikasi surat tugas, default-kan ke pekerjaan rutin kantor
-        if (!$wantsSt) {
+        if (empty($text)) {
             return null;
         }
 
-        $todayStr = $date->toDateString();
-        $startOfDay = $date->copy()->startOfDay();
-        $endOfDay = $date->copy()->endOfDay();
-
-        $activeStList = SuratTugas::query()
-            ->where('user_id', $user->id)
-            ->where(function ($q) use ($todayStr, $startOfDay, $endOfDay) {
-                $q->whereDate('tanggal', $todayStr)
-                    ->orWhere(function ($sub) use ($startOfDay, $endOfDay) {
-                        $sub->where('waktu_mulai', '<=', $endOfDay)
-                            ->where('waktu_selesai', '>=', $startOfDay);
-                    });
-            })
-            ->where('status', '!=', 'rejected')
-            ->get();
-
-        // Jika tepat 1 penugasan aktif, otomatis kaitkan
-        if ($activeStList->count() === 1) {
-            return $activeStList->first();
+        // Hanya deteksi jika ada hashtag eksplisit dengan nomor ST, misal: #st4467, #st:4467, #st-4467
+        if (preg_match('/#st[:\s_-]?(\d{3,})/i', $text, $matches)) {
+            $stNumber = $matches[1];
+            return SuratTugas::where('user_id', $user->id)
+                ->where(function ($q) use ($stNumber) {
+                    $q->where('id', $stNumber)
+                      ->orWhere('nomor_surat_tugas', 'like', "%{$stNumber}%");
+                })
+                ->where('status', '!=', 'rejected')
+                ->first();
         }
 
         return null;

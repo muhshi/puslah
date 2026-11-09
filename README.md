@@ -54,6 +54,12 @@ composer dev
 
 ## Changelog
 
+### 2026-11-09
+- **Default Kosong Surat Tugas pada Laporan Bukti Dukung Telegram**:
+  - Mengubah perilaku resolusi Surat Tugas di bot Telegram (`DailyActivityTelegramHandler`). Sebelumnya sistem mencoba mencocokkan substring `"st"`, `"penugasan"`, `"dinas"` secara otomatis ke Surat Tugas aktif, yang menyebabkan kata umum seperti `"wilkerstat"` atau `"penugasan"` tidak sengaja mengaitkan kegiatan harian ke Surat Tugas aktif hari itu.
+  - Sesuai alur operasional BPS, seluruh laporan kegiatan harian yang dikirim melalui Telegram (teks, foto album, maupun pesan suara) kini **secara default selalu kosong (`surat_tugas_id = null`)**.
+  - Surat Tugas hanya akan dikaitkan jika pegawai secara sengaja dan eksplisit menuliskan hashtag nomor ST (misal `#st4467` atau `#st:4467`), atau dipilih secara terarah saat menyusun Laporan Perjalanan Dinas (LPD) via menu Tindakan masal di web.
+
 ### 2026-11-04
 - **Resilient SafePolling Engine untuk Bot Telegram & Solusi Anti Dobel Watermark**:
   - **Arsitektur SafePolling (`App\Telegram\SafePolling`):** Mengatasi crash loop worker Telegram akibat timeout Guzzle cURL error 28 (16002ms) dan Telegram 502 Bad Gateway. SafePolling membungkus `getUpdates` dalam exception handler mandiri dan menyimpan progress offset secara persisten di Redis (`nutgram_safe_polling_offset`), sehingga antrean foto album multi-berkas tidak lagi terbuang atau hilang saat bot terhubung kembali.
