@@ -199,7 +199,7 @@ EOT;
 
         // 4. Panggil Gemini API dengan automatic fallback jika model 404/503
         $model = $this->getModel();
-        $modelsToTry = array_unique([$model, 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-3.8-flash']);
+        $modelsToTry = array_unique([$model, 'gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-flash-lite-latest', 'gemini-3.8-flash']);
 
         $response = null;
         $lastError = null;
@@ -365,7 +365,7 @@ EOT;
 
             try {
                 $model = $this->getModel();
-                $modelsToTry = array_unique([$model, 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-3.8-flash']);
+                $modelsToTry = array_unique([$model, 'gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-flash-lite-latest', 'gemini-3.8-flash']);
                 $response = null;
 
                 foreach ($modelsToTry as $currentModel) {

@@ -37,7 +37,7 @@ class DailyActivityAiService
             return trim($settingsModel);
         }
 
-        return config('services.gemini.model', 'gemini-2.5-flash');
+        return config('services.gemini.model', 'gemini-3.5-flash');
     }
 
     /**
@@ -83,7 +83,7 @@ Keluarkan HANYA teks formal hasil polesan tanpa komentar tambahan.
 EOT;
 
         $model = $this->getModel();
-        $modelsToTry = array_unique([$model, 'gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash']);
+        $modelsToTry = array_unique([$model, 'gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-flash-lite-latest', 'gemini-3.8-flash']);
 
         $lastError = null;
 
@@ -163,7 +163,7 @@ Keluarkan HANYA JSON tanpa markdown block ```json atau komentar apapun.
 EOT;
 
         $model = $this->getModel();
-        $modelsToTry = array_unique([$model, 'gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash']);
+        $modelsToTry = array_unique([$model, 'gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-flash-lite-latest', 'gemini-3.8-flash']);
         $lastError = null;
 
         foreach ($modelsToTry as $currentModel) {
@@ -260,7 +260,7 @@ Gunakan Bahasa Indonesia baku kedinasan aktif (contoh: "Telah diselesaikan seran
 EOT;
 
         $model = $this->getModel();
-        $modelsToTry = array_unique([$model, 'gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash']);
+        $modelsToTry = array_unique([$model, 'gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-flash-lite-latest', 'gemini-3.8-flash']);
         $lastError = null;
 
         foreach ($modelsToTry as $currentModel) {

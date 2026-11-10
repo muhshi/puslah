@@ -55,6 +55,9 @@ composer dev
 ## Changelog
 
 ### 2026-11-10
+- **Pembaruan Model Gemini AI (`gemini-3.5-flash` & Model Fallback Terbaru)**:
+  - Memperbarui daftar model dan fallback Google Gemini AI pada `DailyActivityAiService` dan `LpdAiService`. Model generasi lama (`gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-2.5-flash`) yang telah dipensiunkan oleh Google dengan status 404 diganti dengan model aktif resmi (`gemini-3.5-flash`, `gemini-3.6-flash`, `gemini-flash-lite-latest`, dan `gemini-3.8-flash`).
+  - Pemolesan narasi otomatis via bot Telegram dan web kembali berjalan mulus dan instan tanpa kendala HTTP 404.
 - **Dukungan Dokumen (PDF/Doc) & Auto-Merge Lampiran pada Bot Telegram**:
   - **Handler Dokumen (`MessageType::DOCUMENT`):** Menambahkan route dan handler `handleDocumentMessage` pada bot Telegram untuk menerima berkas dokumen (PDF, Word, Excel, dll). Dokumen otomatis diunduh dan disimpan ke `DailyActivityAttachment` dengan status siap lampir (`is_stamped = true`).
   - **Smart Media Merging (< 90 Detik):** Mengintegrasikan mekanisme pelacakan kegiatan terkini (`tg_recent_activity_{user_id}`) menggunakan Redis/Cache. Apabila pegawai mengirim foto dan dokumen secara bersamaan (atau teks susulan tanpa caption dalam rentang 90 detik), bot otomatis menggabungkannya ke dalam satu baris bukti dukung yang sama, mengadopsi caption dokumen untuk narasi AI formal, dan menautkan seluruh berkas foto maupun dokumen secara utuh.
