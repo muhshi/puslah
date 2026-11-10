@@ -348,6 +348,8 @@ class DailyActivityResource extends Resource
         $isSuperAdmin = Auth::user()?->hasAnyRole(['super_admin', 'admin']) ?? false;
 
         return $table
+            ->recordUrl(null)
+            ->recordAction(null)
             ->columns([
                 Tables\Columns\TextColumn::make('activity_date')
                     ->label('Tanggal')
@@ -358,13 +360,22 @@ class DailyActivityResource extends Resource
                     ->label('Pegawai')
                     ->visible(false),
 
-                Tables\Columns\TextColumn::make('suratTugas.nomor_surat')
+                Tables\Columns\TextColumn::make('surat_tugas_id')
                     ->label('Surat Tugas')
+                    ->state(function (DailyActivity $record): string {
+                        return $record->suratTugas?->nomor_surat ? "No. {$record->suratTugas->nomor_surat}" : 'Kegiatan Rutin';
+                    })
                     ->badge()
-                    ->color(fn ($state) => $state ? 'primary' : 'gray')
-                    ->formatStateUsing(fn ($state) => $state ? "No. {$state}" : 'Kegiatan Rutin')
+                    ->color(fn ($state) => $state !== 'Kegiatan Rutin' ? 'primary' : 'gray')
+                    ->icon(fn ($state) => $state !== 'Kegiatan Rutin' ? 'heroicon-m-document-text' : 'heroicon-m-calendar')
                     ->tooltip('Klik untuk menautkan atau melepas Surat Tugas')
-                    ->searchable()
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->whereHas('suratTugas', function ($q) use ($search) {
+                            $q->where('nomor_surat', 'like', "%{$search}%")
+                              ->orWhere('nomor_surat_tugas', 'like', "%{$search}%")
+                              ->orWhere('keperluan', 'like', "%{$search}%");
+                        });
+                    })
                     ->action(
                         Tables\Actions\Action::make('change_surat_tugas')
                             ->label('Atur Surat Tugas')

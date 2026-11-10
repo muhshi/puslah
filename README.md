@@ -55,11 +55,11 @@ composer dev
 ## Changelog
 
 ### 2026-11-10
-- **Interaksi Modal Cepat pada Badge Surat Tugas & Smart Split-Chip Wadah KIPAPP**:
-  - **Aksi Kolom Surat Tugas (Klik Badge -> Modal Ubah / Lepas):** Badge Surat Tugas di tabel Bukti Dukung Harian kini dapat diklik langsung untuk membuka modal ringkas manajemen Surat Tugas. Pegawai dapat memilih Surat Tugas aktif melalui searchable dropdown, atau menekan tombol *"🗑️ Lepas Surat Tugas Sekarang"* untuk mengembalikan status kegiatan menjadi Kegiatan Rutin secara instan tanpa perlu masuk ke form edit penuh.
-  - **Smart Split-Chip Wadah KIPAPP & Modal Multi-Select (`activity-wadah-badges` & `manage_wadah`):**
-    - Mengubah tampilan badge wadah di tabel menjadi smart-chip dual-access: mengklik teks judul wadah atau badge `+ Masuk Wadah` akan membuka modal manajemen wadah, sedangkan mengklik ikon salin (📋) di samping judul langsung menyalin tautan publik ke clipboard (*instant 1-click copy*).
-    - **Modal Manajemen Wadah KIPAPP:** Menyediakan searchable multi-select untuk memilih, menambah, atau mengeluarkan kegiatan dari satu atau beberapa wadah aktif, serta menyajikan kartu ringkasan tautan berkas publik lengkap dengan tombol *"Salin Link"* (untuk E-Kinerja) dan tautan *"Buka Halaman Publik"* langsung di dalam modal.
+- **Perbaikan Visual Badge Wadah KIPAPP & Interaktivitas Kolom Surat Tugas**:
+  - **Pencegahan Row Click Hijack (`recordUrl(null) & recordAction(null)`):** Menghapus tautan klik otomatis seluruh baris ke halaman edit di tabel Bukti Dukung Harian. Klik pada badge Wadah KIPAPP maupun tombol Salin Link kini terisolasi secara sempurna dan tidak lagi membuka halaman edit baris tanpa disengaja.
+  - **Styling Badge Native Filament v3:** Mengganti styling custom Tailwind arbitrary pada badge Wadah KIPAPP dan komponen modal dengan `<x-filament::badge>` dan `<x-filament::button>` native Filament v3. Tampilan badge kini rapi, bergradasi warna halus, konsisten dengan tema Filament, dan mendukung mode gelap (dark mode).
+  - **Perbaikan State Kolom Surat Tugas (Pill Badge Interaktif):** Memperbaiki kolom Surat Tugas yang sebelumnya blank/kosong jika tidak memiliki ST. Kolom kini selalu menampilkan pill badge berikon kalender (`Kegiatan Rutin` berwarna abu-abu) atau dokumen (`No. ...` berwarna primer) yang dapat diklik langsung untuk memunculkan modal pemilihan atau pelepasan Surat Tugas.
+  - **Smart Split-Chip Wadah KIPAPP & Modal Multi-Select:** Klik judul wadah atau badge `+ Masuk Wadah` membuka modal pengelolaan multi-select wadah, sementara tombol salin (`📋`) melakukan *instant 1-click copy* tautan publik berkas KIPAPP untuk keperluan E-Kinerja.
 
 ### 2026-11-09
 - **Default Kosong Surat Tugas pada Laporan Bukti Dukung Telegram**:
