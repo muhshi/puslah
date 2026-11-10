@@ -245,30 +245,14 @@
         {{-- TTD --}}
         <table style="width: 100%;">
             <tr>
-                <td style="width: 45%;"></td>
-                <td class="text-center" style="width: 55%;">
+                <td style="width: 50%;"></td>
+                <td class="text-center">
                     <span class="f12 arial">Demak, {{ $surat->tanggal->translatedFormat('d F Y') }}</span><br>
                     <span class="f12 arial">{!! nl2br(e($surat->signer_title)) !!},</span><br>
-                    <div style="height: 6pt;"></div>
                     @if($surat->status === 'approved' && $qrBase64)
-                        <table style="width: 195pt; margin: 0 auto; border: 1px solid #005596; border-radius: 4px; padding: 4pt; background-color: #f8fafc;">
-                            <tr>
-                                <td style="width: 55pt; text-align: center; vertical-align: middle;">
-                                    <img src="{{ $qrBase64 }}" width="50pt" height="50pt" alt="QR Verifikasi">
-                                </td>
-                                <td style="text-align: left; vertical-align: middle; padding-left: 6pt;">
-                                    <span style="font-family: Arial, sans-serif; font-size: 6.8pt; color: #005596; font-weight: bold; line-height: 1.2;">
-                                        Ditandatangani secara elektronik oleh:
-                                    </span><br>
-                                    <span style="font-family: Arial, sans-serif; font-size: 7.5pt; color: #1e293b; font-weight: bold; line-height: 1.2;">
-                                        {{ $surat->signer_name }}
-                                    </span><br>
-                                    <span style="font-family: Arial, sans-serif; font-size: 6.5pt; color: #64748b; line-height: 1.1;">
-                                        NIP. {{ $surat->signer_nip ?? '-' }}
-                                    </span>
-                                </td>
-                            </tr>
-                        </table>
+                        <br>
+                        <img src="{{ $qrBase64 }}" width="60pt" height="60pt" alt="QR"><br>
+                        <br>
                     @else
                         <div style="margin: 8pt auto; padding: 10pt; border: 1px dashed #ef4444; border-radius: 4px; width: 170pt; background-color: #fef2f2;">
                             <span style="font-family: Arial, sans-serif; font-size: 8pt; color: #dc2626; font-weight: bold;">
@@ -276,7 +260,6 @@
                             </span>
                         </div>
                     @endif
-                    <div style="height: 6pt;"></div>
                     <b><span class="f12 arial">{{ $surat->signer_name }}</span></b>
                 </td>
             </tr>
