@@ -40,6 +40,9 @@ $bot->onMessageType(MessageType::TEXT, [$handler, 'handleTextMessage']);
 // Handling pesan foto
 $bot->onMessageType(MessageType::PHOTO, [$handler, 'handlePhotoMessage']);
 
+// Handling pesan dokumen (PDF, Word, Excel, dll)
+$bot->onMessageType(MessageType::DOCUMENT, [$handler, 'handleDocumentMessage']);
+
 // Handling pesan suara (Voice Note & Audio)
 $bot->onMessageType(MessageType::VOICE, [$handler, 'handleVoiceMessage']);
 $bot->onMessageType(MessageType::AUDIO, [$handler, 'handleVoiceMessage']);

@@ -55,6 +55,9 @@ composer dev
 ## Changelog
 
 ### 2026-11-10
+- **Dukungan Dokumen (PDF/Doc) & Auto-Merge Lampiran pada Bot Telegram**:
+  - **Handler Dokumen (`MessageType::DOCUMENT`):** Menambahkan route dan handler `handleDocumentMessage` pada bot Telegram untuk menerima berkas dokumen (PDF, Word, Excel, dll). Dokumen otomatis diunduh dan disimpan ke `DailyActivityAttachment` dengan status siap lampir (`is_stamped = true`).
+  - **Smart Media Merging (< 90 Detik):** Mengintegrasikan mekanisme pelacakan kegiatan terkini (`tg_recent_activity_{user_id}`) menggunakan Redis/Cache. Apabila pegawai mengirim foto dan dokumen secara bersamaan (atau teks susulan tanpa caption dalam rentang 90 detik), bot otomatis menggabungkannya ke dalam satu baris bukti dukung yang sama, mengadopsi caption dokumen untuk narasi AI formal, dan menautkan seluruh berkas foto maupun dokumen secara utuh.
 - **Perbaikan Visual Badge Wadah KIPAPP & Interaktivitas Kolom Surat Tugas**:
   - **Pencegahan Row Click Hijack (`recordUrl(null) & recordAction(null)`):** Menghapus tautan klik otomatis seluruh baris ke halaman edit di tabel Bukti Dukung Harian. Klik pada badge Wadah KIPAPP maupun tombol Salin Link kini terisolasi secara sempurna dan tidak lagi membuka halaman edit baris tanpa disengaja.
   - **Styling Badge Native Filament v3:** Mengganti styling custom Tailwind arbitrary pada badge Wadah KIPAPP dan komponen modal dengan `<x-filament::badge>` dan `<x-filament::button>` native Filament v3. Tampilan badge kini rapi, bergradasi warna halus, konsisten dengan tema Filament, dan mendukung mode gelap (dark mode).

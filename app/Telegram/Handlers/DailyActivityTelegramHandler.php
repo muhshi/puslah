@@ -359,6 +359,38 @@ class DailyActivityTelegramHandler
             Log::warning('AI Polish direct error: ' . $e->getMessage());
         }
 
+        // Cek jika ada foto/dokumen yang baru dikirim tanpa caption dalam 90 detik terakhir
+        $recentActId = Cache::get("tg_recent_activity_{$user->id}");
+        if ($recentActId) {
+            $candidate = DailyActivity::find($recentActId);
+            if ($candidate && $candidate->created_at->diffInSeconds(now()) <= 90 && ($candidate->raw_content === 'Dokumentasi kegiatan' || str_starts_with($candidate->raw_content, 'Dokumen kegiatan:'))) {
+                $candidate->raw_content = $rawText;
+                $candidate->ai_formal_content = $formalContent;
+                $candidate->final_content = $formalContent;
+                $candidate->activity_date = $activityDate;
+                if ($activeSt) $candidate->surat_tugas_id = $activeSt->id;
+                if ($sharedReports->isNotEmpty()) {
+                    $candidate->shared_work_report_id = $sharedReports->first()->id;
+                    $candidate->sharedWorkReports()->sync($sharedReports->pluck('id'));
+                }
+                $candidate->save();
+
+                Cache::put("tg_recent_activity_{$user->id}", $candidate->id, 90);
+
+                $totalAtt = $candidate->attachments()->count();
+                $bot->sendMessage(
+                    text: "📝 *Catatan Berhasil Ditambahkan ke Bukti Dukung!* 🚀\n\n" .
+                    "📝 *Catatan:* \"{$rawText}\"\n" .
+                    "✨ *Narasi AI:* \"{$formalContent}\"\n" .
+                    "🖼️ *Lampiran Terkait:* {$totalAtt} berkas\n\n" .
+                    "✅ _Kegiatan diperbarui otomatis di Puslah._",
+                    chat_id: $bot->chatId(),
+                    parse_mode: 'Markdown'
+                );
+                return;
+            }
+        }
+
         // Simpan kegiatan baru
         $activity = DailyActivity::create([
             'user_id' => $user->id,
@@ -375,6 +407,8 @@ class DailyActivityTelegramHandler
         if ($sharedReports->isNotEmpty()) {
             $activity->sharedWorkReports()->sync($sharedReports->pluck('id'));
         }
+
+        Cache::put("tg_recent_activity_{$user->id}", $activity->id, 90);
 
         $dateNotice = "📅 *Tanggal Kegiatan:* " . $activityDate->translatedFormat('l, d F Y');
         if (!$activityDate->isToday()) {
@@ -510,6 +544,19 @@ class DailyActivityTelegramHandler
                 }
             }
 
+            // Jika bukan album atau belum ada, cek recent activity user dalam 90 detik terakhir (misal dokumen/foto lain yang baru dikirim)
+            if (!$activity) {
+                $recentActId = Cache::get("tg_recent_activity_{$user->id}");
+                if ($recentActId) {
+                    $candidate = DailyActivity::find($recentActId);
+                    if ($candidate && $candidate->created_at->diffInSeconds(now()) <= 90) {
+                        if (empty($caption) || $candidate->raw_content === 'Dokumentasi kegiatan' || str_starts_with($candidate->raw_content, 'Dokumen kegiatan:')) {
+                            $activity = $candidate;
+                        }
+                    }
+                }
+            }
+
             // Jika activity sudah ada (foto ke-2 dst di album) dan ada caption baru:
             // Telegram hanya menempelkan caption pada 1 foto di album (bisa foto pertama atau foto berikutnya).
             // Jika foto berikutnya membawa caption, update activity yang ada agar caption tidak hilang!
@@ -600,6 +647,8 @@ class DailyActivityTelegramHandler
                     ]);
                 }
             }
+
+            Cache::put("tg_recent_activity_{$user->id}", $activity->id, 90);
 
             // Tentukan waktu foto: gunakan EXIF jika ada, atau waktu pesan Telegram saat dikirim (konversi ke WIB)
             $capturedAt = $exifData['captured_at'] ?? Carbon::createFromTimestamp($msg->date ?? time(), 'Asia/Jakarta')->setTimezone('Asia/Jakarta');
@@ -780,6 +829,282 @@ class DailyActivityTelegramHandler
                     }
                 }
             }
+        } finally {
+            if ($albumLock) {
+                try {
+                    $albumLock->release();
+                } catch (\Throwable $e) {
+                    // Abaikan release exception
+                }
+            }
+        }
+    }
+
+    /**
+     * Handle pesan dokumen masuk (PDF, Word, Excel, berkas lampiran lainnya)
+     */
+    public function handleDocumentMessage(Nutgram $bot): void
+    {
+        $user = $this->getAuthenticatedUser($bot);
+        if (!$user) return;
+
+        $msg = $bot->message();
+        $doc = $msg->document;
+        if (!$doc || empty($doc->file_id)) return;
+
+        $caption = trim($msg->caption ?? '');
+        $mediaGroupId = $msg->media_group_id ?? null;
+        $originalFileName = $doc->file_name ?? ('dokumen_' . time() . '.pdf');
+        $mimeType = $doc->mime_type ?? 'application/pdf';
+
+        // Unduh berkas dokumen dari Telegram
+        $file = $bot->getFile($doc->file_id);
+        if (!$file || empty($file->file_path)) {
+            $bot->sendMessage(
+                text: "⚠️ Gagal membaca berkas dokumen dari Telegram. File mungkin terlalu besar (maks 20MB oleh batasan Telegram Bot API).",
+                chat_id: $bot->chatId()
+            );
+            return;
+        }
+
+        $ext = pathinfo($originalFileName, PATHINFO_EXTENSION) ?: (pathinfo($file->file_path, PATHINFO_EXTENSION) ?: 'pdf');
+        $todayStr = Carbon::today()->format('Y-m-d');
+        $sanitizedName = preg_replace('/[^a-zA-Z0-9_\.-]/', '_', pathinfo($originalFileName, PATHINFO_FILENAME));
+        $fileName = 'doc_' . time() . '_' . uniqid() . '_' . $sanitizedName . '.' . $ext;
+        $relativePath = "daily-activities/{$user->id}/{$todayStr}/{$fileName}";
+        $fullPath = storage_path('app/public/' . $relativePath);
+
+        $dir = dirname($fullPath);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+
+        // 1. Coba download via Nutgram
+        $downloaded = false;
+        try {
+            $downloaded = $bot->downloadFile($file, $fullPath);
+        } catch (\Throwable $e) {
+            Log::warning("Nutgram download document error: " . $e->getMessage());
+        }
+
+        // 2. Fallback via URL jika belum terdownload
+        if (!$downloaded || !file_exists($fullPath) || filesize($fullPath) === 0) {
+            $token = config('nutgram.token');
+            $fileUrl = "https://api.telegram.org/file/bot{$token}/" . $file->file_path;
+            $fileContents = @file_get_contents($fileUrl);
+            if ($fileContents) {
+                file_put_contents($fullPath, $fileContents);
+                $downloaded = true;
+            }
+        }
+
+        if (!file_exists($fullPath) || filesize($fullPath) === 0) {
+            $bot->sendMessage(
+                text: "⚠️ Gagal mengunduh dokumen dari server Telegram. Silakan coba kirim ulang.",
+                chat_id: $bot->chatId()
+            );
+            return;
+        }
+
+        $fileSize = filesize($fullPath);
+        $activityDate = $this->resolveActivityDate($caption ?: '');
+
+        // Kunci atomic lock jika media_group (album dokumen)
+        $albumLock = null;
+        if (!empty($mediaGroupId)) {
+            try {
+                $albumLock = Cache::lock("tg_album_{$bot->chatId()}_{$mediaGroupId}", 30);
+                $albumLock->block(15);
+            } catch (\Throwable $e) {
+                Log::warning('Album document lock warning: ' . $e->getMessage());
+            }
+        }
+
+        try {
+            $activity = null;
+            $existingUpdate = null;
+            $isMergedWithExisting = false;
+
+            // Jika bagian dari media_group (album dokumen)
+            if (!empty($mediaGroupId)) {
+                $existingUpdate = TelegramUpdate::where('chat_id', $bot->chatId())
+                    ->where('media_group_id', $mediaGroupId)
+                    ->where('created_at', '>=', Carbon::now()->subMinutes(10))
+                    ->latest()
+                    ->first();
+
+                if ($existingUpdate && !empty($existingUpdate->payload['activity_id'])) {
+                    $activity = DailyActivity::find($existingUpdate->payload['activity_id']);
+                    if ($activity) $isMergedWithExisting = true;
+                }
+            }
+
+            // Jika bukan media_group atau belum ada, cek recent activity user dalam 90 detik terakhir (misal foto yang baru dikirim beberapa detik lalu)
+            if (!$activity) {
+                $recentActId = Cache::get("tg_recent_activity_{$user->id}");
+                if ($recentActId) {
+                    $candidate = DailyActivity::find($recentActId);
+                    if ($candidate && $candidate->created_at->diffInSeconds(now()) <= 90) {
+                        // Jika dokumen tidak ada caption ATAU candidate masih berstatus 'Dokumentasi kegiatan',
+                        // gabungkan ke kegiatan yang sama!
+                        if (empty($caption) || $candidate->raw_content === 'Dokumentasi kegiatan' || str_starts_with($candidate->raw_content, 'Dokumen kegiatan:')) {
+                            $activity = $candidate;
+                            $isMergedWithExisting = true;
+                        }
+                    }
+                }
+            }
+
+            // Jika activity sudah ada (misal digabung dengan foto yang baru dikirim) dan dokumen membawa caption baru:
+            if ($activity && !empty($caption)) {
+                $isOldDefault = empty($activity->raw_content) || $activity->raw_content === 'Dokumentasi kegiatan' || str_starts_with($activity->raw_content, 'Dokumen kegiatan:');
+                if ($isOldDefault || strlen($caption) > strlen($activity->raw_content)) {
+                    $activity->raw_content = $caption;
+                    $activity->activity_date = $this->resolveActivityDate($caption);
+
+                    try {
+                        $aiService = app(DailyActivityAiService::class);
+                        $formalContent = $aiService->formalize($caption, [
+                            'user_name' => $user->name,
+                            'tanggal' => $activity->activity_date->translatedFormat('d F Y'),
+                        ]);
+                        $activity->ai_formal_content = $formalContent;
+                        $activity->final_content = $formalContent;
+                    } catch (\Throwable $e) {
+                        Log::warning('AI Polish doc caption error: ' . $e->getMessage());
+                        $activity->ai_formal_content = $caption;
+                        $activity->final_content = $caption;
+                    }
+
+                    $activeSt = $this->resolveActiveSuratTugas($user, $activity->activity_date, $caption);
+                    if ($activeSt) {
+                        $activity->surat_tugas_id = $activeSt->id;
+                    }
+                    $sharedReports = $this->resolveSharedWorkReports($user, $caption);
+                    if ($sharedReports->isNotEmpty()) {
+                        $activity->shared_work_report_id = $sharedReports->first()->id;
+                        $activity->sharedWorkReports()->sync($sharedReports->pluck('id'));
+                    }
+
+                    $activity->save();
+                }
+            }
+
+            // Jika belum ada activity, buat baru khusus dokumen ini
+            if (!$activity) {
+                $rawContent = !empty($caption) ? $caption : ('Dokumen kegiatan: ' . pathinfo($originalFileName, PATHINFO_FILENAME));
+                $formalContent = $rawContent;
+
+                if (!empty($caption)) {
+                    try {
+                        $aiService = app(DailyActivityAiService::class);
+                        $formalContent = $aiService->formalize($caption, [
+                            'user_name' => $user->name,
+                            'tanggal' => $activityDate->translatedFormat('d F Y'),
+                        ]);
+                    } catch (\Throwable $e) {
+                        Log::warning('AI Polish doc error: ' . $e->getMessage());
+                    }
+                }
+
+                $activeSt = $this->resolveActiveSuratTugas($user, $activityDate, $caption ?: '');
+                $sharedReports = $this->resolveSharedWorkReports($user, $caption ?: '');
+
+                $activity = DailyActivity::create([
+                    'user_id' => $user->id,
+                    'surat_tugas_id' => $activeSt?->id,
+                    'shared_work_report_id' => $sharedReports->first()?->id,
+                    'activity_date' => $activityDate,
+                    'raw_content' => $rawContent,
+                    'ai_formal_content' => $formalContent,
+                    'final_content' => $formalContent,
+                    'status' => 'submitted',
+                    'source' => 'telegram',
+                ]);
+
+                if ($sharedReports->isNotEmpty()) {
+                    $activity->sharedWorkReports()->sync($sharedReports->pluck('id'));
+                }
+
+                if (!empty($mediaGroupId)) {
+                    TelegramUpdate::create([
+                        'update_id' => $bot->updateId() ?? time(),
+                        'chat_id' => $bot->chatId(),
+                        'message_id' => $msg->message_id,
+                        'media_group_id' => $mediaGroupId,
+                        'payload' => ['activity_id' => $activity->id],
+                        'processed_at' => Carbon::now(),
+                    ]);
+                }
+            }
+
+            // Simpan ke cache agar media selanjutnya dalam 90 detik otomatis bergabung
+            Cache::put("tg_recent_activity_{$user->id}", $activity->id, 90);
+
+            // Waktu & koordinat dokumen (default kantor)
+            $officeCoords = $this->getOfficeCoordinates();
+            $capturedAt = Carbon::createFromTimestamp($msg->date ?? time(), 'Asia/Jakarta')->setTimezone('Asia/Jakarta');
+
+            DailyActivityAttachment::create([
+                'daily_activity_id' => $activity->id,
+                'file_path' => $relativePath,
+                'file_name' => $originalFileName,
+                'file_size' => $fileSize,
+                'mime_type' => $mimeType,
+                'is_stamped' => true, // Dokumen PDF/Word siap dilampirkan tanpa stempel kamera
+                'latitude' => $officeCoords['latitude'],
+                'longitude' => $officeCoords['longitude'],
+                'captured_at' => $capturedAt,
+                'caption' => $caption ?: $originalFileName,
+            ]);
+
+            // Hitung total lampiran
+            $totalAttachments = $activity->attachments()->count();
+
+            $stBadge = "";
+            if ($activity->suratTugas) {
+                $stNo = $activity->suratTugas->nomor_surat_tugas ?: 'DRAFT';
+                $stBadge = "\n🔖 *Terkait ST:* No. {$stNo}";
+            }
+
+            $kipappBadge = "";
+            $allReports = $activity->sharedWorkReports;
+            if ($allReports->isEmpty() && $activity->sharedWorkReport) {
+                $allReports = collect([$activity->sharedWorkReport]);
+            }
+            if ($allReports->isNotEmpty()) {
+                $wadahList = $allReports->pluck('title')->implode(', ');
+                $kipappBadge = "\n📁 *Wadah KIPAPP:* {$wadahList}";
+            }
+
+            $dateBadge = "\n📅 *Tanggal Kegiatan:* " . $activity->activity_date->translatedFormat('l, d F Y') . (!$activity->activity_date->isToday() ? " _(Backdate)_" : "");
+
+            $captionInfo = "";
+            if (!empty($activity->raw_content) && !str_starts_with($activity->raw_content, 'Dokumen kegiatan:')) {
+                $captionInfo = "\n📝 *Catatan:* \"{$activity->raw_content}\"\n✨ *Narasi AI:* \"{$activity->final_content}\"\n";
+            } else {
+                $captionInfo = "\n📝 *Kegiatan:* {$activity->final_content}\n";
+            }
+
+            $headerTitle = $isMergedWithExisting
+                ? "📎 *Dokumen Berhasil Ditambahkan ke Bukti Dukung!*"
+                : "📄 *Dokumen Berhasil Disimpan!*";
+
+            $responseMsgText = "{$headerTitle}\n" .
+                $captionInfo .
+                "📎 *Nama Berkas:* `{$originalFileName}`\n" .
+                "🖼️ *Total Lampiran:* {$totalAttachments} berkas" .
+                $dateBadge .
+                $stBadge .
+                $kipappBadge . "\n\n" .
+                "✅ _Tersimpan otomatis di bukti dukung Puslah._";
+
+            $bot->sendMessage(
+                text: $responseMsgText,
+                chat_id: $bot->chatId(),
+                parse_mode: 'Markdown'
+            );
+
         } finally {
             if ($albumLock) {
                 try {
