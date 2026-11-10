@@ -814,8 +814,25 @@ class DailyActivityResource extends Resource
                                 ->helperText('Pilih wadah yang ingin ditautkan. Anda juga bisa mengosongkan pilihan untuk mengeluarkan kegiatan dari semua wadah.')
                                 ->required(false),
 
-                            Forms\Components\ViewField::make('wadah_links_preview')
-                                ->view('filament.forms.components.wadah-modal-links'),
+                            Forms\Components\Placeholder::make('wadah_links_preview')
+                                ->hiddenLabel()
+                                ->content(function (Forms\Get $get, ?DailyActivity $record) {
+                                    $selectedIds = $get('shared_work_reports');
+                                    if ($selectedIds === null && $record) {
+                                        $selectedIds = $record->sharedWorkReports->pluck('id')->toArray();
+                                        if (empty($selectedIds) && $record->shared_work_report_id) {
+                                            $selectedIds = [$record->shared_work_report_id];
+                                        }
+                                    }
+                                    $selectedIds = array_filter(array_map('intval', (array) $selectedIds));
+                                    $reports = !empty($selectedIds)
+                                        ? \App\Models\SharedWorkReport::whereIn('id', $selectedIds)->get()
+                                        : collect();
+
+                                    return view('filament.forms.components.wadah-modal-links', [
+                                        'reports' => $reports,
+                                    ]);
+                                }),
                         ])
                         ->action(function (DailyActivity $record, array $data) {
                             $selectedIds = $data['shared_work_reports'] ?? [];

@@ -1,12 +1,5 @@
 @php
-    $selectedIds = $get('shared_work_reports') ?? [];
-    if (!is_array($selectedIds)) {
-        $selectedIds = [$selectedIds];
-    }
-    $selectedIds = array_filter(array_map('intval', $selectedIds));
-    $reports = !empty($selectedIds) 
-        ? \App\Models\SharedWorkReport::whereIn('id', $selectedIds)->get()
-        : collect();
+    $reports = $reports ?? collect();
 @endphp
 
 <div class="w-full mt-2">
