@@ -363,7 +363,83 @@ class DailyActivityResource extends Resource
                     ->badge()
                     ->color(fn ($state) => $state ? 'primary' : 'gray')
                     ->formatStateUsing(fn ($state) => $state ? "No. {$state}" : 'Kegiatan Rutin')
-                    ->searchable(),
+                    ->tooltip('Klik untuk menautkan atau melepas Surat Tugas')
+                    ->searchable()
+                    ->action(
+                        Tables\Actions\Action::make('change_surat_tugas')
+                            ->label('Atur Surat Tugas')
+                            ->modalHeading('Atur Surat Tugas Kegiatan')
+                            ->modalDescription('Tautkan kegiatan ini ke Surat Tugas yang sesuai, atau kosongkan untuk menjadikannya Kegiatan Rutin.')
+                            ->modalWidth(\Filament\Support\Enums\MaxWidth::Medium)
+                            ->modalSubmitActionLabel('Simpan Perubahan')
+                            ->fillForm(fn (DailyActivity $record): array => [
+                                'surat_tugas_id' => $record->surat_tugas_id,
+                            ])
+                            ->form([
+                                Forms\Components\Placeholder::make('info_kegiatan')
+                                    ->label('Kegiatan')
+                                    ->content(fn (DailyActivity $record) => $record->activity_date->translatedFormat('l, d F Y') . ' — ' . \Illuminate\Support\Str::limit($record->final_content, 120)),
+
+                                Forms\Components\Select::make('surat_tugas_id')
+                                    ->label('Pilih Surat Tugas')
+                                    ->options(function (DailyActivity $record) {
+                                        $userId = $record->user_id ?: Auth::id();
+                                        return SuratTugas::where('user_id', $userId)
+                                            ->where('status', '!=', 'rejected')
+                                            ->latest('tanggal')
+                                            ->take(50)
+                                            ->get()
+                                            ->mapWithKeys(function ($st) {
+                                                $tgl = $st->tanggal ? \Carbon\Carbon::parse($st->tanggal)->format('d/m/Y') : '-';
+                                                $nomor = $st->nomor_surat ?: ($st->nomor_surat_tugas ?: 'DRAFT');
+                                                $keperluan = $st->keperluan ?: $st->tempat_tugas ?: 'Penugasan Lapangan';
+                                                return [$st->id => "[{$tgl}] No. {$nomor} — {$keperluan}"];
+                                            });
+                                    })
+                                    ->searchable()
+                                    ->nullable()
+                                    ->placeholder('— Tanpa Surat Tugas (Kegiatan Rutin) —')
+                                    ->helperText('Pilih surat tugas yang relevan, atau kosongkan jika ini kegiatan rutin non-surat tugas.'),
+
+                                Forms\Components\Actions::make([
+                                    Forms\Components\Actions\Action::make('lepas_st_sekarang')
+                                        ->label('🗑️ Lepas Surat Tugas Sekarang')
+                                        ->color('danger')
+                                        ->visible(fn (DailyActivity $record) => !empty($record->surat_tugas_id))
+                                        ->requiresConfirmation()
+                                        ->modalHeading('Lepas Kaitan Surat Tugas?')
+                                        ->modalDescription('Kegiatan ini akan dikembalikan menjadi kegiatan rutin non-surat tugas.')
+                                        ->action(function (DailyActivity $record, Forms\Set $set) {
+                                            $record->update(['surat_tugas_id' => null]);
+                                            $set('surat_tugas_id', null);
+                                            Notification::make()
+                                                ->info()
+                                                ->title('Surat Tugas Dilepas')
+                                                ->body('Kegiatan kini tercatat sebagai Kegiatan Rutin (non-surat tugas).')
+                                                ->send();
+                                        }),
+                                ])->extraAttributes(['class' => 'mt-2']),
+                            ])
+                            ->action(function (DailyActivity $record, array $data) {
+                                $newStId = !empty($data['surat_tugas_id']) ? (int) $data['surat_tugas_id'] : null;
+                                $record->update(['surat_tugas_id' => $newStId]);
+
+                                if ($newStId) {
+                                    $st = SuratTugas::find($newStId);
+                                    Notification::make()
+                                        ->success()
+                                        ->title('Surat Tugas Ditautkan')
+                                        ->body('Kegiatan berhasil ditautkan ke ST No. ' . ($st?->nomor_surat ?: 'Draft'))
+                                        ->send();
+                                } else {
+                                    Notification::make()
+                                        ->info()
+                                        ->title('Surat Tugas Dilepas')
+                                        ->body('Kegiatan kini tercatat sebagai Kegiatan Rutin (non-surat tugas).')
+                                        ->send();
+                                }
+                            })
+                    ),
 
                 Tables\Columns\TextColumn::make('final_content')
                     ->label('Uraian Narasi Kegiatan')
@@ -686,6 +762,62 @@ class DailyActivityResource extends Resource
                             } catch (\Throwable $e) {
                                 Notification::make()->danger()->title('Gagal Membuat Dokumen')->body($e->getMessage())->send();
                             }
+                        }),
+
+                    Tables\Actions\Action::make('manage_wadah')
+                        ->label('Atur Wadah KIPAPP')
+                        ->icon('heroicon-m-folder')
+                        ->color('success')
+                        ->modalHeading('Atur Wadah KIPAPP Kegiatan')
+                        ->modalDescription('Pilih satu atau beberapa wadah KIPAPP untuk membundel bukti dukung ini, atau salin tautan berkas publiknya.')
+                        ->modalWidth(\Filament\Support\Enums\MaxWidth::Large)
+                        ->modalSubmitActionLabel('Simpan Pilihan Wadah')
+                        ->fillForm(function (DailyActivity $record): array {
+                            $reportIds = $record->sharedWorkReports->pluck('id')->toArray();
+                            if (empty($reportIds) && $record->shared_work_report_id) {
+                                $reportIds = [$record->shared_work_report_id];
+                            }
+                            return [
+                                'shared_work_reports' => $reportIds,
+                            ];
+                        })
+                        ->form([
+                            Forms\Components\Placeholder::make('activity_summary')
+                                ->label('Kegiatan')
+                                ->content(fn (DailyActivity $record) => $record->activity_date->translatedFormat('l, d F Y') . ' — ' . \Illuminate\Support\Str::limit($record->final_content, 120)),
+
+                            Forms\Components\Select::make('shared_work_reports')
+                                ->label('Pilih Wadah KIPAPP')
+                                ->multiple()
+                                ->searchable()
+                                ->preload()
+                                ->live()
+                                ->options(function (DailyActivity $record) {
+                                    $userId = $record->user_id ?: Auth::id();
+                                    return \App\Models\SharedWorkReport::where('user_id', $userId)
+                                        ->where('is_active', true)
+                                        ->latest()
+                                        ->pluck('title', 'id');
+                                })
+                                ->placeholder('Pilih satu atau beberapa wadah...')
+                                ->helperText('Pilih wadah yang ingin ditautkan. Anda juga bisa mengosongkan pilihan untuk mengeluarkan kegiatan dari semua wadah.')
+                                ->required(false),
+
+                            Forms\Components\ViewField::make('wadah_links_preview')
+                                ->view('filament.forms.components.wadah-modal-links'),
+                        ])
+                        ->action(function (DailyActivity $record, array $data) {
+                            $selectedIds = $data['shared_work_reports'] ?? [];
+                            $record->sharedWorkReports()->sync($selectedIds);
+                            $record->update([
+                                'shared_work_report_id' => !empty($selectedIds) ? (int) $selectedIds[0] : null,
+                            ]);
+
+                            Notification::make()
+                                ->success()
+                                ->title('Wadah KIPAPP Diperbarui')
+                                ->body('Tautan wadah kegiatan berhasil disimpan.')
+                                ->send();
                         }),
 
                     Tables\Actions\EditAction::make(),

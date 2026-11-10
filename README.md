@@ -54,6 +54,13 @@ composer dev
 
 ## Changelog
 
+### 2026-11-10
+- **Interaksi Modal Cepat pada Badge Surat Tugas & Smart Split-Chip Wadah KIPAPP**:
+  - **Aksi Kolom Surat Tugas (Klik Badge -> Modal Ubah / Lepas):** Badge Surat Tugas di tabel Bukti Dukung Harian kini dapat diklik langsung untuk membuka modal ringkas manajemen Surat Tugas. Pegawai dapat memilih Surat Tugas aktif melalui searchable dropdown, atau menekan tombol *"🗑️ Lepas Surat Tugas Sekarang"* untuk mengembalikan status kegiatan menjadi Kegiatan Rutin secara instan tanpa perlu masuk ke form edit penuh.
+  - **Smart Split-Chip Wadah KIPAPP & Modal Multi-Select (`activity-wadah-badges` & `manage_wadah`):**
+    - Mengubah tampilan badge wadah di tabel menjadi smart-chip dual-access: mengklik teks judul wadah atau badge `+ Masuk Wadah` akan membuka modal manajemen wadah, sedangkan mengklik ikon salin (📋) di samping judul langsung menyalin tautan publik ke clipboard (*instant 1-click copy*).
+    - **Modal Manajemen Wadah KIPAPP:** Menyediakan searchable multi-select untuk memilih, menambah, atau mengeluarkan kegiatan dari satu atau beberapa wadah aktif, serta menyajikan kartu ringkasan tautan berkas publik lengkap dengan tombol *"Salin Link"* (untuk E-Kinerja) dan tautan *"Buka Halaman Publik"* langsung di dalam modal.
+
 ### 2026-11-09
 - **Default Kosong Surat Tugas pada Laporan Bukti Dukung Telegram**:
   - Mengubah perilaku resolusi Surat Tugas di bot Telegram (`DailyActivityTelegramHandler`). Sebelumnya sistem mencoba mencocokkan substring `"st"`, `"penugasan"`, `"dinas"` secara otomatis ke Surat Tugas aktif, yang menyebabkan kata umum seperti `"wilkerstat"` atau `"penugasan"` tidak sengaja mengaitkan kegiatan harian ke Surat Tugas aktif hari itu.
