@@ -54,6 +54,12 @@ composer dev
 
 ## Changelog
 
+### 2026-11-11
+- **Perbaikan Layout Desain Sertifikat (Anti Tumpang Tindih Nama & Peran Survei)**:
+  - **Unifikasi Kontener Dinamis (`resources/views/certificates/pdf.blade.php`):** Menyatukan elemen Nama Penerima, Peran Petugas, Nama Survei, dan Tanggal Pelaksanaan ke dalam satu kontener blok terpadu (`box right`) beralur vertikal (*flow layout*), menggantikan penentuan posisi absolut terpisah (`top: 345px`, `top: 410px`, `top: 475px`) yang sebelumnya menyebabkan teks bertumpuk ketika nama memiliki gelar/multi-baris atau nama survei panjang.
+  - **Penyesuaian Skala Tipografi:** Menyesuaikan ukuran font nama menjadi `30px` (sebelumnya `40px`) dengan margin dinamis, sehingga nama panjang tetap tampil proporsional dalam 1 atau 2 baris tanpa menimpa baris teks peran petugas di bawahnya.
+  - **Pencegahan Tabrakan Tanggal:** Tanggal pelaksanaan survei kini otomatis bergeser turun mengikuti panjangnya nama survei secara fleksibel.
+
 ### 2026-11-10
 - **Penyederhanaan Tampilan QR Code Tanda Tangan pada PDF Surat Tugas**:
   - Memperbarui bagian tanda tangan pada template PDF Surat Tugas (`resources/views/surat-tugas/pdf_table_layout.blade.php`) ketika status dokumen `approved` agar hanya menampilkan QR Code verifikasi (`60pt x 60pt`) tanpa kotak teks *"Ditandatangani secara elektronik oleh ..."*, karena jabatan dan nama penandatangan sudah tercantum langsung di atas dan di bawah QR Code. Placeholder `[ DRAFT - MENUNGGU PERSETUJUAN ]` tetap dipertahankan untuk surat yang belum disetujui.

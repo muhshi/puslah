@@ -237,19 +237,24 @@
             Nomor: {{ $no }}
         </div>
 
-        <!-- NAMA (besar, kanan, dengan garis tipis di bawah) -->
-        <div class="box right fs-40 bold muted" style="top: 345px; left: 380px; width: 640px;">
-            {{ $user->profile->full_name ?? $user->name }}
-        </div>
+        <!-- KONTEN PENERIMA & SURVEI (Mengalir dinamis ke bawah, anti tumpang tindih) -->
+        <div class="box right" style="top: 325px; left: 340px; width: 700px;">
+            <!-- NAMA LENGKAP PENERIMA -->
+            <div class="bold muted" style="font-size: 30px; line-height: 1.25; margin-bottom: 10px;">
+                {{ $user->profile->full_name ?? $user->name }}
+            </div>
 
-        <!-- Deskripsi peran & nama survei (kanan tengah) -->
-        <div class="box right fs-20 muted" style="top: 410px; left: 500px; width: 520px;">
-            Petugas <span class="bold">{{ $survey->name }}</span>
-        </div>
+            <!-- PERAN & NAMA SURVEI -->
+            <div class="muted" style="font-size: 16px; line-height: 1.35; margin-bottom: 8px;">
+                Petugas <span class="bold">{{ $survey->name }}</span>
+            </div>
 
-        <!-- Tanggal pelaksanaan (lebih kecil, di bawahnya) -->
-        <div class="box right fs-12 muted" style="top: 475px; left: 660px; width: 360px;">
-            {{ optional($survey->start_date)->format('d M Y') }} — {{ optional($survey->end_date)->format('d M Y') }}
+            <!-- TANGGAL PELAKSANAAN SURVEI -->
+            @if ($survey->start_date || $survey->end_date)
+                <div class="muted" style="font-size: 12px; font-weight: 500;">
+                    {{ optional($survey->start_date)->translatedFormat('d M Y') }} — {{ optional($survey->end_date)->translatedFormat('d M Y') }}
+                </div>
+            @endif
         </div>
 
         <!-- Verifikasi (tepat di bawah QR) -->
