@@ -237,19 +237,21 @@
             Nomor: {{ $no }}
         </div>
 
-        <!-- KONTEN PENERIMA & SURVEI (Mengalir dinamis ke bawah, anti tumpang tindih) -->
-        <div class="box right" style="top: 325px; left: 340px; width: 700px;">
-            <!-- NAMA LENGKAP PENERIMA -->
-            <div class="bold muted" style="font-size: 30px; line-height: 1.25; margin-bottom: 10px;">
+        <!-- 1. NAMA PENERIMA (Tepat di atas garis underline template) -->
+        <div class="box right fs-30 bold muted" style="top: 350px; left: 340px; width: 700px;">
+            <div style="font-size: 30px; line-height: 1.2;">
                 {{ $user->profile->full_name ?? $user->name }}
             </div>
+        </div>
 
-            <!-- PERAN & NAMA SURVEI -->
+        <!-- 2. PERAN, NAMA SURVEI & TANGGAL (Tepat di bawah garis underline template, mengalir dinamis) -->
+        <div class="box right" style="top: 420px; left: 340px; width: 700px;">
+            <!-- Peran & Nama Survei -->
             <div class="muted" style="font-size: 16px; line-height: 1.35; margin-bottom: 8px;">
                 Petugas <span class="bold">{{ $survey->name }}</span>
             </div>
 
-            <!-- TANGGAL PELAKSANAAN SURVEI -->
+            <!-- Tanggal Pelaksanaan Survei -->
             @if ($survey->start_date || $survey->end_date)
                 <div class="muted" style="font-size: 12px; font-weight: 500;">
                     {{ optional($survey->start_date)->translatedFormat('d M Y') }} — {{ optional($survey->end_date)->translatedFormat('d M Y') }}

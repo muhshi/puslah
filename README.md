@@ -55,10 +55,10 @@ composer dev
 ## Changelog
 
 ### 2026-11-11
-- **Perbaikan Layout Desain Sertifikat (Anti Tumpang Tindih Nama & Peran Survei)**:
-  - **Unifikasi Kontener Dinamis (`resources/views/certificates/pdf.blade.php`):** Menyatukan elemen Nama Penerima, Peran Petugas, Nama Survei, dan Tanggal Pelaksanaan ke dalam satu kontener blok terpadu (`box right`) beralur vertikal (*flow layout*), menggantikan penentuan posisi absolut terpisah (`top: 345px`, `top: 410px`, `top: 475px`) yang sebelumnya menyebabkan teks bertumpuk ketika nama memiliki gelar/multi-baris atau nama survei panjang.
-  - **Penyesuaian Skala Tipografi:** Menyesuaikan ukuran font nama menjadi `30px` (sebelumnya `40px`) dengan margin dinamis, sehingga nama panjang tetap tampil proporsional dalam 1 atau 2 baris tanpa menimpa baris teks peran petugas di bawahnya.
-  - **Pencegahan Tabrakan Tanggal:** Tanggal pelaksanaan survei kini otomatis bergeser turun mengikuti panjangnya nama survei secara fleksibel.
+- **Penyelarasan Presisi Garis Underline & Layout Sertifikat**:
+  - **Penyelarasan Garis Blanko Template (`resources/views/certificates/pdf.blade.php`):** Menyesuaikan posisi vertikal Nama Penerima (`top: 350px`) agar bertengger pas dan presisi tepat di atas garis underline bawaan blanko sertifikat (`y ≈ 404px`).
+  - **Pemisahan Blok Peran & Survei di Bawah Garis:** Menempatkan blok Peran Petugas, Nama Survei, dan Tanggal Pelaksanaan di `top: 420px` (di bawah garis underline) dengan alur dinamis, sehingga teks peran survei tidak lagi terpotong/melintang di atas garis underline maupun bertabrakan dengan nama penerima.
+  - **Skala Tipografi Proporsional:** Menggunakan font-size `30px` untuk nama penerima agar nama dengan gelar panjang tetap rapi dan seimbang di antara teks *"Diberikan Kepada :"* dan garis underline.
 
 ### 2026-11-10
 - **Penyederhanaan Tampilan QR Code Tanda Tangan pada PDF Surat Tugas**:
