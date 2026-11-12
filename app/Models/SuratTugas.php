@@ -233,7 +233,23 @@ class SuratTugas extends Model
             $missingByMonth[$month] = self::formatSkippedNumbers($numbers);
         }
 
-        return $missingByMonth;
+        return self::sortMonthsChronologically($missingByMonth);
+    }
+
+    /**
+     * Sort month-keyed array in chronological Indonesian month order.
+     */
+    public static function sortMonthsChronologically(array $byMonth): array
+    {
+        $monthOrder = [
+            'Januari' => 1, 'Februari' => 2, 'Maret' => 3, 'April' => 4,
+            'Mei' => 5, 'Juni' => 6, 'Juli' => 7, 'Agustus' => 8,
+            'September' => 9, 'Oktober' => 10, 'November' => 11, 'Desember' => 12,
+        ];
+
+        uksort($byMonth, fn ($a, $b) => ($monthOrder[$a] ?? 99) <=> ($monthOrder[$b] ?? 99));
+
+        return $byMonth;
     }
 
     /**

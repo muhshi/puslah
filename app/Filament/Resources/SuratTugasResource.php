@@ -179,19 +179,24 @@ class SuratTugasResource extends Resource
                             ->required()
                             ->default(now())
                             ->live()
-                            ->afterStateUpdated(function (Get $get, Set $set, $state) {
-                                // If year changes, re-fetch max sequence for that year
+                            ->afterStateUpdated(function (Get $get, Set $set, $state, ?SuratTugas $record) {
+                                // Only auto-assign next sequence on create, or if the year actually changed
                                 if ($state) {
-                                    $year = \Carbon\Carbon::parse($state)->year;
-                                    $next = SuratTugas::getNextNomorUrut($year);
-                                    $set('nomor_urut', $next);
+                                    $newYear = \Carbon\Carbon::parse($state)->year;
+                                    $oldYear = $record?->tanggal ? \Carbon\Carbon::parse($record->tanggal)->year : null;
 
-                                    // For SPPD
-                                    $nextSppd = SuratTugas::getNextNomorUrutSppd($year);
-                                    $set('nomor_urut_sppd', $nextSppd);
+                                    if (!$record || $newYear !== $oldYear) {
+                                        $next = SuratTugas::getNextNomorUrut($newYear);
+                                        $set('nomor_urut', $next);
+                                        self::updateNomorSurat($get, $set);
+
+                                        if (!$record || !$record->sppd) {
+                                            $nextSppd = SuratTugas::getNextNomorUrutSppd($newYear);
+                                            $set('nomor_urut_sppd', $nextSppd);
+                                            self::updateNomorSppd($get, $set);
+                                        }
+                                    }
                                 }
-                                self::updateNomorSurat($get, $set);
-                                self::updateNomorSppd($get, $set);
                             }),
                         Forms\Components\Toggle::make('abaikan_validasi')
                             ->label('Abaikan Validasi Bentrok Tanggal')
@@ -221,7 +226,6 @@ class SuratTugasResource extends Resource
                     Forms\Components\Toggle::make('is_sppd')
                         ->label('Memerlukan SPPD?')
                         ->default(false)
-                        ->dehydrated(false) // Don't save this field automatically
                         ->live(),
 
                     Forms\Components\Group::make()->schema([
@@ -242,7 +246,7 @@ class SuratTugasResource extends Resource
                             })
                             ->live(onBlur: true)
                             ->afterStateUpdated(function (\Filament\Forms\Get $get, \Filament\Forms\Set $set, $state) {
-                                if (preg_match('/(?:B-)?0*(\d+)\//', $state, $matches)) {
+                                if (preg_match('/^(?:[A-Za-z]+-)?0*(\d+)\//', (string) $state, $matches)) {
                                     $set('nomor_urut_sppd', (int) $matches[1]);
                                 }
                             })
@@ -257,7 +261,7 @@ class SuratTugasResource extends Resource
                             ->default(function () {
                                 return SuratTugas::getNextNomorUrutSppd(now()->year);
                             })
-                            ->live()
+                            ->live(onBlur: true)
                             ->afterStateUpdated(function (Get $get, Set $set) {
                                 self::updateNomorSppd($get, $set);
                             }),
@@ -828,8 +832,13 @@ class SuratTugasResource extends Resource
 
     protected static function updateNomorSppd(Get $get, Set $set): void
     {
+        $urut = $get('nomor_urut_sppd');
+        if (blank($urut)) {
+            return;
+        }
+
         $nomor = SppdService::formatNomorSppd(
-            $get('nomor_urut_sppd') ?? 0,
+            $urut,
             $get('kode_klasifikasi_sppd') ?? 'KP.650',
             $get('tanggal') ? \Carbon\Carbon::parse($get('tanggal'))->year : now()->year
         );

@@ -56,9 +56,28 @@ class EditSuratTugas extends EditRecord
         }
 
         $this->is_sppd = $data['is_sppd'] ?? false;
+        $existingSppd = $this->record->sppd;
+        $nomorSppd = $data['nomor_sppd'] ?? null;
+        $nomorUrutSppd = $data['nomor_urut_sppd'] ?? null;
+
+        if ($this->is_sppd) {
+            if ($nomorSppd && $nomorSppd !== $existingSppd?->nomor_sppd) {
+                if (preg_match('/^(?:[A-Za-z]+-)?0*(\d+)\//', (string) $nomorSppd, $matches)) {
+                    $nomorUrutSppd = (int) $matches[1];
+                }
+            } elseif ($nomorUrutSppd && (int) $nomorUrutSppd !== (int) $existingSppd?->nomor_urut_sppd) {
+                $year = isset($data['tanggal']) ? \Carbon\Carbon::parse($data['tanggal'])->year : now()->year;
+                $nomorSppd = \App\Services\SppdService::formatNomorSppd(
+                    $nomorUrutSppd,
+                    $data['kode_klasifikasi_sppd'] ?? 'KP.650',
+                    $year
+                );
+            }
+        }
+
         $this->sppdData = [
-            'nomor_sppd' => $data['nomor_sppd'] ?? null,
-            'nomor_urut_sppd' => $data['nomor_urut_sppd'] ?? null,
+            'nomor_sppd' => $nomorSppd,
+            'nomor_urut_sppd' => $nomorUrutSppd,
             'kode_klasifikasi_sppd' => $data['kode_klasifikasi_sppd'] ?? null,
             'tingkat_perjalanan_dinas' => $data['tingkat_perjalanan_dinas'] ?? null,
             'alat_angkutan' => $data['alat_angkutan'] ?? null,

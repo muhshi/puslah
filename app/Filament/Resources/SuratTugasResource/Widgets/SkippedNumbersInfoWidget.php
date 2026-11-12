@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\SuratTugasResource\Widgets;
 
 use App\Models\BlockedSuratTugasNumber;
+use App\Models\Sppd;
 use App\Models\SuratTugas;
 use App\Models\Survey;
 use App\Models\SurveyUser;
@@ -29,14 +30,36 @@ class SkippedNumbersInfoWidget extends Widget implements HasActions, HasForms
 
     public int $selectedYear;
 
+    public string $activeTab = 'surat_tugas';
+
     public function mount(): void
     {
         $this->selectedYear = now()->year;
     }
 
+    public function setActiveTab(string $tab): void
+    {
+        $this->activeTab = in_array($tab, ['surat_tugas', 'sppd']) ? $tab : 'surat_tugas';
+    }
+
     public function getSkippedNumbersByMonth(): array
     {
         return SuratTugas::getSkippedNumbersByMonth($this->selectedYear);
+    }
+
+    public function getSkippedNumbersCount(): int
+    {
+        return count(SuratTugas::getSkippedNumbers($this->selectedYear));
+    }
+
+    public function getSppdSkippedNumbersByMonth(): array
+    {
+        return Sppd::getSkippedNumbersByMonth($this->selectedYear);
+    }
+
+    public function getSppdSkippedNumbersCount(): int
+    {
+        return count(Sppd::getSkippedNumbers($this->selectedYear));
     }
 
     public function getBlockedNumbersGrouped(): array
