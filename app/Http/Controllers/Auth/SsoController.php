@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Socialite\Facades\Socialite;
 
 class SsoController extends Controller
@@ -77,6 +80,55 @@ class SsoController extends Controller
         $ssoNip = $rawData['nip'] ?? null;
         if (empty($profile->nip) && !empty($ssoNip)) {
             $updateData['nip'] = $ssoNip;
+        }
+
+        // Sinkronkan Foto Profil / Avatar dari SIPETRA
+        $rawAvatar = $ssoUser->getAvatar()
+            ?? $rawData['avatar']
+            ?? $rawData['avatar_url']
+            ?? $rawData['photo']
+            ?? $rawData['photo_url']
+            ?? $rawData['foto']
+            ?? $rawData['profile_photo_url']
+            ?? $rawData['avatar_path']
+            ?? null;
+
+        if (!empty($rawAvatar)) {
+            $fullAvatarUrl = $rawAvatar;
+            if (!str_starts_with($rawAvatar, 'http://') && !str_starts_with($rawAvatar, 'https://')) {
+                $sipetraBase = rtrim(config('services.sipetra.base_url', 'https://bpsdemak.com'), '/');
+                $fullAvatarUrl = $sipetraBase . '/' . ltrim($rawAvatar, '/');
+            }
+
+            try {
+                // Unduh avatar ke storage disk public Puslah agar terintegrasi penuh dengan Filament
+                $avatarResponse = Http::timeout(10)->get($fullAvatarUrl);
+                if ($avatarResponse->successful()) {
+                    $contentType = $avatarResponse->header('Content-Type');
+                    $ext = 'jpg';
+                    if (str_contains($contentType, 'png')) {
+                        $ext = 'png';
+                    } elseif (str_contains($contentType, 'webp')) {
+                        $ext = 'webp';
+                    }
+
+                    // Hapus avatar lama jika file lokal
+                    if (!empty($profile->avatar_path) && !str_starts_with($profile->avatar_path, 'http')) {
+                        Storage::disk('public')->delete($profile->avatar_path);
+                    }
+
+                    $filename = 'avatars/sipetra_' . $user->id . '_' . time() . '.' . $ext;
+                    Storage::disk('public')->put($filename, $avatarResponse->body());
+                    $updateData['avatar_path'] = $filename;
+                } else {
+                    // Fallback: simpan URL langsung jika respons download bukan 200
+                    $updateData['avatar_path'] = $fullAvatarUrl;
+                }
+            } catch (\Exception $e) {
+                Log::warning('Gagal mengunduh avatar SIPETRA: ' . $e->getMessage());
+                // Fallback: simpan URL langsung jika request gagal
+                $updateData['avatar_path'] = $fullAvatarUrl;
+            }
         }
         
         $profile->update($updateData);

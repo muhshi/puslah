@@ -5,17 +5,19 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 
 use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasAvatar;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 // use Laravel\Passport\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
 
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable implements FilamentUser, HasAvatar
 {
     use HasFactory, Notifiable, HasRoles, LogsActivity; // HasApiTokens,
 
@@ -105,6 +107,17 @@ class User extends Authenticatable implements FilamentUser
         return $this->roles()->exists();
     }
 
+    public function getFilamentAvatarUrl(): ?string
+    {
+        $avatar = $this->profile?->avatar_path;
+        if (empty($avatar)) {
+            return null;
+        }
 
+        if (str_starts_with($avatar, 'http://') || str_starts_with($avatar, 'https://')) {
+            return $avatar;
+        }
 
+        return Storage::disk('public')->url($avatar);
+    }
 }

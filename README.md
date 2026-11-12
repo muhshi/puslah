@@ -54,6 +54,11 @@ composer dev
 
 ## Changelog
 
+### 2026-11-12
+- **Sinkronisasi Foto Profil / Avatar dari SIPETRA SSO**:
+  - **Auto-Download & Cache Avatar (`SsoController.php`):** Menambahkan mapping foto profil/avatar dari response OAuth2 SIPETRA (`$ssoUser->getAvatar()`, `$rawData['avatar']`, dll) pada proses callback SSO. Sistem secara otomatis mengunduh file gambar ke storage disk `public` Puslah (`avatars/sipetra_{user_id}_{timestamp}.{ext}`) dengan fallback URL yang aman, serta membersihkan file avatar lama saat sinkronisasi ulang.
+  - **Dukungan Native Avatar Panel Filament (`User.php`):** Mengimplementasikan kontrak `Filament\Models\Contracts\HasAvatar` dan method `getFilamentAvatarUrl()` pada model `User`, sehingga foto profil yang tersinkron langsung tampil resmi di pojok kanan atas panel Filament serta form Profil Saya (`ProfileMe`).
+
 ### 2026-11-11
 - **Penyelarasan Presisi Garis Underline & Layout Sertifikat**:
   - **Penyelarasan Garis Blanko Template (`resources/views/certificates/pdf.blade.php`):** Menyesuaikan posisi vertikal Nama Penerima (`top: 350px`) agar bertengger pas dan presisi tepat di atas garis underline bawaan blanko sertifikat (`y ≈ 404px`).
