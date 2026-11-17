@@ -54,6 +54,13 @@ composer dev
 
 ## Changelog
 
+### 2026-11-17
+- **Perbaikan Pemilih Titik di Peta (Map Picker) Bukti Dukung Harian**:
+  - **Inisialisasi Peta Leaflet & ResizeObserver (`map-with-search.blade.php`, `fallback-scripts.blade.php`, `AdminPanelProvider.php`):** Mendaftarkan library Leaflet CSS dan JS secara resmi di panel Filament serta menyediakan fallback dynamic loader. Mengatasi kegagalan eksekusi script external di dalam modal Livewire sehingga peta Leaflet kini langsung terbuka secara mulus. Menambahkan `ResizeObserver` untuk memastikan `map.invalidateSize()` otomatis menyesuaikan ukuran kontainer saat modal selesai dibuka/animasi.
+  - **Pencarian Wilayah Instan (Nominatim OpenStreetMap):** Mengintegrasikan `<x-filament::input.wrapper>` dan `<x-filament::button>` native Filament v3 pada kolom pencarian lokasi beserta dropdown hasil yang mengambang rapi di atas peta (`z-index: 1050`). Memperbaiki error handling pencarian dan navigasi otomatis ke koordinat lokasi yang dipilih.
+  - **Deteksi GPS Saya Responsif:** Menambahkan status loading interaktif (*"Mencari GPS..."*) pada tombol **GPS Saya**, dukungan fallback penanganan izin/error geolocation yang ramah pengguna, dan penguncian posisi peta secara otomatis ke titik akurat perangkat pengguna.
+  - **Perbaikan Visual Tombol & Pre-fill Form Koordinat (`DailyActivityResource.php`):** Menambahkan `->button()` eksplisit pada aksi modal `pick_coordinate_map` di form repeater foto, mengganti styling tombol mentah dengan native Filament component sehingga teks tombol tidak lagi hilang/transparan, serta menambahkan `fillForm()` agar koordinat latitude/longitude foto yang sudah tersimpan otomatis terisi dan menjadi titik awal peta saat modal dibuka.
+
 ### 2026-11-12
 - **Monitor Nomor SPPD, Perbaikan Edit Nomor SPPD, & Pembaruan Desain Card Monitor Nomor**:
   - **Monitor Nomor Terlewat SPPD (`Sppd.php`, `SkippedNumbersInfoWidget.php`):** Menambahkan deteksi nomor urut SPPD yang terlewat/belum terpakai per bulan (`Sppd::getSkippedNumbers()` & `Sppd::getSkippedNumbersByMonth()`) serta tab switcher **Surat Tugas | SPPD** dengan badge jumlah nomor terlewat di widget `Monitor Nomor Surat`. Sekaligus memperbaiki pengurutan bulan agar selalu kronologis (`Januari` s/d `Desember`) pada Surat Tugas dan SPPD.

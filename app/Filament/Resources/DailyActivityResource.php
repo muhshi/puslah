@@ -298,10 +298,21 @@ class DailyActivityResource extends Resource
                                                 ->label('Pilih Titik di Peta 📍')
                                                 ->icon('heroicon-m-map-pin')
                                                 ->color('info')
+                                                ->button()
                                                 ->modalHeading('Pilih Titik Koordinat Lokasi di Peta')
                                                 ->modalDescription('Cari nama wilayah/desa/kecamatan atau klik & geser penanda (marker) pada peta.')
                                                 ->modalWidth(\Filament\Support\Enums\MaxWidth::FourExtraLarge)
                                                 ->modalSubmitActionLabel('Gunakan Titik Ini 📍')
+                                                ->fillForm(function (Forms\Get $get) {
+                                                    $lat = (float) ($get('latitude') ?: -6.894561);
+                                                    $lng = (float) ($get('longitude') ?: 110.637492);
+                                                    return [
+                                                        'map_location' => [
+                                                            'lat' => $lat,
+                                                            'lng' => $lng,
+                                                        ],
+                                                    ];
+                                                })
                                                 ->form([
                                                     \App\Filament\Forms\Components\MapWithSearch::make('map_location')
                                                         ->label('Peta & Pencarian Wilayah')
@@ -313,9 +324,13 @@ class DailyActivityResource extends Resource
                                                         }),
                                                 ])
                                                 ->action(function (array $data, Forms\Set $set) {
-                                                    if (!empty($data['map_location']['lat']) && !empty($data['map_location']['lng'])) {
-                                                        $set('latitude', round((float)$data['map_location']['lat'], 8));
-                                                        $set('longitude', round((float)$data['map_location']['lng'], 8));
+                                                    $loc = $data['map_location'] ?? [];
+                                                    if (is_string($loc)) {
+                                                        $loc = json_decode($loc, true) ?: [];
+                                                    }
+                                                    if (!empty($loc['lat']) && !empty($loc['lng'])) {
+                                                        $set('latitude', round((float)$loc['lat'], 8));
+                                                        $set('longitude', round((float)$loc['lng'], 8));
                                                     }
                                                 }),
                                         ])->extraAttributes(['class' => 'my-3']),
