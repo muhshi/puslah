@@ -101,7 +101,7 @@
         </div>
 
         {{-- Map Container --}}
-        <div class="relative w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm bg-gray-100 dark:bg-gray-900" style="height: 400px; min-height: 400px;">
+        <div wire:ignore class="relative w-full rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm bg-gray-100 dark:bg-gray-900" style="height: 400px; min-height: 400px;">
             <div x-ref="mapContainer" class="w-full h-full z-0"></div>
         </div>
 
@@ -195,6 +195,10 @@
                                 this.map = null;
                             }
 
+                            if (container._leaflet_id) {
+                                delete container._leaflet_id;
+                            }
+
                             try {
                                 delete L.Icon.Default.prototype._getIconUrl;
                                 L.Icon.Default.mergeOptions({
@@ -280,7 +284,7 @@
                         syncState(lat, lng) {
                             const data = { lat: lat, lng: lng };
                             if (config.statePath && this.$wire) {
-                                this.$wire.set(config.statePath, data);
+                                this.$wire.set(config.statePath, data, false);
                             }
                         },
 

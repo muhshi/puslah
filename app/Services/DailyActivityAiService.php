@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Settings\SystemSettings;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Exception;
@@ -299,5 +300,61 @@ EOT;
         }
 
         throw new Exception("Gagal membuat ringkasan AI: " . $lastError);
+    }
+
+    /**
+     * Ekstrak tanggal kegiatan dari teks catatan jika disebutkan secara eksplisit maupun natural oleh pegawai.
+     */
+    public function extractDateFromText(string $text): ?Carbon
+    {
+        $apiKey = $this->getApiKey();
+        if (empty($apiKey) || empty(trim($text))) {
+            return null;
+        }
+
+        $currentDate = Carbon::today()->toDateString();
+        $prompt = <<<EOT
+Analisis teks catatan kegiatan berikut:
+"{$text}"
+
+Tentukan tanggal pelaksanaan kegiatan yang dimaksud dalam catatan tersebut.
+Tanggal hari ini sebagai referensi waktu: {$currentDate}.
+Jika dalam catatan ada penyebutan tanggal (misal: "13 Oktober", "kemarin", "tgl 14", "13-14 okt", "2 hari lalu"), konversikan ke format ISO YYYY-MM-DD.
+Jika tidak ada tanggal spesifik disebutkan dalam catatan (hanya menceritakan pekerjaan rutin hari ini tanpa keterangan waktu khusus), jawab: NONE.
+
+Keluarkan HANYA tanggal YYYY-MM-DD atau NONE, tanpa penjelasan apapun.
+EOT;
+
+        try {
+            $model = $this->getModel();
+            $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
+            $res = Http::withHeaders(['Content-Type' => 'application/json'])
+                ->timeout(12)
+                ->post($endpoint, [
+                    'contents' => [
+                        [
+                            'role' => 'user',
+                            'parts' => [['text' => $prompt]]
+                        ]
+                    ],
+                    'generationConfig' => [
+                        'temperature' => 0.0,
+                    ]
+                ]);
+
+            if ($res->successful()) {
+                $ans = trim($res->json('candidates.0.content.parts.0.text') ?? '');
+                if (preg_match('/(\d{4}-\d{2}-\d{2})/', $ans, $m)) {
+                    $d = Carbon::parse($m[1])->startOfDay();
+                    if ($d->isValid() && $d->year >= 2020 && $d->lte(Carbon::today()->addDays(7))) {
+                        return $d;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::info('AI date extraction skipped: ' . $e->getMessage());
+        }
+
+        return null;
     }
 }

@@ -378,11 +378,14 @@ class DailyActivityTelegramHandler
                 Cache::put("tg_recent_activity_{$user->id}", $candidate->id, 90);
 
                 $totalAtt = $candidate->attachments()->count();
+                $dateBadge = "\n📅 *Tanggal Kegiatan:* " . $candidate->activity_date->translatedFormat('l, d F Y') . (!$candidate->activity_date->isToday() ? " _(Backdate)_" : "");
+
                 $bot->sendMessage(
                     text: "📝 *Catatan Berhasil Ditambahkan ke Bukti Dukung!* 🚀\n\n" .
                     "📝 *Catatan:* \"{$rawText}\"\n" .
                     "✨ *Narasi AI:* \"{$formalContent}\"\n" .
-                    "🖼️ *Lampiran Terkait:* {$totalAtt} berkas\n\n" .
+                    "🖼️ *Lampiran Terkait:* {$totalAtt} berkas" .
+                    $dateBadge . "\n\n" .
                     "✅ _Kegiatan diperbarui otomatis di Puslah._",
                     chat_id: $bot->chatId(),
                     parse_mode: 'Markdown'
@@ -1406,8 +1409,11 @@ class DailyActivityTelegramHandler
     /**
      * Parse tanggal kegiatan secara cerdas (Natural Date Parsing):
      * - Mendukung kata relatif: "kemarin", "kemarin lusa", "X hari yang lalu"
-     * - Mendukung pola nama bulan Indo: "28 Oktober", "tgl 5 mei 2026", "28 okt"
+     * - Mendukung rentang tanggal: "13 dan 14 oktober", "13-14 okt"
+     * - Mendukung pola nama bulan Indo/Inggris: "28 Oktober", "tgl 5 mei 2026", "28 okt", "13-okt"
      * - Mendukung pola numerik: "28/10", "28-10-2026", "28.10.2026"
+     * - Mendukung pola hanya tanggal: "tgl 13", "tanggal 14"
+     * - Deteksi AI pintar dengan Gemini jika format bahasa alami belum tercover regex
      * - Fallback ke metadata EXIF foto jika foto diambil di hari lampau
      * - Default ke Carbon::today()
      */
@@ -1433,24 +1439,36 @@ class DailyActivityTelegramHandler
             }
         }
 
-        // 4. Pola Nama Bulan Indonesia
+        // 4. Pola Nama Bulan Indonesia & Inggris (Lengkap dan Singkatan)
         $monthMap = [
-            'januari' => 1, 'jan' => 1,
-            'februari' => 2, 'feb' => 2,
-            'maret' => 3, 'mar' => 3,
+            'januari' => 1, 'jan' => 1, 'january' => 1,
+            'februari' => 2, 'feb' => 2, 'february' => 2,
+            'maret' => 3, 'mar' => 3, 'march' => 3,
             'april' => 4, 'apr' => 4,
-            'mei' => 5,
-            'juni' => 6, 'jun' => 6,
-            'juli' => 7, 'jul' => 7,
-            'agustus' => 8, 'agu' => 8, 'ags' => 8,
-            'september' => 9, 'sep' => 9,
-            'oktober' => 10, 'okt' => 10,
-            'november' => 11, 'nov' => 11,
-            'desember' => 12, 'des' => 12,
+            'mei' => 5, 'may' => 5,
+            'juni' => 6, 'jun' => 6, 'june' => 6,
+            'juli' => 7, 'jul' => 7, 'july' => 7,
+            'agustus' => 8, 'agu' => 8, 'ags' => 8, 'agust' => 8, 'august' => 8, 'aug' => 8,
+            'september' => 9, 'sep' => 9, 'sept' => 9,
+            'oktober' => 10, 'okt' => 10, 'october' => 10, 'oct' => 10,
+            'november' => 11, 'nov' => 11, 'nopember' => 11, 'nop' => 11,
+            'desember' => 12, 'des' => 12, 'december' => 12, 'dec' => 12,
         ];
         $monthPattern = implode('|', array_keys($monthMap));
 
-        if (preg_match('/(?:tgl|tanggal)?\s*(\d{1,2})\s+(' . $monthPattern . ')(?:\s+(\d{4}))?/i', $lower, $m)) {
+        // 4a. Pola Rentang Tanggal: "13 dan 14 oktober", "13 - 14 oktober", "13 s/d 14 okt"
+        if (preg_match('/(?:tgl\.?|tanggal)?\s*(\d{1,2})\s*(?:-|s\/d|sampai|dan|&)\s*(\d{1,2})[\s\-\.\/]+(' . $monthPattern . ')(?:[\s\-\.\/]+(\d{4}))?/i', $lower, $m)) {
+            $day = (int) $m[1];
+            $month = $monthMap[strtolower($m[3])] ?? null;
+            $year = !empty($m[4]) ? (int) $m[4] : (int) date('Y');
+
+            if ($month && checkdate($month, $day, $year)) {
+                return Carbon::createFromDate($year, $month, $day)->startOfDay();
+            }
+        }
+
+        // 4b. Pola Tanggal + Bulan: "13 oktober", "tgl 13 okt", "13-okt", "13.oktober.2026", "tanggal: 14 oktober"
+        if (preg_match('/(?:tgl\.?|tanggal)?\s*(\d{1,2})[\s\-\.\/]+(' . $monthPattern . ')(?:[\s\-\.\/]+(\d{4}))?/i', $lower, $m)) {
             $day = (int) $m[1];
             $month = $monthMap[strtolower($m[2])] ?? null;
             $year = !empty($m[3]) ? (int) $m[3] : (int) date('Y');
@@ -1460,8 +1478,19 @@ class DailyActivityTelegramHandler
             }
         }
 
+        // 4c. Pola Terbalik: "oktober 13", "bulan oktober tgl 13"
+        if (preg_match('/(' . $monthPattern . ')[\s\-\.\/]+(?:tgl\.?|tanggal)?\s*(\d{1,2})(?:[\s\-\.\/]+(\d{4}))?/i', $lower, $m)) {
+            $day = (int) $m[2];
+            $month = $monthMap[strtolower($m[1])] ?? null;
+            $year = !empty($m[3]) ? (int) $m[3] : (int) date('Y');
+
+            if ($month && checkdate($month, $day, $year)) {
+                return Carbon::createFromDate($year, $month, $day)->startOfDay();
+            }
+        }
+
         // 5. Pola Numerik: "28/10", "28/10/2026", "28-10-2026", "28.10.2026"
-        if (preg_match('/(?:tgl|tanggal)?\s*(\d{1,2})[\/\-\.](\d{1,2})(?:[\/\-\.](\d{2,4}))?/i', $lower, $m)) {
+        if (preg_match('/(?:tgl\.?|tanggal)?\s*(\d{1,2})[\/\-\.](\d{1,2})(?:[\/\-\.](\d{2,4}))?/i', $lower, $m)) {
             $day = (int) $m[1];
             $month = (int) $m[2];
             $rawYear = !empty($m[3]) ? (int) $m[3] : (int) date('Y');
@@ -1472,7 +1501,30 @@ class DailyActivityTelegramHandler
             }
         }
 
-        // 6. Fallback EXIF metadata foto jika diambil sebelum hari ini (backdate foto asli)
+        // 5b. Pola Hanya Tanggal: "tgl 13", "tanggal 14"
+        if (preg_match('/\b(?:tgl\.?|tanggal)\s*(\d{1,2})\b/i', $lower, $m)) {
+            $day = (int) $m[1];
+            if ($day >= 1 && $day <= 31) {
+                $today = Carbon::today();
+                $targetMonth = ($day <= $today->day) ? $today->month : $today->copy()->subMonth()->month;
+                $targetYear = ($day <= $today->day) ? $today->year : $today->copy()->subMonth()->year;
+                if (checkdate($targetMonth, $day, $targetYear)) {
+                    return Carbon::createFromDate($targetYear, $targetMonth, $day)->startOfDay();
+                }
+            }
+        }
+
+        // 6. Coba deteksi cerdas dengan Gemini AI jika teks memiliki indikasi penyebutan waktu
+        if (!empty($lower) && preg_match('/(?:tgl|tanggal|bulan|hari|kemarin|lalu|senin|selasa|rabu|kamis|jumat|sabtu|minggu|\d{1,2})/i', $lower)) {
+            try {
+                $aiDate = app(DailyActivityAiService::class)->extractDateFromText($text);
+                if ($aiDate instanceof Carbon) {
+                    return $aiDate;
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        // 7. Fallback EXIF metadata foto jika diambil sebelum hari ini (backdate foto asli)
         if ($exifCapturedAt instanceof Carbon && $exifCapturedAt->lt(Carbon::today())) {
             return $exifCapturedAt->copy()->startOfDay();
         }

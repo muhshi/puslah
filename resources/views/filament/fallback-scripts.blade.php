@@ -1,8 +1,8 @@
 {{-- JANGAN panggil @filamentScripts di sini. Panel sudah manggil itu. --}}
-<script src="{{ asset('js/filament/forms/components/file-upload.js') }}" data-navigate-track></script>
-<script src="{{ asset('js/filament/forms/components/date-time-picker.js') }}" data-navigate-track></script>
-<script src="{{ asset('js/filament/forms/components/textarea.js') }}" data-navigate-track></script>
-<script src="{{ asset('js/filament/widgets/components/chart.js') }}" data-navigate-track></script>
+<script type="module" src="{{ asset('js/filament/forms/components/file-upload.js') }}" data-navigate-track></script>
+<script type="module" src="{{ asset('js/filament/forms/components/date-time-picker.js') }}" data-navigate-track></script>
+<script type="module" src="{{ asset('js/filament/forms/components/textarea.js') }}" data-navigate-track></script>
+<script type="module" src="{{ asset('js/filament/widgets/components/chart.js') }}" data-navigate-track></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
     if (typeof window.mapWithSearchPicker === 'undefined') {
@@ -79,6 +79,10 @@
                             this.map.remove();
                         } catch (e) {}
                         this.map = null;
+                    }
+
+                    if (container._leaflet_id) {
+                        delete container._leaflet_id;
                     }
 
                     try {
@@ -166,7 +170,7 @@
                 syncState(lat, lng) {
                     const data = { lat: lat, lng: lng };
                     if (config.statePath && this.$wire) {
-                        this.$wire.set(config.statePath, data);
+                        this.$wire.set(config.statePath, data, false);
                     }
                 },
 
