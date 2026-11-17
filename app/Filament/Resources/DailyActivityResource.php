@@ -59,12 +59,45 @@ class DailyActivityResource extends Resource
                         Forms\Components\Hidden::make('user_id')
                             ->default(fn () => Auth::id()),
 
+                        Forms\Components\Toggle::make('is_range')
+                            ->label('Isi Rentang Tanggal (Multi-Hari)')
+                            ->helperText('Aktifkan jika kegiatan berlangsung beberapa hari dan ingin dicatat untuk masing-masing hari.')
+                            ->default(false)
+                            ->live()
+                            ->visibleOn('create')
+                            ->columnSpanFull(),
+
                         Forms\Components\DatePicker::make('activity_date')
                             ->label('Tanggal Kegiatan')
-                            ->required()
+                            ->required(fn (string $operation, Forms\Get $get) => $operation !== 'create' || !$get('is_range'))
                             ->default(Carbon::today())
                             ->displayFormat('d/m/Y')
+                            ->visible(fn (string $operation, Forms\Get $get) => $operation !== 'create' || !$get('is_range'))
                             ->columnSpan(1),
+
+                        Forms\Components\Grid::make(3)
+                            ->schema([
+                                Forms\Components\DatePicker::make('range_start')
+                                    ->label('Tanggal Mulai')
+                                    ->required(fn (string $operation, Forms\Get $get) => $operation === 'create' && (bool) $get('is_range'))
+                                    ->default(Carbon::today())
+                                    ->displayFormat('d/m/Y'),
+
+                                Forms\Components\DatePicker::make('range_end')
+                                    ->label('Tanggal Selesai')
+                                    ->required(fn (string $operation, Forms\Get $get) => $operation === 'create' && (bool) $get('is_range'))
+                                    ->default(Carbon::today())
+                                    ->afterOrEqual('range_start')
+                                    ->displayFormat('d/m/Y'),
+
+                                Forms\Components\Toggle::make('skip_weekends')
+                                    ->label('Lewati Sabtu & Minggu')
+                                    ->helperText('Hanya catat pada hari kerja aktif')
+                                    ->default(true)
+                                    ->inline(false),
+                            ])
+                            ->visible(fn (string $operation, Forms\Get $get) => $operation === 'create' && (bool) $get('is_range'))
+                            ->columnSpanFull(),
 
                         Forms\Components\Select::make('surat_tugas_id')
                             ->label('Tautan Surat Tugas')
@@ -165,6 +198,7 @@ class DailyActivityResource extends Resource
                         Forms\Components\Repeater::make('attachments')
                             ->relationship('attachments')
                             ->label('Daftar Foto Bukti')
+                            ->defaultItems(0)
                             ->columns(2)
                             ->reorderable('sort_order')
                             ->schema([
@@ -365,11 +399,22 @@ class DailyActivityResource extends Resource
         return $table
             ->recordUrl(null)
             ->recordAction(null)
+            ->defaultGroup(
+                Tables\Grouping\Group::make('activity_date')
+                    ->label('Tanggal Kegiatan')
+                    ->date()
+                    ->collapsible()
+                    ->titlePrefixedWithLabel(false)
+                    ->getTitleFromRecordUsing(fn (DailyActivity $record): string =>
+                        \Carbon\Carbon::parse($record->activity_date)->translatedFormat('l, d F Y')
+                    )
+            )
             ->columns([
                 Tables\Columns\TextColumn::make('activity_date')
                     ->label('Tanggal')
                     ->date('d M Y')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Pegawai')

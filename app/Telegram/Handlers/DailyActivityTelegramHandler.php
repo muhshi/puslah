@@ -10,7 +10,9 @@ use App\Models\User;
 use App\Services\DailyActivityAiService;
 use App\Services\ImageExifExtractorService;
 use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use SergiX44\Nutgram\Nutgram;
@@ -357,6 +359,64 @@ class DailyActivityTelegramHandler
             ]);
         } catch (\Throwable $e) {
             Log::warning('AI Polish direct error: ' . $e->getMessage());
+        }
+
+        // Cek apakah pesan menyebutkan rentang tanggal multi-hari (misal: "13 s.d. 16 oktober", "13-16 okt")
+        $dateRange = $this->resolveActivityDateRange($rawText);
+        if ($dateRange) {
+            $period = CarbonPeriod::create($dateRange['start'], $dateRange['end']);
+            $createdDates = [];
+
+            DB::transaction(function () use ($period, $user, $rawText, $formalContent, $activeSt, $sharedReports, &$createdDates) {
+                foreach ($period as $dt) {
+                    if ($dt->isSaturday() || $dt->isSunday()) {
+                        continue;
+                    }
+
+                    $act = DailyActivity::create([
+                        'user_id' => $user->id,
+                        'surat_tugas_id' => $activeSt?->id,
+                        'shared_work_report_id' => $sharedReports->first()?->id,
+                        'activity_date' => $dt->toDateString(),
+                        'raw_content' => $rawText,
+                        'ai_formal_content' => $formalContent,
+                        'final_content' => $formalContent,
+                        'status' => 'submitted',
+                        'source' => 'telegram',
+                    ]);
+
+                    if ($sharedReports->isNotEmpty()) {
+                        $act->sharedWorkReports()->sync($sharedReports->pluck('id'));
+                    }
+
+                    $createdDates[] = $dt->translatedFormat('l, d M Y');
+                }
+            });
+
+            if (empty($createdDates)) {
+                $bot->sendMessage(
+                    text: "⚠️ *Rentang tanggal yang dimasukkan hanya mencakup hari libur (Sabtu/Minggu).*\nTidak ada kegiatan yang dicatat.",
+                    chat_id: $bot->chatId(),
+                    parse_mode: 'Markdown'
+                );
+                return;
+            }
+
+            $listStr = implode("\n• ", $createdDates);
+            $stBadge = $activeSt ? "\n🔖 *Terkait ST:* No. " . ($activeSt->nomor_surat_tugas ?: 'DRAFT') : "";
+            $wadahBadge = $sharedReports->isNotEmpty() ? "\n📁 *Wadah KIPAPP:* " . $sharedReports->pluck('title')->implode(', ') : "";
+
+            $bot->sendMessage(
+                text: "🗓️ *Laporan Rentang Multi-Hari Berhasil Dibuat!* 🚀\n\n" .
+                "📝 *Catatan:* \"{$rawText}\"\n" .
+                "✨ *Narasi AI:* \"{$formalContent}\"" .
+                $stBadge . $wadahBadge . "\n\n" .
+                "📅 *Tercatat untuk " . count($createdDates) . " hari kerja:*\n• {$listStr}\n\n" .
+                "✅ _Semua kegiatan berhasil dicatat di Puslah._",
+                chat_id: $bot->chatId(),
+                parse_mode: 'Markdown'
+            );
+            return;
         }
 
         // Cek jika ada foto/dokumen yang baru dikirim tanpa caption dalam 90 detik terakhir
@@ -1404,6 +1464,74 @@ class DailyActivityTelegramHandler
     protected function resolveSharedWorkReport(User $user, string $text): ?\App\Models\SharedWorkReport
     {
         return $this->resolveSharedWorkReports($user, $text)->first();
+    }
+
+    /**
+     * Deteksi apakah teks menyebutkan rentang tanggal (misal: "13 s.d. 16 oktober", "13-16 okt", "28 okt s.d. 2 nov")
+     * @return array{start: Carbon, end: Carbon}|null
+     */
+    public function resolveActivityDateRange(string $text): ?array
+    {
+        $lower = strtolower(trim($text));
+
+        $monthMap = [
+            'januari' => 1, 'jan' => 1, 'january' => 1,
+            'februari' => 2, 'feb' => 2, 'february' => 2,
+            'maret' => 3, 'mar' => 3, 'march' => 3,
+            'april' => 4, 'apr' => 4,
+            'mei' => 5, 'may' => 5,
+            'juni' => 6, 'jun' => 6, 'june' => 6,
+            'juli' => 7, 'jul' => 7, 'july' => 7,
+            'agustus' => 8, 'agu' => 8, 'ags' => 8, 'agust' => 8, 'august' => 8, 'aug' => 8,
+            'september' => 9, 'sep' => 9, 'sept' => 9,
+            'oktober' => 10, 'okt' => 10, 'october' => 10, 'oct' => 10,
+            'november' => 11, 'nov' => 11, 'nopember' => 11, 'nop' => 11,
+            'desember' => 12, 'des' => 12, 'december' => 12, 'dec' => 12,
+        ];
+        $monthPattern = implode('|', array_keys($monthMap));
+
+        // 1. Rentang beda bulan: "28 oktober s.d. 2 november 2026", "28 okt - 2 nov"
+        if (preg_match('/(?:tgl\.?|tanggal)?\s*(\d{1,2})[\s\-\.\/]+(' . $monthPattern . ')(?:[\s\-\.\/]+(\d{4}))?\s*(?:-|s\/d|s\.d\.|sampai|sd|dan|&)\s*(?:tgl\.?|tanggal)?\s*(\d{1,2})[\s\-\.\/]+(' . $monthPattern . ')(?:[\s\-\.\/]+(\d{4}))?/i', $lower, $m)) {
+            $startDay = (int) $m[1];
+            $startMonth = $monthMap[strtolower($m[2])] ?? null;
+            $startYear = !empty($m[3]) ? (int) $m[3] : (!empty($m[6]) ? (int) $m[6] : (int) date('Y'));
+
+            $endDay = (int) $m[4];
+            $endMonth = $monthMap[strtolower($m[5])] ?? null;
+            $endYear = !empty($m[6]) ? (int) $m[6] : (int) date('Y');
+
+            if ($startMonth && $endMonth && checkdate($startMonth, $startDay, $startYear) && checkdate($endMonth, $endDay, $endYear)) {
+                $start = Carbon::createFromDate($startYear, $startMonth, $startDay)->startOfDay();
+                $end = Carbon::createFromDate($endYear, $endMonth, $endDay)->startOfDay();
+
+                if ($start->gt($end)) {
+                    [$start, $end] = [$end, $start];
+                }
+
+                if ($start->diffInDays($end) >= 1 && $start->diffInDays($end) <= 60) {
+                    return ['start' => $start, 'end' => $end];
+                }
+            }
+        }
+
+        // 2. Rentang satu bulan: "13 s.d. 16 oktober 2026", "13 - 16 oktober", "13 dan 14 okt", "13 sd 16 okt"
+        if (preg_match('/(?:tgl\.?|tanggal)?\s*(\d{1,2})\s*(?:-|s\/d|s\.d\.|sampai|sd|dan|&)\s*(?:tgl\.?|tanggal)?\s*(\d{1,2})[\s\-\.\/]+(' . $monthPattern . ')(?:[\s\-\.\/]+(\d{4}))?/i', $lower, $m)) {
+            $startDay = (int) $m[1];
+            $endDay = (int) $m[2];
+            $month = $monthMap[strtolower($m[3])] ?? null;
+            $year = !empty($m[4]) ? (int) $m[4] : (int) date('Y');
+
+            if ($month && checkdate($month, $startDay, $year) && checkdate($month, $endDay, $year)) {
+                $start = Carbon::createFromDate($year, $month, min($startDay, $endDay))->startOfDay();
+                $end = Carbon::createFromDate($year, $month, max($startDay, $endDay))->startOfDay();
+
+                if ($start->diffInDays($end) >= 1 && $start->diffInDays($end) <= 31) {
+                    return ['start' => $start, 'end' => $end];
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
