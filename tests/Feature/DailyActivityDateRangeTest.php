@@ -113,4 +113,20 @@ class DailyActivityDateRangeTest extends TestCase
         $this->assertNotNull($group);
         $this->assertEquals('activity_date', $group->getColumn());
     }
+
+    public function test_table_renders_with_records_grouped_by_indonesian_date(): void
+    {
+        DailyActivity::create([
+            'user_id' => $this->user->id,
+            'activity_date' => '2026-10-13',
+            'raw_content' => 'Uji coba laporan selasa',
+            'final_content' => 'Uji coba laporan selasa',
+            'status' => 'submitted',
+            'source' => 'web',
+        ]);
+
+        Livewire::test(\App\Filament\Resources\DailyActivityResource\Pages\ListDailyActivities::class)
+            ->assertSuccessful()
+            ->assertSee('Selasa, 13 Oktober 2026');
+    }
 }

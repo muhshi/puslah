@@ -402,11 +402,13 @@ class DailyActivityResource extends Resource
             ->defaultGroup(
                 Tables\Grouping\Group::make('activity_date')
                     ->label('Tanggal Kegiatan')
-                    ->date()
                     ->collapsible()
                     ->titlePrefixedWithLabel(false)
+                    ->getKeyFromRecordUsing(fn (DailyActivity $record): string =>
+                        $record->activity_date ? \Carbon\Carbon::parse($record->activity_date)->toDateString() : ''
+                    )
                     ->getTitleFromRecordUsing(fn (DailyActivity $record): string =>
-                        \Carbon\Carbon::parse($record->activity_date)->translatedFormat('l, d F Y')
+                        $record->activity_date ? \Carbon\Carbon::parse($record->activity_date)->locale('id')->translatedFormat('l, d F Y') : '-'
                     )
             )
             ->columns([
