@@ -7,6 +7,7 @@ use App\Models\DailyActivity;
 use App\Models\SharedWorkReport;
 use App\Models\User;
 use App\Telegram\Handlers\DailyActivityTelegramHandler;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -128,5 +129,66 @@ class DailyActivityDateRangeTest extends TestCase
         Livewire::test(\App\Filament\Resources\DailyActivityResource\Pages\ListDailyActivities::class)
             ->assertSuccessful()
             ->assertSee('Selasa, 13 Oktober 2026');
+    }
+
+    public function test_activities_within_same_date_are_ordered_chronologically_by_created_at(): void
+    {
+        $date = '2026-10-13';
+
+        // Buat kegiatan 1 (Pagi)
+        $act1 = DailyActivity::create([
+            'user_id' => $this->user->id,
+            'activity_date' => $date,
+            'raw_content' => 'Apel pagi dan briefing',
+            'final_content' => 'Apel pagi dan briefing',
+            'status' => 'submitted',
+            'source' => 'web',
+            'created_at' => Carbon::parse('2026-10-13 07:30:00'),
+        ]);
+
+        // Buat kegiatan 2 (Siang)
+        $act2 = DailyActivity::create([
+            'user_id' => $this->user->id,
+            'activity_date' => $date,
+            'raw_content' => 'Pengawasan lapangan mitra',
+            'final_content' => 'Pengawasan lapangan mitra',
+            'status' => 'submitted',
+            'source' => 'web',
+            'created_at' => Carbon::parse('2026-10-13 13:00:00'),
+        ]);
+
+        // Buat kegiatan 3 (Sore)
+        $act3 = DailyActivity::create([
+            'user_id' => $this->user->id,
+            'activity_date' => $date,
+            'raw_content' => 'Evaluasi hasil pengawasan sore',
+            'final_content' => 'Evaluasi hasil pengawasan sore',
+            'status' => 'submitted',
+            'source' => 'web',
+            'created_at' => Carbon::parse('2026-10-13 16:30:00'),
+        ]);
+
+        $component = Livewire::test(\App\Filament\Resources\DailyActivityResource\Pages\ListDailyActivities::class);
+
+        // Ambil record yang dirender di tabel
+        $records = $component->instance()->getTable()->getRecords();
+        $this->assertCount(3, $records);
+
+        // Pastikan urutan item adalah Pagi (act1) -> Siang (act2) -> Sore (act3)
+        $this->assertEquals($act1->id, $records->values()[0]->id);
+        $this->assertEquals($act2->id, $records->values()[1]->id);
+        $this->assertEquals($act3->id, $records->values()[2]->id);
+    }
+
+    public function test_table_has_sortable_created_at_column(): void
+    {
+        $table = \App\Filament\Resources\DailyActivityResource::table(
+            new \Filament\Tables\Table(new \App\Filament\Resources\DailyActivityResource\Pages\ListDailyActivities())
+        );
+
+        $column = $table->getColumn('created_at');
+        $this->assertNotNull($column, 'Kolom created_at harus ada di tabel');
+        $this->assertTrue($column->isSortable(), 'Kolom created_at harus sortable');
+        $this->assertTrue($column->isToggledHiddenByDefault(), 'Kolom created_at harus hidden default agar tabel tetap ringkas');
     }
 }

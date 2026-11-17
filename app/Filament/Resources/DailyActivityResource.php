@@ -410,6 +410,9 @@ class DailyActivityResource extends Resource
                     ->getTitleFromRecordUsing(fn (DailyActivity $record): string =>
                         $record->activity_date ? \Carbon\Carbon::parse($record->activity_date)->locale('id')->translatedFormat('l, d F Y') : '-'
                     )
+                    ->orderQueryUsing(fn (Builder $query, string $direction) =>
+                        $query->orderBy('activity_date', $direction)->orderBy('created_at', 'asc')
+                    )
             )
             ->columns([
                 Tables\Columns\TextColumn::make('activity_date')
@@ -536,6 +539,13 @@ class DailyActivityResource extends Resource
                     ->trueColor('success')
                     ->falseColor('gray')
                     ->tooltip(fn (DailyActivity $record) => $record->laporan_perjalanan_dinas_id ? 'Sudah disalin ke LPD' : 'Belum disalin ke LPD'),
+
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Waktu Input')
+                    ->dateTime('d M Y, H:i')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->tooltip(fn (DailyActivity $record) => 'Dibuat pada ' . $record->created_at?->translatedFormat('d F Y H:i:s')),
             ])
             ->defaultSort('activity_date', 'desc')
             ->filters([
