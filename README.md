@@ -54,6 +54,11 @@ composer dev
 
 ## Changelog
 
+### 2026-11-19
+- **Perbaikan Urutan Default Tabel Bukti Dukung Harian (Terbaru di Paling Atas)**:
+  - **Default Grouping Direction Descending (`ListDailyActivities.php` & `DailyActivityResource.php`):** Memperbaiki perilaku grouping tabel Filament yang sebelumnya secara default mengurutkan tanggal secara *ascending* (tanggal paling lawas di atas). Menambahkan properti Livewire `public ?string $tableGroupingDirection = 'desc'` dengan atribut `#[Url]` pada `ListDailyActivities` serta menyempurnakan `orderQueryUsing` agar memastikan arah pengurutan tanggal selalu *descending* (tanggal terbaru/hari ini di posisi paling atas) dan tetap menjaga kronologis internal per hari dari pagi ke sore (`created_at ASC`).
+  - **Automated Regression Test:** Menambahkan test `test_activities_across_different_dates_are_ordered_with_newest_date_first` pada `DailyActivityDateRangeTest.php` untuk memastikan tanggal terbaru selalu tampil di atas secara konsisten.
+
 ### 2026-11-17
 - **Hierarchical Sorting & Kolom Waktu Input Bukti Dukung Harian (`DailyActivityResource.php`)**:
   - **Sorting Bertingkat (Hierarchical Sorting):** Mengonfigurasi `orderQueryUsing` pada `Group` agar urutan data bertingkat: tingkat 1 berdasarkan tanggal kegiatan menurun (`activity_date DESC`) sehingga hari terbaru selalu di atas, dan tingkat 2 di dalam satu hari yang sama diurutkan kronologis naik (`created_at ASC`) sehingga beberapa kegiatan harian tersusun rapi dari pagi ke sore sesuai alur kerja.

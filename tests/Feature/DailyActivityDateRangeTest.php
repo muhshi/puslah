@@ -136,7 +136,7 @@ class DailyActivityDateRangeTest extends TestCase
         $date = '2026-10-13';
 
         // Buat kegiatan 1 (Pagi)
-        $act1 = DailyActivity::create([
+        $act1 = DailyActivity::forceCreate([
             'user_id' => $this->user->id,
             'activity_date' => $date,
             'raw_content' => 'Apel pagi dan briefing',
@@ -147,7 +147,7 @@ class DailyActivityDateRangeTest extends TestCase
         ]);
 
         // Buat kegiatan 2 (Siang)
-        $act2 = DailyActivity::create([
+        $act2 = DailyActivity::forceCreate([
             'user_id' => $this->user->id,
             'activity_date' => $date,
             'raw_content' => 'Pengawasan lapangan mitra',
@@ -158,7 +158,7 @@ class DailyActivityDateRangeTest extends TestCase
         ]);
 
         // Buat kegiatan 3 (Sore)
-        $act3 = DailyActivity::create([
+        $act3 = DailyActivity::forceCreate([
             'user_id' => $this->user->id,
             'activity_date' => $date,
             'raw_content' => 'Evaluasi hasil pengawasan sore',
@@ -190,5 +190,43 @@ class DailyActivityDateRangeTest extends TestCase
         $this->assertNotNull($column, 'Kolom created_at harus ada di tabel');
         $this->assertTrue($column->isSortable(), 'Kolom created_at harus sortable');
         $this->assertTrue($column->isToggledHiddenByDefault(), 'Kolom created_at harus hidden default agar tabel tetap ringkas');
+    }
+
+    public function test_activities_across_different_dates_are_ordered_with_newest_date_first(): void
+    {
+        $actOld = DailyActivity::create([
+            'user_id' => $this->user->id,
+            'activity_date' => '2026-10-10',
+            'raw_content' => 'Kegiatan tanggal lampau',
+            'final_content' => 'Kegiatan tanggal lampau',
+            'status' => 'submitted',
+            'source' => 'web',
+        ]);
+
+        $actMid = DailyActivity::create([
+            'user_id' => $this->user->id,
+            'activity_date' => '2026-10-15',
+            'raw_content' => 'Kegiatan pertengahan',
+            'final_content' => 'Kegiatan pertengahan',
+            'status' => 'submitted',
+            'source' => 'web',
+        ]);
+
+        $actNew = DailyActivity::create([
+            'user_id' => $this->user->id,
+            'activity_date' => '2026-10-20',
+            'raw_content' => 'Kegiatan terbaru',
+            'final_content' => 'Kegiatan terbaru',
+            'status' => 'submitted',
+            'source' => 'web',
+        ]);
+
+        $component = Livewire::test(\App\Filament\Resources\DailyActivityResource\Pages\ListDailyActivities::class);
+        $records = $component->instance()->getTable()->getRecords();
+
+        $this->assertCount(3, $records);
+        $this->assertEquals($actNew->id, $records->values()[0]->id, 'Tanggal terbaru harus di posisi paling atas');
+        $this->assertEquals($actMid->id, $records->values()[1]->id, 'Tanggal pertengahan di posisi kedua');
+        $this->assertEquals($actOld->id, $records->values()[2]->id, 'Tanggal terlama di posisi paling bawah');
     }
 }

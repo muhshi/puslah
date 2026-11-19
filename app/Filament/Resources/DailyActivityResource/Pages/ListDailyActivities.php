@@ -9,10 +9,14 @@ use Filament\Resources\Pages\ListRecords;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use Livewire\Attributes\Url;
 
 class ListDailyActivities extends ListRecords
 {
     protected static string $resource = DailyActivityResource::class;
+
+    #[Url]
+    public ?string $tableGroupingDirection = 'desc';
 
     protected function getHeaderWidgets(): array
     {

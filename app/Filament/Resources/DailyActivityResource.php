@@ -410,9 +410,10 @@ class DailyActivityResource extends Resource
                     ->getTitleFromRecordUsing(fn (DailyActivity $record): string =>
                         $record->activity_date ? \Carbon\Carbon::parse($record->activity_date)->locale('id')->translatedFormat('l, d F Y') : '-'
                     )
-                    ->orderQueryUsing(fn (Builder $query, string $direction) =>
-                        $query->orderBy('activity_date', $direction)->orderBy('created_at', 'asc')
-                    )
+                    ->orderQueryUsing(function (Builder $query, string $direction, $livewire = null) {
+                        $direction = $livewire?->getTableGroupingDirection() ?? 'desc';
+                        return $query->orderBy('activity_date', $direction)->orderBy('created_at', 'asc');
+                    })
             )
             ->columns([
                 Tables\Columns\TextColumn::make('activity_date')
