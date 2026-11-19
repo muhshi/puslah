@@ -61,13 +61,12 @@ composer dev
   - **Tombol Proper Case ("Propering") Interaktif:** Menyediakan tombol aksi suffix (*Proper Case* berikon ✨) pada field Nama Kegiatan dan Tujuan Kegiatan untuk mengubah teks menjadi format kapital setiap awal kata secara fleksibel tanpa memerlukan aturan akronim yang kaku.
   - **Pencegahan Duplikat Nama Toleran Spasi:** Menerapkan validasi cerdas anti-duplikasi pada input nama kegiatan yang menormalisasi spasi berulang/berlebih (*multiple spaces*) dan huruf besar-kecil (*case-insensitive*), mencegah entri serupa di kemudian hari tanpa mengotori atau mengubah riwayat data lama di database.
   - **Atribut Jenis Kegiatan & Metode:** Menambahkan field `jenis_kegiatan` (`pelatihan`, `non-pelatihan`) dan `metode` (`daring`, `luring`, `blended`) pada skema database, form, tabel admin dengan badge visual, serta kartu kegiatan di halaman *Kegiatan Saya*.
-  - **Manajemen Role Peserta & Konfigurasi Dinamis:**
+  - **Manajemen Role Peserta & Pemetaan Dinamis ke Sertifikat:**
     - Menambahkan kolom `role` pada tabel `survey_users` dengan opsi bawaan `['PML', 'PCL', 'Penanggung Jawab', 'Panitia', 'Peserta']` serta opsi penambahan peran kustom.
-    - Role baru yang ditambahkan otomatis tersimpan ke pengaturan sistem (`kegiatan_roles`) dan dapat dikelola secara terpusat melalui halaman *Pengaturan Sistem*.
+    - **Pemetaan Otomatis Singkatan ke Nama Resmi di Sertifikat (`kegiatan_roles_map`):** Mengintegrasikan konfigurasi Key-Value di Pengaturan Sistem (`SystemSettingsPage`) yang memetakan kode/singkatan peran ke nama lengkap resminya (misal: `PML` → *"Petugas Pengawas Lapangan"*, `PCL` → *"Petugas Pencacah Lapangan"*).
+    - Penambahan peran baru kini menanyakan singkatan dan nama lengkap resmi, otomatis tersimpan ke pengaturan sistem, dan saat sertifikat dicetak akan menggunakan nama resmi tanpa perlu sentuh kode pemrograman lagi (*100% No-Code Maintenance*).
+    - Pada form peserta, dropdown otomatis menampilkan label informatif format `KODE (Nama Lengkap Resmi)`.
     - Pada aksi *Tambah Peserta (Banyak)*, admin dapat langsung menetapkan peran/role serentak untuk seluruh peserta yang dipilih.
-  - **Penyesuaian Formal Singkatan Peran pada Sertifikat (PML & PCL):**
-    - Mesin pembuat sertifikat PDF (`certificates.pdf` & `CertificateIssuanceService`) secara otomatis mencetak kepanjangan formal dari singkatan peran (PML menjadi *"Petugas Pengawas Lapangan"* dan PCL menjadi *"Petugas Pencacah Lapangan"*).
-    - Dilengkapi petunjuk/helper text informatif pada form pendaftaran peserta.
   - **Pembersihan Data Orphan dari Kegiatan yang Dihapus:**
     - Menerapkan scope query `whereHas('survey')` pada `SurveyUserResource` dan halaman *Kegiatan Saya* (`MySurveys`), sehingga peserta dari kegiatan yang telah di-*soft-delete* tidak lagi muncul dengan kolom kegiatan bernilai kosong/null.
 

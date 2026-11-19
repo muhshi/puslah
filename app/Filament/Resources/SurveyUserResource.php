@@ -38,8 +38,8 @@ class SurveyUserResource extends Resource
 
     public static function form(Form $form): Form
     {
-        $roles = app(SystemSettings::class)->kegiatan_roles ?? ['PML', 'PCL', 'Penanggung Jawab', 'Panitia', 'Peserta'];
-        $roleOptions = array_combine($roles, $roles);
+        $settings = app(SystemSettings::class);
+        $roleOptions = $settings->getRoleOptions();
 
         return $form->schema([
             Forms\Components\Select::make('survey_id')
@@ -54,24 +54,32 @@ class SurveyUserResource extends Resource
                 ->label('Role / Peran')
                 ->options($roleOptions)
                 ->default('Peserta')
-                ->helperText('Peran peserta pada kegiatan. Singkatan PML & PCL akan otomatis dicetak lengkap ("Petugas Pengawas Lapangan" & "Petugas Pencacah Lapangan") pada sertifikat.')
+                ->helperText('Peran peserta pada kegiatan. Nama lengkap resmi akan otomatis dicetak pada sertifikat sesuai pemetaan pengaturan sistem.')
                 ->required()
                 ->createOptionForm([
-                    Forms\Components\TextInput::make('role')
-                        ->label('Nama Role Baru')
-                        ->helperText('Disarankan menggunakan nama peran lengkap dan tidak disingkat, karena akan dicetak pada sertifikat kegiatan.')
+                    Forms\Components\TextInput::make('code')
+                        ->label('Singkatan / Nama Peran')
+                        ->placeholder('Contoh: Inda, Koseka')
                         ->required()
                         ->maxLength(100),
+                    Forms\Components\TextInput::make('full_name')
+                        ->label('Nama Lengkap di Sertifikat')
+                        ->placeholder('Contoh: Instruktur Daerah')
+                        ->helperText('Teks resmi yang akan dicetak pada sertifikat kegiatan.')
+                        ->required()
+                        ->maxLength(255),
                 ])
-                ->createOptionUsing(function (array $data) use ($roles) {
-                    $newRole = trim($data['role']);
-                    if ($newRole && !in_array($newRole, $roles)) {
-                        $settings = app(SystemSettings::class);
-                        $updatedRoles = array_merge($roles, [$newRole]);
-                        $settings->kegiatan_roles = $updatedRoles;
-                        $settings->save();
-                    }
-                    return $newRole;
+                ->createOptionUsing(function (array $data) {
+                    $code = trim($data['code']);
+                    $fullName = trim($data['full_name']);
+                    $settings = app(SystemSettings::class);
+                    $map = $settings->kegiatan_roles_map ?? [];
+                    $map[$code] = $fullName;
+                    $settings->kegiatan_roles_map = $map;
+                    $settings->kegiatan_roles = array_keys($map);
+                    $settings->save();
+
+                    return $code;
                 }),
 
             Forms\Components\Select::make('status')
@@ -104,10 +112,7 @@ class SurveyUserResource extends Resource
                     ->options(fn () => Survey::orderBy('name')->pluck('name', 'id')),
                 Tables\Filters\SelectFilter::make('role')
                     ->label('Role')
-                    ->options(function () {
-                        $roles = app(SystemSettings::class)->kegiatan_roles ?? ['PML', 'PCL', 'Penanggung Jawab', 'Panitia', 'Peserta'];
-                        return array_combine($roles, $roles);
-                    }),
+                    ->options(fn () => app(SystemSettings::class)->getRoleOptions()),
                 Tables\Filters\SelectFilter::make('status')
                     ->options(['registered' => 'Terdaftar', 'approved' => 'Disetujui']),
                 Tables\Filters\Filter::make('registered_at')->form([

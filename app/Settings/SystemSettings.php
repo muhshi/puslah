@@ -40,6 +40,58 @@ class SystemSettings extends Settings
 
     // Kegiatan Settings
     public array $kegiatan_roles;
+    public array $kegiatan_roles_map;
+
+    public function getCertificateRole(?string $role): string
+    {
+        if (!$role) {
+            return 'Petugas';
+        }
+
+        $map = $this->kegiatan_roles_map ?? [];
+        if (isset($map[$role])) {
+            return $map[$role];
+        }
+
+        foreach ($map as $key => $fullName) {
+            if (strcasecmp($key, $role) === 0) {
+                return $fullName;
+            }
+        }
+
+        // Fallback default BPS standard abbreviations
+        $upper = strtoupper(trim($role));
+        if ($upper === 'PML') {
+            return 'Petugas Pengawas Lapangan';
+        }
+        if ($upper === 'PCL') {
+            return 'Petugas Pencacah Lapangan';
+        }
+
+        return $role;
+    }
+
+    public function getRoleOptions(): array
+    {
+        $map = $this->kegiatan_roles_map ?? [
+            'PML' => 'Petugas Pengawas Lapangan',
+            'PCL' => 'Petugas Pencacah Lapangan',
+            'Penanggung Jawab' => 'Penanggung Jawab',
+            'Panitia' => 'Panitia',
+            'Peserta' => 'Peserta',
+        ];
+
+        $options = [];
+        foreach ($map as $code => $fullName) {
+            if (strcasecmp($code, $fullName) === 0) {
+                $options[$code] = $fullName;
+            } else {
+                $options[$code] = "{$code} ({$fullName})";
+            }
+        }
+
+        return $options;
+    }
 
     public static function defaults(): array
     {
@@ -72,6 +124,13 @@ class SystemSettings extends Settings
             'gemini_api_key' => null,
             'gemini_model' => 'gemini-3.5-flash',
             'kegiatan_roles' => ['PML', 'PCL', 'Penanggung Jawab', 'Panitia', 'Peserta'],
+            'kegiatan_roles_map' => [
+                'PML' => 'Petugas Pengawas Lapangan',
+                'PCL' => 'Petugas Pencacah Lapangan',
+                'Penanggung Jawab' => 'Penanggung Jawab',
+                'Panitia' => 'Panitia',
+                'Peserta' => 'Peserta',
+            ],
         ];
     }
 

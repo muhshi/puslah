@@ -44,8 +44,8 @@ class ParticipantsRelationManager extends RelationManager
 
     public function form(Form $form): Form
     {
-        $roles = app(SystemSettings::class)->kegiatan_roles ?? ['PML', 'PCL', 'Penanggung Jawab', 'Panitia', 'Peserta'];
-        $roleOptions = array_combine($roles, $roles);
+        $settings = app(SystemSettings::class);
+        $roleOptions = $settings->getRoleOptions();
 
         return $form->schema([
             Forms\Components\Select::make('user_id')
@@ -57,23 +57,32 @@ class ParticipantsRelationManager extends RelationManager
                 ->label('Role / Peran')
                 ->options($roleOptions)
                 ->default('Peserta')
-                ->helperText('Peran peserta pada kegiatan. Singkatan PML & PCL otomatis dicetak lengkap ("Petugas Pengawas Lapangan" & "Petugas Pencacah Lapangan") pada sertifikat.')
+                ->helperText('Peran peserta pada kegiatan. Nama lengkap resmi akan otomatis dicetak pada sertifikat sesuai pemetaan pengaturan sistem.')
                 ->required()
                 ->createOptionForm([
-                    Forms\Components\TextInput::make('role')
-                        ->label('Nama Role Baru')
-                        ->helperText('Disarankan menggunakan nama peran lengkap dan tidak disingkat, karena akan dicetak pada sertifikat kegiatan.')
+                    Forms\Components\TextInput::make('code')
+                        ->label('Singkatan / Nama Peran')
+                        ->placeholder('Contoh: Inda, Koseka')
                         ->required()
                         ->maxLength(100),
+                    Forms\Components\TextInput::make('full_name')
+                        ->label('Nama Lengkap di Sertifikat')
+                        ->placeholder('Contoh: Instruktur Daerah')
+                        ->helperText('Teks resmi yang akan dicetak pada sertifikat kegiatan.')
+                        ->required()
+                        ->maxLength(255),
                 ])
-                ->createOptionUsing(function (array $data) use ($roles) {
-                    $newRole = trim($data['role']);
-                    if ($newRole && !in_array($newRole, $roles)) {
-                        $settings = app(SystemSettings::class);
-                        $settings->kegiatan_roles = array_merge($roles, [$newRole]);
-                        $settings->save();
-                    }
-                    return $newRole;
+                ->createOptionUsing(function (array $data) {
+                    $code = trim($data['code']);
+                    $fullName = trim($data['full_name']);
+                    $settings = app(SystemSettings::class);
+                    $map = $settings->kegiatan_roles_map ?? [];
+                    $map[$code] = $fullName;
+                    $settings->kegiatan_roles_map = $map;
+                    $settings->kegiatan_roles = array_keys($map);
+                    $settings->save();
+
+                    return $code;
                 }),
             Forms\Components\Select::make('status')
                 ->options(['registered' => 'Terdaftar', 'approved' => 'Disetujui'])
@@ -153,12 +162,9 @@ class ParticipantsRelationManager extends RelationManager
 
                         Forms\Components\Select::make('role')
                             ->label('Role / Peran untuk semua peserta di atas')
-                            ->options(function () {
-                                $roles = app(SystemSettings::class)->kegiatan_roles ?? ['PML', 'PCL', 'Penanggung Jawab', 'Panitia', 'Peserta'];
-                                return array_combine($roles, $roles);
-                            })
+                            ->options(fn () => app(SystemSettings::class)->getRoleOptions())
                             ->default('Peserta')
-                            ->helperText('Peran peserta pada kegiatan. Singkatan PML & PCL otomatis dicetak lengkap ("Petugas Pengawas Lapangan" & "Petugas Pencacah Lapangan") pada sertifikat.')
+                            ->helperText('Peran peserta pada kegiatan. Nama lengkap resmi akan otomatis dicetak pada sertifikat sesuai pemetaan pengaturan sistem.')
                             ->required()
                             ->columnSpanFull(),
 

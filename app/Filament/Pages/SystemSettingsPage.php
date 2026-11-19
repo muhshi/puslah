@@ -65,6 +65,13 @@ class SystemSettingsPage extends Page implements HasForms
             'gemini_api_key' => $s->gemini_api_key,
             'gemini_model' => $s->gemini_model ?? 'gemini-3.5-flash',
             'kegiatan_roles' => $s->kegiatan_roles ?? ['PML', 'PCL', 'Penanggung Jawab', 'Panitia', 'Peserta'],
+            'kegiatan_roles_map' => $s->kegiatan_roles_map ?? [
+                'PML' => 'Petugas Pengawas Lapangan',
+                'PCL' => 'Petugas Pencacah Lapangan',
+                'Penanggung Jawab' => 'Penanggung Jawab',
+                'Panitia' => 'Panitia',
+                'Peserta' => 'Peserta',
+            ],
         ]);
     }
 
@@ -251,13 +258,15 @@ class SystemSettingsPage extends Page implements HasForms
                                 ->required(),
                         ])->columns(1),
 
-                    Section::make('Manajemen Kegiatan')
-                        ->description('Pengaturan pilihan default role/peran peserta kegiatan.')
+                    Section::make('Manajemen Peran Kegiatan & Sertifikat')
+                        ->description('Pengaturan pemetaan singkatan peran peserta dan nama lengkap resmi yang dicetak pada sertifikat.')
                         ->schema([
-                            Forms\Components\TagsInput::make('kegiatan_roles')
-                                ->label('Daftar Pilihan Role Peserta')
-                                ->helperText('Tekan Enter setelah mengetik role baru. Role ini akan muncul sebagai opsi pilihan saat menambahkan peserta kegiatan.')
-                                ->placeholder('Tambah role...'),
+                            Forms\Components\KeyValue::make('kegiatan_roles_map')
+                                ->label('Daftar Peran Peserta & Teks Sertifikat')
+                                ->keyLabel('Singkatan / Kode Peran (misal: PML, PCL, Inda)')
+                                ->valueLabel('Nama Lengkap di Sertifikat (misal: Petugas Pengawas Lapangan)')
+                                ->helperText('Peran di sini otomatis menjadi pilihan dropdown di form peserta. Saat sertifikat dicetak, sistem akan mencetak Nama Lengkap resminya.')
+                                ->reorderable(),
                         ])->columns(1),
 
                 ])->columns(1), // End Section Pejabat
@@ -316,6 +325,10 @@ class SystemSettingsPage extends Page implements HasForms
         if (empty($changed)) {
             Notification::make()->title('Tidak ada perubahan')->info()->send();
             return;
+        }
+
+        if (isset($changed['kegiatan_roles_map'])) {
+            $changed['kegiatan_roles'] = array_keys($changed['kegiatan_roles_map']);
         }
 
         $settings->fill($changed)->save();

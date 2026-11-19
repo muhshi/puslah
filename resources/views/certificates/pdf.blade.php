@@ -252,15 +252,8 @@
             }
             $rawRole = $rawRole ?: 'Petugas';
 
-            // Sesuaikan kepanjangan PML dan PCL untuk sertifikat
-            $upperRole = strtoupper(trim($rawRole));
-            if ($upperRole === 'PML') {
-                $displayRole = 'Petugas Pengawas Lapangan';
-            } elseif ($upperRole === 'PCL') {
-                $displayRole = 'Petugas Pencacah Lapangan';
-            } else {
-                $displayRole = $rawRole;
-            }
+            // Resolusi nama peran sertifikat dari pemetaan dinamis di Pengaturan Sistem
+            $displayRole = app(\App\Settings\SystemSettings::class)->getCertificateRole($rawRole);
         @endphp
         <div class="box right" style="top: 420px; left: 340px; width: 700px;">
             <!-- Peran & Nama Kegiatan -->
