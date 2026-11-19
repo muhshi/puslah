@@ -29,7 +29,7 @@ use Filament\Resources\Components\Tab;
 class ParticipantsRelationManager extends RelationManager
 {
     protected static string $relationship = 'surveyUsers';
-    protected static ?string $title = 'Peserta';
+    protected static ?string $title = 'Peserta Kegiatan';
 
     public function getTabs(): array
     {
@@ -44,20 +44,44 @@ class ParticipantsRelationManager extends RelationManager
 
     public function form(Form $form): Form
     {
+        $roles = app(SystemSettings::class)->kegiatan_roles ?? ['PML', 'PCL', 'Penanggung Jawab', 'Panitia', 'Peserta'];
+        $roleOptions = array_combine($roles, $roles);
+
         return $form->schema([
             Forms\Components\Select::make('user_id')
-                ->label('User')
-                ->options(User::orderBy('name')
-                    ->pluck('name', 'id'))
+                ->label('Peserta')
+                ->options(User::orderBy('name')->pluck('name', 'id'))
                 ->searchable()
                 ->preload()->required(),
+            Forms\Components\Select::make('role')
+                ->label('Role / Peran')
+                ->options($roleOptions)
+                ->default('Peserta')
+                ->helperText('Peran peserta pada kegiatan. Singkatan PML & PCL otomatis dicetak lengkap ("Petugas Pengawas Lapangan" & "Petugas Pencacah Lapangan") pada sertifikat.')
+                ->required()
+                ->createOptionForm([
+                    Forms\Components\TextInput::make('role')
+                        ->label('Nama Role Baru')
+                        ->helperText('Disarankan menggunakan nama peran lengkap dan tidak disingkat, karena akan dicetak pada sertifikat kegiatan.')
+                        ->required()
+                        ->maxLength(100),
+                ])
+                ->createOptionUsing(function (array $data) use ($roles) {
+                    $newRole = trim($data['role']);
+                    if ($newRole && !in_array($newRole, $roles)) {
+                        $settings = app(SystemSettings::class);
+                        $settings->kegiatan_roles = array_merge($roles, [$newRole]);
+                        $settings->save();
+                    }
+                    return $newRole;
+                }),
             Forms\Components\Select::make('status')
-                ->options(['registered' => 'registered', 'approved' => 'approved'])
+                ->options(['registered' => 'Terdaftar', 'approved' => 'Disetujui'])
                 ->default('registered')->required(),
             Forms\Components\TextInput::make('score')
-                ->numeric()->minValue(0)->maxValue(100)->nullable(),
+                ->numeric()->minValue(0)->maxValue(100)->nullable()->label('Skor'),
             Forms\Components\Textarea::make('notes')
-                ->columnSpanFull(),
+                ->label('Catatan')->columnSpanFull(),
         ])->columns(2);
     }
 
@@ -67,6 +91,10 @@ class ParticipantsRelationManager extends RelationManager
             ->recordTitleAttribute('id')
             ->columns([
                 Tables\Columns\TextColumn::make('user.name')->label('Nama')->searchable(),
+                Tables\Columns\TextColumn::make('role')
+                    ->label('Role')
+                    ->badge()
+                    ->color('info'),
                 Tables\Columns\TextColumn::make('status')->colors([
                     'warning' => 'registered',
                     'success' => 'approved',
@@ -75,7 +103,7 @@ class ParticipantsRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('registered_at')->since()->label('Terdaftar'),
                 Tables\Columns\IconColumn::make('certificate_exists')
                     ->label('Sertifikat')
-                    ->state(fn(SurveyUser $r) => Certificate::where('survey_id', $r->survey_id)->where('user_id', $r->user_id)->exists())
+                    ->state(fn (SurveyUser $r) => Certificate::where('survey_id', $r->survey_id)->where('user_id', $r->user_id)->exists())
                     ->boolean(),
             ])
             ->headerActions([
@@ -85,7 +113,7 @@ class ParticipantsRelationManager extends RelationManager
                     ->label('Tambah Peserta (Banyak)')
                     ->icon('heroicon-o-user-plus')
                     ->form([
-                        Section::make('Peserta Survei')->schema([
+                        Section::make('Peserta Kegiatan')->schema([
                             Forms\Components\Select::make('mitra_users')
                                 ->label('Pegawai Mitra')
                                 ->multiple()
@@ -123,23 +151,30 @@ class ParticipantsRelationManager extends RelationManager
                                 ->helperText('Cari dan pilih pegawai dengan role Organik'),
                         ])->columns(2),
 
+                        Forms\Components\Select::make('role')
+                            ->label('Role / Peran untuk semua peserta di atas')
+                            ->options(function () {
+                                $roles = app(SystemSettings::class)->kegiatan_roles ?? ['PML', 'PCL', 'Penanggung Jawab', 'Panitia', 'Peserta'];
+                                return array_combine($roles, $roles);
+                            })
+                            ->default('Peserta')
+                            ->helperText('Peran peserta pada kegiatan. Singkatan PML & PCL otomatis dicetak lengkap ("Petugas Pengawas Lapangan" & "Petugas Pencacah Lapangan") pada sertifikat.')
+                            ->required()
+                            ->columnSpanFull(),
+
                         Forms\Components\Textarea::make('notes')->label('Catatan')->columnSpanFull(),
                     ])
                     ->action(function (array $data, $livewire) {
                         /** @var \App\Models\Survey $survey */
-                        $survey = $livewire->getOwnerRecord(); // record parent (Survey)
+                        $survey = $livewire->getOwnerRecord();
                         $now = now();
 
-                        // Merge users from both role categories
-                        $mitraUsers = $data['mitra_users'] ?? [];
+                        $mitraUsers   = $data['mitra_users'] ?? [];
                         $pegawaiUsers = $data['pegawai_bps_users'] ?? [];
-                        $allUsers = array_merge($mitraUsers, $pegawaiUsers);
+                        $allUsers     = array_merge($mitraUsers, $pegawaiUsers);
 
                         if (empty($allUsers)) {
-                            Notification::make()
-                                ->title('Pilih minimal 1 peserta')
-                                ->danger()
-                                ->send();
+                            Notification::make()->title('Pilih minimal 1 peserta')->danger()->send();
                             return;
                         }
 
@@ -147,9 +182,10 @@ class ParticipantsRelationManager extends RelationManager
                             SurveyUser::firstOrCreate(
                                 ['survey_id' => $survey->id, 'user_id' => $userId],
                                 [
-                                    'status' => 'registered',
+                                    'role'          => $data['role'] ?? 'Peserta',
+                                    'status'        => 'registered',
                                     'registered_at' => $now,
-                                    'notes' => $data['notes'] ?? null,
+                                    'notes'         => $data['notes'] ?? null,
                                 ]
                             );
                         }

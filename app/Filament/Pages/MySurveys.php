@@ -14,7 +14,7 @@ class MySurveys extends Page
 
     protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-check';
     protected static ?string $navigationGroup = 'Pengaturan Akun';
-    protected static ?string $title = 'Survei Saya';
+    protected static ?string $title = 'Kegiatan Saya';
     protected static string $view = 'filament.pages.my-surveys';
 
     public string $search = '';
@@ -58,6 +58,7 @@ class MySurveys extends Page
         $query = SurveyUser::query()
             ->with(['survey'])
             ->where('user_id', Auth::id())
+            ->whereHas('survey')  // hanya yang kegiatannya belum dihapus
             ->join('surveys', 'surveys.id', '=', 'survey_users.survey_id')
             ->select([
                 'survey_users.*',

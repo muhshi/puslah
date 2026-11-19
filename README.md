@@ -54,6 +54,23 @@ composer dev
 
 ## Changelog
 
+### 2026-11-19
+- **Pembaruan Menyeluruh Manajemen Kegiatan & Peserta (Rebranding dari Survei)**:
+  - **Unifikasi Terminologi (Survei → Kegiatan):** Mengubah seluruh istilah *"Manajemen Survei"*, *"Survei"*, dan *"Peserta Survei"* menjadi *"Manajemen Kegiatan"*, *"Kegiatan"*, dan *"Peserta Kegiatan"* pada sidebar panel Filament, header form, breadcrumbs, modal copy kegiatan, widget statistik dashboard, kalender penugasan, dan rekapitulasi presensi.
+  - **Penggantian Deskripsi menjadi Tujuan (`tujuan`):** Mengganti kolom dan label `description` menjadi `tujuan` (*Tujuan Kegiatan*) dengan mutator/accessor *backward-compatible* pada model `Survey`.
+  - **Tombol Proper Case ("Propering") Interaktif:** Menyediakan tombol aksi suffix (*Proper Case* berikon ✨) pada field Nama Kegiatan dan Tujuan Kegiatan untuk mengubah teks menjadi format kapital setiap awal kata secara fleksibel tanpa memerlukan aturan akronim yang kaku.
+  - **Pencegahan Duplikat Nama Toleran Spasi:** Menerapkan validasi cerdas anti-duplikasi pada input nama kegiatan yang menormalisasi spasi berulang/berlebih (*multiple spaces*) dan huruf besar-kecil (*case-insensitive*), mencegah entri serupa di kemudian hari tanpa mengotori atau mengubah riwayat data lama di database.
+  - **Atribut Jenis Kegiatan & Metode:** Menambahkan field `jenis_kegiatan` (`pelatihan`, `non-pelatihan`) dan `metode` (`daring`, `luring`, `blended`) pada skema database, form, tabel admin dengan badge visual, serta kartu kegiatan di halaman *Kegiatan Saya*.
+  - **Manajemen Role Peserta & Konfigurasi Dinamis:**
+    - Menambahkan kolom `role` pada tabel `survey_users` dengan opsi bawaan `['PML', 'PCL', 'Penanggung Jawab', 'Panitia', 'Peserta']` serta opsi penambahan peran kustom.
+    - Role baru yang ditambahkan otomatis tersimpan ke pengaturan sistem (`kegiatan_roles`) dan dapat dikelola secara terpusat melalui halaman *Pengaturan Sistem*.
+    - Pada aksi *Tambah Peserta (Banyak)*, admin dapat langsung menetapkan peran/role serentak untuk seluruh peserta yang dipilih.
+  - **Penyesuaian Formal Singkatan Peran pada Sertifikat (PML & PCL):**
+    - Mesin pembuat sertifikat PDF (`certificates.pdf` & `CertificateIssuanceService`) secara otomatis mencetak kepanjangan formal dari singkatan peran (PML menjadi *"Petugas Pengawas Lapangan"* dan PCL menjadi *"Petugas Pencacah Lapangan"*).
+    - Dilengkapi petunjuk/helper text informatif pada form pendaftaran peserta.
+  - **Pembersihan Data Orphan dari Kegiatan yang Dihapus:**
+    - Menerapkan scope query `whereHas('survey')` pada `SurveyUserResource` dan halaman *Kegiatan Saya* (`MySurveys`), sehingga peserta dari kegiatan yang telah di-*soft-delete* tidak lagi muncul dengan kolom kegiatan bernilai kosong/null.
+
 ### 2026-11-12
 - **Sinkronisasi Foto Profil / Avatar dari SIPETRA SSO**:
   - **Auto-Download & Cache Avatar (`SsoController.php`):** Menambahkan mapping foto profil/avatar dari response OAuth2 SIPETRA (`$ssoUser->getAvatar()`, `$rawData['avatar']`, dll) pada proses callback SSO. Sistem secara otomatis mengunduh file gambar ke storage disk `public` Puslah (`avatars/sipetra_{user_id}_{timestamp}.{ext}`) dengan fallback URL yang aman, serta membersihkan file avatar lama saat sinkronisasi ulang.

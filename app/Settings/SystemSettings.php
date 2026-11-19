@@ -38,6 +38,9 @@ class SystemSettings extends Settings
     public ?string $gemini_api_key;
     public ?string $gemini_model;
 
+    // Kegiatan Settings
+    public array $kegiatan_roles;
+
     public static function defaults(): array
     {
         return [
@@ -68,6 +71,7 @@ class SystemSettings extends Settings
             'ppk_title' => 'Pejabat Pembuat Komitmen',
             'gemini_api_key' => null,
             'gemini_model' => 'gemini-3.5-flash',
+            'kegiatan_roles' => ['PML', 'PCL', 'Penanggung Jawab', 'Panitia', 'Peserta'],
         ];
     }
 

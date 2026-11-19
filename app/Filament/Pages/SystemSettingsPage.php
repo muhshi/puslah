@@ -64,6 +64,7 @@ class SystemSettingsPage extends Page implements HasForms
             'ppk_title' => $s->ppk_title ?? 'Pejabat Pembuat Komitmen',
             'gemini_api_key' => $s->gemini_api_key,
             'gemini_model' => $s->gemini_model ?? 'gemini-3.5-flash',
+            'kegiatan_roles' => $s->kegiatan_roles ?? ['PML', 'PCL', 'Penanggung Jawab', 'Panitia', 'Peserta'],
         ]);
     }
 
@@ -248,6 +249,15 @@ class SystemSettingsPage extends Page implements HasForms
                                 ])
                                 ->default('gemini-3.5-flash')
                                 ->required(),
+                        ])->columns(1),
+
+                    Section::make('Manajemen Kegiatan')
+                        ->description('Pengaturan pilihan default role/peran peserta kegiatan.')
+                        ->schema([
+                            Forms\Components\TagsInput::make('kegiatan_roles')
+                                ->label('Daftar Pilihan Role Peserta')
+                                ->helperText('Tekan Enter setelah mengetik role baru. Role ini akan muncul sebagai opsi pilihan saat menambahkan peserta kegiatan.')
+                                ->placeholder('Tambah role...'),
                         ])->columns(1),
 
                 ])->columns(1), // End Section Pejabat

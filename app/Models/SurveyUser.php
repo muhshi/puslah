@@ -16,6 +16,7 @@ class SurveyUser extends Pivot
     protected $fillable = [
         'survey_id',
         'user_id',
+        'role',
         'registered_at',
         'status',
         'score',

@@ -64,6 +64,8 @@ class CertificateIssuanceService
             'template' => $template,
             'user' => $user,
             'survey' => $survey,
+            'surveyUser' => $row,
+            'role' => $row->role,
             'no' => $no,
             'issuedAt' => $now,
             'signatureDate' => $now,

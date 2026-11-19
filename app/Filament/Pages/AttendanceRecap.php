@@ -78,11 +78,11 @@ class AttendanceRecap extends Page implements Tables\Contracts\HasTable, Forms\C
                 Group::make()
                     ->schema([
                         Section::make('Filter Rekap Presensi')
-                            ->description('Pilih kegiatan / survei untuk melihat ringkasan rekap kehadiran petugas.')
+                            ->description('Pilih kegiatan untuk melihat ringkasan rekap kehadiran petugas.')
                             ->icon('heroicon-o-funnel')
                             ->schema([
                                 Select::make('surveyId')
-                                    ->label('Pilih Kegiatan / Survei')
+                                    ->label('Pilih Kegiatan')
                                     ->prefixIcon('heroicon-m-clipboard-document-check')
                                     ->options(fn() => $this->surveyOptions())
                                     ->searchable()
@@ -93,7 +93,7 @@ class AttendanceRecap extends Page implements Tables\Contracts\HasTable, Forms\C
                                         $this->resetTable();
                                     })
                                     ->required()
-                                    ->helperText('Hanya menampilkan kegiatan/survei yang memiliki aktivitas presensi dari anggotanya.'),
+                                    ->helperText('Hanya menampilkan kegiatan yang memiliki aktivitas presensi dari anggotanya.'),
                             ])
                             ->columns(1)
                             ->collapsible(false),

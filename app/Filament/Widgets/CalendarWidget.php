@@ -77,13 +77,13 @@ class CalendarWidget extends FullCalendarWidget implements HasActions, HasInfoli
         foreach ($suratTugasList as $st) {
             $events[] = [
                 'id' => 'st-' . $st->id,
-                'title' => 'ST: ' . ($st->user->name ?? 'N/A') . ' - ' . ($st->survey->name ?? 'No Survey'),
+                'title' => 'ST: ' . ($st->user->name ?? 'N/A') . ' - ' . ($st->survey->name ?? 'No Kegiatan'),
                 'start' => $st->waktu_mulai,
                 'end' => $st->waktu_selesai,
                 'color' => '#3b82f6',
                 'extendedProps' => [
                     'type' => 'Surat Tugas',
-                    'survey_name' => $st->survey->name ?? 'No Survey',
+                    'survey_name' => $st->survey->name ?? 'No Kegiatan',
                     'user_name' => $st->user->name ?? 'N/A',
                     'keperluan' => $st->keperluan ?? '-',
                     'created_by' => $st->created_by,
@@ -191,7 +191,7 @@ class CalendarWidget extends FullCalendarWidget implements HasActions, HasInfoli
                                     ->label('Petugas'),
 
                                 TextEntry::make('survey')
-                                    ->label('Survey')
+                                    ->label('Kegiatan')
                                     ->visible($resourceType === 'st'),
 
                                 TextEntry::make('keperluan')

@@ -7,7 +7,7 @@
                 <div class="flex-1 min-w-[200px]">
                     <x-filament::input.wrapper prefix-icon="heroicon-m-magnifying-glass" class="h-9">
                         <x-filament::input wire:model.live.debounce.500ms="search"
-                            placeholder="Cari survei..." class="text-sm" />
+                            placeholder="Cari kegiatan..." class="text-sm" />
                     </x-filament::input.wrapper>
                 </div>
 
@@ -100,9 +100,9 @@
                                 {{ $survey->name }}
                             </h3>
                             
-                            {{-- Description / Subtitle --}}
+                            {{-- Tujuan / Subtitle --}}
                             <p class="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-2">
-                                {{ $survey->description ?? 'Tidak ada deskripsi survei.' }}
+                                {{ $survey->tujuan ?? $survey->description ?? 'Tidak ada tujuan kegiatan.' }}
                             </p>
 
                             {{-- Tags / Badges Row --}}
@@ -110,6 +110,24 @@
                                 <x-filament::badge color="{{ $statusBadgeColor }}">
                                     {{ $statusLabel }}
                                 </x-filament::badge>
+
+                                @if($r->role)
+                                    <x-filament::badge color="warning">
+                                        {{ $r->role }}
+                                    </x-filament::badge>
+                                @endif
+
+                                @if($survey->jenis_kegiatan)
+                                    <x-filament::badge color="info">
+                                        {{ ucfirst($survey->jenis_kegiatan) }}
+                                    </x-filament::badge>
+                                @endif
+
+                                @if($survey->metode)
+                                    <x-filament::badge color="gray">
+                                        {{ ucfirst($survey->metode) }}
+                                    </x-filament::badge>
+                                @endif
                                 
                                 <x-filament::badge color="gray" icon="heroicon-m-calendar">
                                     {{ \Carbon\Carbon::parse($survey->start_date)->format('Y') }}
@@ -161,9 +179,9 @@
                             {{-- Using raw SVG to ensure rendering --}}
                             <!-- <x-heroicons::solid.user /> -->
                         </div>
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Belum ada survei</h3>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Belum ada kegiatan</h3>
                         <p class="text-gray-500 max-w-sm mt-1">
-                            Anda belum terdaftar dalam survei apapun saat ini.
+                            Anda belum terdaftar dalam kegiatan apapun saat ini.
                         </p>
                         <div class="p-4 bg-sky-50 dark:bg-gray-800 rounded-full mb-4">
                             {{-- Using raw SVG to ensure rendering --}}

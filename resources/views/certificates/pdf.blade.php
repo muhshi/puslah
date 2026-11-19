@@ -244,14 +244,31 @@
             </div>
         </div>
 
-        <!-- 2. PERAN, NAMA SURVEI & TANGGAL (Tepat di bawah garis underline template, mengalir dinamis) -->
+        <!-- 2. PERAN, NAMA KEGIATAN & TANGGAL (Tepat di bawah garis underline template, mengalir dinamis) -->
+        @php
+            $rawRole = $role ?? $surveyUser?->role ?? null;
+            if (!$rawRole && isset($user) && isset($survey)) {
+                $rawRole = \App\Models\SurveyUser::where('survey_id', $survey->id)->where('user_id', $user->id)->value('role');
+            }
+            $rawRole = $rawRole ?: 'Petugas';
+
+            // Sesuaikan kepanjangan PML dan PCL untuk sertifikat
+            $upperRole = strtoupper(trim($rawRole));
+            if ($upperRole === 'PML') {
+                $displayRole = 'Petugas Pengawas Lapangan';
+            } elseif ($upperRole === 'PCL') {
+                $displayRole = 'Petugas Pencacah Lapangan';
+            } else {
+                $displayRole = $rawRole;
+            }
+        @endphp
         <div class="box right" style="top: 420px; left: 340px; width: 700px;">
-            <!-- Peran & Nama Survei -->
+            <!-- Peran & Nama Kegiatan -->
             <div class="muted" style="font-size: 16px; line-height: 1.35; margin-bottom: 8px;">
-                Petugas <span class="bold">{{ $survey->name }}</span>
+                {{ $displayRole }} <span class="bold">{{ $survey->name }}</span>
             </div>
 
-            <!-- Tanggal Pelaksanaan Survei -->
+            <!-- Tanggal Pelaksanaan Kegiatan -->
             @if ($survey->start_date || $survey->end_date)
                 <div class="muted" style="font-size: 12px; font-weight: 500;">
                     {{ optional($survey->start_date)->translatedFormat('d M Y') }} — {{ optional($survey->end_date)->translatedFormat('d M Y') }}

@@ -31,26 +31,55 @@ class SurveyUserResource extends Resource
     protected static ?string $model = SurveyUser::class;
 
     protected static ?string $navigationIcon = 'heroicon-m-user-group';
-    protected static ?string $navigationGroup = 'Manajemen Survei';
-    protected static ?string $navigationLabel = 'Peserta Survei';
+    protected static ?string $navigationGroup = 'Manajemen Kegiatan';
+    protected static ?string $navigationLabel = 'Peserta Kegiatan';
+    protected static ?string $modelLabel = 'Peserta Kegiatan';
+    protected static ?string $pluralModelLabel = 'Peserta Kegiatan';
 
     public static function form(Form $form): Form
     {
+        $roles = app(SystemSettings::class)->kegiatan_roles ?? ['PML', 'PCL', 'Penanggung Jawab', 'Panitia', 'Peserta'];
+        $roleOptions = array_combine($roles, $roles);
+
         return $form->schema([
             Forms\Components\Select::make('survey_id')
-                ->label('Survei')
-                ->options(fn() => Survey::orderBy('name')->pluck('name', 'id'))->searchable()->required(),
+                ->label('Kegiatan')
+                ->options(fn () => Survey::orderBy('name')->pluck('name', 'id'))->searchable()->required(),
 
             Forms\Components\Select::make('user_id')
                 ->label('Peserta')
-                ->options(fn() => User::orderBy('name')->pluck('name', 'id'))->searchable()->required(),
+                ->options(fn () => User::orderBy('name')->pluck('name', 'id'))->searchable()->required(),
+
+            Forms\Components\Select::make('role')
+                ->label('Role / Peran')
+                ->options($roleOptions)
+                ->default('Peserta')
+                ->helperText('Peran peserta pada kegiatan. Singkatan PML & PCL akan otomatis dicetak lengkap ("Petugas Pengawas Lapangan" & "Petugas Pencacah Lapangan") pada sertifikat.')
+                ->required()
+                ->createOptionForm([
+                    Forms\Components\TextInput::make('role')
+                        ->label('Nama Role Baru')
+                        ->helperText('Disarankan menggunakan nama peran lengkap dan tidak disingkat, karena akan dicetak pada sertifikat kegiatan.')
+                        ->required()
+                        ->maxLength(100),
+                ])
+                ->createOptionUsing(function (array $data) use ($roles) {
+                    $newRole = trim($data['role']);
+                    if ($newRole && !in_array($newRole, $roles)) {
+                        $settings = app(SystemSettings::class);
+                        $updatedRoles = array_merge($roles, [$newRole]);
+                        $settings->kegiatan_roles = $updatedRoles;
+                        $settings->save();
+                    }
+                    return $newRole;
+                }),
 
             Forms\Components\Select::make('status')
-                ->options(['registered' => 'registered', 'approved' => 'approved'])
+                ->options(['registered' => 'Terdaftar', 'approved' => 'Disetujui'])
                 ->default('registered')->required(),
 
-            Forms\Components\TextInput::make('score')->numeric()->minValue(0)->maxValue(100)->nullable(),
-            Forms\Components\Textarea::make('notes')->columnSpanFull(),
+            Forms\Components\TextInput::make('score')->numeric()->minValue(0)->maxValue(100)->nullable()->label('Skor'),
+            Forms\Components\Textarea::make('notes')->columnSpanFull()->label('Catatan'),
         ])->columns(2);
     }
 
@@ -58,26 +87,36 @@ class SurveyUserResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('survey.name')->label('Survei')->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('survey.name')->label('Kegiatan')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('user.name')->label('Peserta')->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('role')
+                    ->label('Role')
+                    ->badge()
+                    ->color('info'),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
-                    ->color(fn(string $state) => $state === 'approved' ? 'success' : 'warning'),
+                    ->color(fn (string $state) => $state === 'approved' ? 'success' : 'warning'),
                 Tables\Columns\TextColumn::make('score')->numeric()->label('Skor')->sortable(),
                 Tables\Columns\TextColumn::make('registered_at')->date()->label('Terdaftar')->sortable(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('survey_id')->label('Survei')
-                    ->options(fn() => Survey::orderBy('name')->pluck('name', 'id')),
+                Tables\Filters\SelectFilter::make('survey_id')->label('Kegiatan')
+                    ->options(fn () => Survey::orderBy('name')->pluck('name', 'id')),
+                Tables\Filters\SelectFilter::make('role')
+                    ->label('Role')
+                    ->options(function () {
+                        $roles = app(SystemSettings::class)->kegiatan_roles ?? ['PML', 'PCL', 'Penanggung Jawab', 'Panitia', 'Peserta'];
+                        return array_combine($roles, $roles);
+                    }),
                 Tables\Filters\SelectFilter::make('status')
-                    ->options(['registered' => 'registered', 'approved' => 'approved']),
+                    ->options(['registered' => 'Terdaftar', 'approved' => 'Disetujui']),
                 Tables\Filters\Filter::make('registered_at')->form([
-                    Forms\Components\DatePicker::make('from'),
-                    Forms\Components\DatePicker::make('until'),
+                    Forms\Components\DatePicker::make('from')->label('Dari'),
+                    Forms\Components\DatePicker::make('until')->label('Sampai'),
                 ])->query(function ($query, array $data) {
                     return $query
-                        ->when($data['from'] ?? null, fn($qq, $d) => $qq->whereDate('registered_at', '>=', $d))
-                        ->when($data['until'] ?? null, fn($qq, $d) => $qq->whereDate('registered_at', '<=', $d));
+                        ->when($data['from'] ?? null, fn ($qq, $d) => $qq->whereDate('registered_at', '>=', $d))
+                        ->when($data['until'] ?? null, fn ($qq, $d) => $qq->whereDate('registered_at', '<=', $d));
                 }),
             ])
             ->headerActions([
@@ -270,6 +309,8 @@ class SurveyUserResource extends Resource
             'template' => $template,
             'user' => $row->user,
             'survey' => $row->survey,
+            'surveyUser' => $row,
+            'role' => $row->role,
             'no' => $no,
             'issuedAt' => $now,
             'signatureDate' => $now,
@@ -304,12 +345,21 @@ class SurveyUserResource extends Resource
         ];
     }
 
+    /**
+     * Override query: hanya tampilkan peserta dari kegiatan yang belum di-hapus (soft-deleted).
+     * Ini mencegah row dengan survey.name null/kosong di tabel Peserta Kegiatan.
+     */
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->whereHas('survey');
+    }
+
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSurveyUsers::route('/'),
+            'index'  => Pages\ListSurveyUsers::route('/'),
             'create' => Pages\CreateSurveyUser::route('/create'),
-            'edit' => Pages\EditSurveyUser::route('/{record}/edit'),
+            'edit'   => Pages\EditSurveyUser::route('/{record}/edit'),
         ];
     }
 }

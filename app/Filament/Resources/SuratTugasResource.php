@@ -42,7 +42,7 @@ class SuratTugasResource extends Resource
                 Section::make('Informasi Tugas')->schema([
                     Forms\Components\Group::make()->schema([
                         Forms\Components\Select::make('survey_id')
-                            ->label('Survey (Opsional)')
+                            ->label('Kegiatan (Opsional)')
                             ->relationship('survey', 'name')
                             ->searchable()
                             ->preload()
@@ -391,7 +391,7 @@ class SuratTugasResource extends Resource
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('survey_id')
-                    ->label('Filter berdasarkan Survey')
+                    ->label('Filter berdasarkan Kegiatan')
                     ->relationship('survey', 'name')
                     ->searchable()
                     ->preload(),

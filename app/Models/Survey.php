@@ -21,13 +21,26 @@ class Survey extends Model
 
     protected $fillable = [
         'name',
+        'tujuan',
         'description',
+        'jenis_kegiatan',
+        'metode',
         'dasar_surat',
         'start_date',
         'end_date',
         'is_active',
         'is_multiple',
     ];
+
+    public function getDescriptionAttribute(): ?string
+    {
+        return $this->attributes['tujuan'] ?? $this->attributes['description'] ?? null;
+    }
+
+    public function setDescriptionAttribute(?string $value): void
+    {
+        $this->attributes['tujuan'] = $value;
+    }
 
     protected $casts = [
         'start_date' => 'date',
@@ -40,7 +53,7 @@ class Survey extends Model
     {
         return $this->belongsToMany(User::class, 'survey_users')
             ->using(SurveyUser::class)
-            ->withPivot(['status', 'registered_at', 'score', 'notes'])
+            ->withPivot(['role', 'status', 'registered_at', 'score', 'notes'])
             ->withTimestamps();
     }
 

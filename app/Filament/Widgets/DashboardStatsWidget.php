@@ -20,8 +20,8 @@ class DashboardStatsWidget extends BaseWidget
                 ->descriptionIcon('heroicon-m-document-text')
                 ->color('primary'),
                 
-            Stat::make('Total Survei', Survey::count())
-                ->description('Survei yang terdaftar')
+            Stat::make('Total Kegiatan', Survey::count())
+                ->description('Kegiatan yang terdaftar')
                 ->descriptionIcon('heroicon-m-clipboard-document-check')
                 ->color('success'),
                 

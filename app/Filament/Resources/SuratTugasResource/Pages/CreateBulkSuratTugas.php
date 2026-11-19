@@ -42,11 +42,11 @@ class CreateBulkSuratTugas extends Page implements HasForms
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('Pilih Survey & Pegawai')
-                    ->description('Pilih survey terlebih dahulu, lalu pilih pegawai dari peserta survey tersebut.')
+                Forms\Components\Section::make('Pilih Kegiatan & Pegawai')
+                    ->description('Pilih kegiatan terlebih dahulu, lalu pilih pegawai dari peserta kegiatan tersebut.')
                     ->schema([
                         Forms\Components\Select::make('survey_id')
-                            ->label('Survey')
+                            ->label('Kegiatan')
                             ->options(function () {
                                 return \App\Models\Survey::where('is_active', true)
                                     ->where(function ($query) {

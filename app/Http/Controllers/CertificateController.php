@@ -34,6 +34,7 @@ class CertificateController extends Controller
             'template' => $template,
             'user' => $certificate->user,
             'survey' => $certificate->survey,
+            'role' => \App\Models\SurveyUser::where('survey_id', $certificate->survey_id)->where('user_id', $certificate->user_id)->value('role'),
             'no' => $certificate->certificate_no,
             'issuedAt' => $certificate->issued_at,
             'signatureDate' => $certificate->signature_date ?? $certificate->issued_at,
