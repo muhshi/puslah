@@ -155,7 +155,7 @@ class ProfileMe extends Page implements HasForms
             ->statePath('passwordData')
             ->schema([
                 Section::make('Update Password')
-                    ->description('Pastikan password panjang & acak.')
+                    ->description('Akun Anda terhubung dengan SIPETRA SSO. Mengubah kata sandi di sini hanya untuk keperluan lokal darurat dan tidak mengubah kata sandi utama akun SIPETRA Anda. Untuk mengelola kata sandi utama, silakan gunakan menu Profil & Password (SIPETRA).')
                     ->schema([
                         TextInput::make('current_password')
                             ->label('Password saat ini')
