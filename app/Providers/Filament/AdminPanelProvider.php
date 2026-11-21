@@ -37,7 +37,6 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->databaseNotifications()
             ->authGuard('web')
-            ->registration()
             ->userMenuItems([
                 MenuItem::make()
                     ->label('Profile')
