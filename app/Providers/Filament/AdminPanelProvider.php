@@ -34,7 +34,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            ->login(\App\Filament\Pages\Auth\Login::class)
             ->databaseNotifications()
             ->authGuard('web')
             ->userMenuItems([
@@ -113,7 +113,6 @@ class AdminPanelProvider extends PanelProvider
                         'sm' => 2,
                     ]),
                 FilamentFullCalendarPlugin::make(),
-            ])
-            ->renderHook('panels::auth.login.form.after', fn() => view('auth.sso-button'));
+            ]);
     }
 }
