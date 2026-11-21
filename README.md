@@ -55,6 +55,8 @@ composer dev
 ## Changelog
 
 ### 2026-11-21
+- **UI/UX Polish Tombol Login SIPETRA SSO**:
+  - **Penyempurnaan Padding & Kontainer Badge Logo BPS (`login.blade.php`):** Membungkus logo BPS ke dalam container badge putih ber-radius (`rounded-lg bg-white p-1.5 shadow-sm`) agar logo tidak mepet/terpotong di latar tombol biru BPS (`#005596`), memberikan tampilan yang lebih rapi, proporsional, dan estetik.
 - **Transisi Login Tunggal SIPETRA SSO (Single Sign-On)**:
   - **Halaman Login Satu Pintu SIPETRA (`App\Filament\Pages\Auth\Login` & `login.blade.php`):** Menyederhanakan proses autentikasi menjadi metode tunggal berbasis SIPETRA SSO dengan antarmuka bersih dan tombol heroik ber-branding BPS Demak, menggantikan tampilan form ganda (email/password dan SSO).
   - **Opsi Darurat / Pengembang (Emergency Fallback):** Menyediakan collapsible toggle halus untuk form login email & password standar yang tersembunyi secara default (dapat diakses via toggle atau parameter `?fallback=1`) saat server SIPETRA offline atau untuk keperluan pengujian lokal.

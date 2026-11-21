@@ -27,25 +27,27 @@
     <div class="flex flex-col items-center gap-4 py-2">
         <a href="{{ route('sipetra.login') }}"
            id="sipetra-sso-btn"
-           onclick="if(this.getAttribute('data-submitting')) return false; this.setAttribute('data-submitting', '1'); this.style.pointerEvents='none'; this.style.opacity='0.8'; document.getElementById('sso-spinner').style.display='inline-block'; document.getElementById('sso-icon').style.display='none'; document.getElementById('sso-btn-text').innerText='Menghubungkan ke SIPETRA...';"
-           class="w-full flex items-center justify-center gap-3 px-5 py-3.5 text-base font-semibold text-white rounded-xl shadow-md transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2"
+           onclick="if(this.getAttribute('data-submitting')) return false; this.setAttribute('data-submitting', '1'); this.style.pointerEvents='none'; this.style.opacity='0.85'; document.getElementById('sso-spinner').style.display='inline-block'; document.getElementById('sso-icon-badge').style.display='none'; document.getElementById('sso-btn-text').innerText='Menghubungkan ke SIPETRA...';"
+           class="w-full flex items-center justify-center gap-3.5 px-4 py-3 text-base font-semibold text-white rounded-xl shadow-md transition-all duration-200 hover:shadow-lg hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-offset-2"
            style="background-color: #005596;">
-            {{-- Logo BPS --}}
-            <img id="sso-icon"
-                 src="{{ asset('images/logo_bps.png') }}"
-                 alt="Logo BPS"
-                 class="w-6 h-6 object-contain shrink-0"
-                 loading="lazy">
+            {{-- Logo BPS Badge with Padding & Rounded Corners --}}
+            <span id="sso-icon-badge" class="flex items-center justify-center w-8 h-8 rounded-lg bg-white p-1.5 shadow-sm shrink-0">
+                <img id="sso-icon"
+                     src="{{ asset('images/logo_bps.png') }}"
+                     alt="Logo BPS"
+                     class="w-full h-full object-contain"
+                     loading="lazy">
+            </span>
 
             {{-- Spinner --}}
-            <svg id="sso-spinner" style="display: none;" class="w-6 h-6 animate-spin text-white shrink-0" viewBox="0 0 24 24" fill="none">
+            <svg id="sso-spinner" style="display: none;" class="w-7 h-7 animate-spin text-white shrink-0 p-0.5" viewBox="0 0 24 24" fill="none">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
             </svg>
 
-            <span id="sso-btn-text">Masuk dengan SIPETRA SSO</span>
+            <span id="sso-btn-text" class="tracking-wide">Masuk dengan SIPETRA SSO</span>
 
-            <svg class="w-5 h-5 ml-auto text-blue-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 ml-auto text-blue-200 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
             </svg>
         </a>
