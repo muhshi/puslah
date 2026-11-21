@@ -54,6 +54,14 @@ composer dev
 
 ## Changelog
 
+### 2026-11-21
+- **Transisi Login Tunggal SIPETRA SSO (Single Sign-On)**:
+  - **Halaman Login Satu Pintu SIPETRA (`App\Filament\Pages\Auth\Login` & `login.blade.php`):** Menyederhanakan proses autentikasi menjadi metode tunggal berbasis SIPETRA SSO dengan antarmuka bersih dan tombol heroik ber-branding BPS Demak, menggantikan tampilan form ganda (email/password dan SSO).
+  - **Opsi Darurat / Pengembang (Emergency Fallback):** Menyediakan collapsible toggle halus untuk form login email & password standar yang tersembunyi secara default (dapat diakses via toggle atau parameter `?fallback=1`) saat server SIPETRA offline atau untuk keperluan pengujian lokal.
+  - **Penonaktifan Registrasi Publik & Pembersihan Route Auth Legacy:** Menghapus `->registration()` pada `AdminPanelProvider` dan membersihkan rute legacy Google Socialite di `routes/web.php` guna mencegah pembuatan akun lokal tanpa relasi SSO.
+  - **Penyempurnaan Penanganan Error SSO (`SsoController.php`):** Memperbaiki penanganan callback saat terjadi error atau pembatalan otorisasi dengan redirect langsung ke login panel beserta notifikasi flash error yang informatif.
+  - **Harmonisasi Halaman Profil Pengguna (`ProfileMe.php`):** Menambahkan penjelasan pada form ganti kata sandi bahwa akun dikelola terpusat via SIPETRA SSO dan pergantian sandi lokal hanya ditujukan untuk akses darurat.
+
 ### 2026-11-19
 - **Perbaikan Urutan Default Tabel Bukti Dukung Harian (Terbaru di Paling Atas)**:
   - **Default Grouping Direction Descending (`ListDailyActivities.php` & `DailyActivityResource.php`):** Memperbaiki perilaku grouping tabel Filament yang sebelumnya secara default mengurutkan tanggal secara *ascending* (tanggal paling lawas di atas). Menambahkan properti Livewire `public ?string $tableGroupingDirection = 'desc'` dengan atribut `#[Url]` pada `ListDailyActivities` serta menyempurnakan `orderQueryUsing` agar memastikan arah pengurutan tanggal selalu *descending* (tanggal terbaru/hari ini di posisi paling atas) dan tetap menjaga kronologis internal per hari dari pagi ke sore (`created_at ASC`).
