@@ -21,13 +21,21 @@ class SsoController extends Controller
     public function callback(Request $request)
     {
         if ($request->has('error')) {
-            return redirect()->route('login')->with('error', 'Login SSO Dibatalkan');
+            $errorDescription = $request->get('error_description') ?? 'Login SSO dibatalkan oleh pengguna.';
+            return redirect()->route('filament.admin.auth.login')->with('error', $errorDescription);
         }
 
         try {
             $ssoUser = Socialite::driver('sipetra')->user();
         } catch (\Exception $e) {
-            return redirect()->route('login')->with('error', 'Gagal mengambil data user');
+            Log::error('SIPETRA SSO Callback error: ' . $e->getMessage(), [
+                'exception' => $e,
+            ]);
+
+            return redirect()->route('filament.admin.auth.login')->with(
+                'error',
+                'Gagal terhubung dengan server SIPETRA atau otentikasi tidak valid. Silakan coba kembali.'
+            );
         }
 
         $rawData = $ssoUser->getRaw();
