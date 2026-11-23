@@ -75,60 +75,73 @@ class SuratTugasPdfService
         // 4. Format tanggal periode tugas
         $periode = self::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
 
-        // 5. Siapkan data Lampiran Peserta (Kolektif / Terlampir)
+        // 5. Siapkan data Lampiran Peserta (Kolektif / Terlampir) & Multi-Lampiran Modular
         $participants = $record->participants()->with('profile')->get();
         $isUserTerlampir = stripos($record->user?->name, 'Terlampir') !== false;
-        $hasLampiran = $participants->isNotEmpty() || $isUserTerlampir;
-        $lampiranData = [];
+        $hasLampiranPeserta = $participants->isNotEmpty() || $isUserTerlampir;
+        $lampirans = [];
 
-        if ($hasLampiran && $record->survey) {
-            $survey = $record->survey;
-            $surveyUsers = \App\Models\SurveyUser::where('survey_id', $survey->id)
-                ->whereIn('user_id', $participants->pluck('id'))
-                ->with(['class', 'user.profile'])
-                ->get();
+        if ($hasLampiranPeserta) {
+            $lampiranPesertaData = [];
 
-            $foundUserIds = $surveyUsers->pluck('user_id')->toArray();
-            $missingUsers = $participants->filter(fn ($u) => !in_array($u->id, $foundUserIds));
+            if ($record->survey) {
+                $survey = $record->survey;
+                $surveyUsers = \App\Models\SurveyUser::where('survey_id', $survey->id)
+                    ->whereIn('user_id', $participants->pluck('id'))
+                    ->with(['class', 'user.profile'])
+                    ->get();
 
-            if ($survey->is_multiclass) {
-                // Kelompokkan per kelas (bahkan jika hanya 1 kelas, tetap tampilkan nama kelasnya)
-                $grouped = $surveyUsers->groupBy(fn ($su) => $su->class?->name ?? 'Tanpa Kelas');
-                foreach ($grouped as $className => $items) {
-                    $lampiranData[] = [
-                        'class_name' => $className,
-                        'members' => $items,
-                    ];
-                }
-                if ($missingUsers->isNotEmpty()) {
-                    $lampiranData[] = [
-                        'class_name' => 'Peserta Lainnya',
-                        'members' => $missingUsers->map(fn ($u) => (object)[
+                $foundUserIds = $surveyUsers->pluck('user_id')->toArray();
+                $missingUsers = $participants->filter(fn ($u) => !in_array($u->id, $foundUserIds));
+
+                if ($survey->is_multiclass) {
+                    // Kelompokkan per kelas (bahkan jika hanya 1 kelas, tetap tampilkan nama kelasnya)
+                    $grouped = $surveyUsers->groupBy(fn ($su) => $su->class?->name ?? 'Tanpa Kelas');
+                    foreach ($grouped as $className => $items) {
+                        $lampiranPesertaData[] = [
+                            'class_name' => $className,
+                            'members' => $items,
+                        ];
+                    }
+                    if ($missingUsers->isNotEmpty()) {
+                        $lampiranPesertaData[] = [
+                            'class_name' => 'Peserta Lainnya',
+                            'members' => $missingUsers->map(fn ($u) => (object)[
+                                'user' => $u,
+                                'role' => $u->profile?->jabatan ?? 'Petugas',
+                            ]),
+                        ];
+                    }
+                } else {
+                    $allMembers = $surveyUsers;
+                    if ($missingUsers->isNotEmpty()) {
+                        $allMembers = $allMembers->concat($missingUsers->map(fn ($u) => (object)[
                             'user' => $u,
                             'role' => $u->profile?->jabatan ?? 'Petugas',
-                        ]),
+                        ]));
+                    }
+                    $lampiranPesertaData[] = [
+                        'class_name' => null,
+                        'members' => $allMembers,
                     ];
                 }
-            } else {
-                $allMembers = $surveyUsers;
-                if ($missingUsers->isNotEmpty()) {
-                    $allMembers = $allMembers->concat($missingUsers->map(fn ($u) => (object)[
+            } elseif ($participants->isNotEmpty()) {
+                $lampiranPesertaData[] = [
+                    'class_name' => null,
+                    'members' => $participants->map(fn ($u) => (object)[
                         'user' => $u,
                         'role' => $u->profile?->jabatan ?? 'Petugas',
-                    ]));
-                }
-                $lampiranData[] = [
-                    'class_name' => null,
-                    'members' => $allMembers,
+                    ]),
                 ];
             }
-        } elseif ($hasLampiran && $participants->isNotEmpty()) {
-            $lampiranData[] = [
-                'class_name' => null,
-                'members' => $participants->map(fn ($u) => (object)[
-                    'user' => $u,
-                    'role' => $u->profile?->jabatan ?? 'Petugas',
-                ]),
+
+            // Lampiran 1: Daftar Petugas / Peserta Kegiatan
+            $lampirans[] = [
+                'nomor' => 1,
+                'tipe' => 'peserta',
+                'judul' => 'DAFTAR PETUGAS / PESERTA',
+                'sub_judul' => $record->keperluan,
+                'data' => $lampiranPesertaData,
             ];
         }
 
@@ -140,8 +153,8 @@ class SuratTugasPdfService
             'qrBase64' => $qrBase64,
             'periode' => $periode,
             'is_preview' => $isPreview,
-            'hasLampiran' => $hasLampiran,
-            'lampiranData' => $lampiranData,
+            'hasLampiran' => !empty($lampirans),
+            'lampirans' => $lampirans,
         ])->setPaper('a4', 'portrait');
 
         // 6. Proteksi / Enkripsi jika Master Password diatur

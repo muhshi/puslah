@@ -71,7 +71,8 @@ composer dev
     - Opsi pemilihan metode penugasan: *Individu* atau *Kolektif / Terlampir (Banyak Petugas)*.
     - Pada mode kolektif, nama dan jabatan otomatis terkunci dan terisi **Terlampir**. Admin dapat memilih banyak peserta sekaligus (dikelompokkan rapi per kelas).
     - Menyimpan relasi peserta kolektif pada tabel pivot `surat_tugas_participants`.
-    - Cetakan PDF Surat Tugas (`pdf_table_layout.blade.php`) secara otomatis menyisipkan halaman **Lampiran Surat Tugas** resmi BPS.
+    - Cetakan PDF Surat Tugas (`pdf_table_layout.blade.php`) secara otomatis menyisipkan halaman **Lampiran Surat Tugas** resmi BPS dengan blok rujukan di pojok kanan atas (`Lampiran 1 Surat Tugas`, `Nomor`, `Tanggal`).
+    - Desain halaman lampiran berfokus penuh (*full content*) pada tabel peserta tanpa duplikasi blok tanda tangan, dengan arsitektur modular multi-lampiran (`$lampirans = [...]`) yang siap menampung Lampiran 2, 3, dst (misal: Jadwal Kegiatan) di masa mendatang.
     - Jika kegiatan memiliki multi-kelas, lampiran otomatis dikelompokkan per sub-header nama kelas masing-masing, **dengan tetap menampilkan nama kelasnya meskipun peserta yang dipilih hanya berasal dari 1 kelas**.
 - **Tombol Proper Case Universal Seluruh Form Admin (`withProperCase`)**:
   - **Macro Reaktif Filament (`AppServiceProvider`):** Mendaftarkan macro `withProperCase()` pada komponen `TextInput` dan `Textarea` Filament menggunakan concern `Macroable`. Macro menyisipkan suffix action berikon kilau (*heroicon-m-sparkles*) abu-abu yang secara cerdas menormalisasi spasi berulang dan mengonversi teks menjadi Title/Proper Case menggunakan `mb_convert_case($val, MB_CASE_TITLE, 'UTF-8')`.
