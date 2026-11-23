@@ -92,9 +92,9 @@ class ProfileMe extends Page implements HasForms
                         ->columnSpanFull(),
                 ]),
                 Section::make('Informasi Pribadi')->schema([
-                    TextInput::make('full_name')->label('Nama lengkap')->required()->maxLength(100),
-                    TextInput::make('nickname')->label('Nama panggilan')->maxLength(50),
-                    TextInput::make('birth_place')->label('Tempat lahir')->maxLength(100),
+                    TextInput::make('full_name')->label('Nama lengkap')->required()->maxLength(100)->withProperCase(),
+                    TextInput::make('nickname')->label('Nama panggilan')->maxLength(50)->withProperCase(),
+                    TextInput::make('birth_place')->label('Tempat lahir')->maxLength(100)->withProperCase(),
                     DatePicker::make('birth_date')
                         ->label('Tanggal lahir')
                         ->native(false),
@@ -107,6 +107,7 @@ class ProfileMe extends Page implements HasForms
                     Textarea::make('address')
                         ->label('Alamat domisili')
                         ->rows(3)
+                        ->withProperCase()
                         ->columnSpanFull(),
                     TextInput::make('phone')
                         ->label('No. HP/WA')
@@ -116,8 +117,8 @@ class ProfileMe extends Page implements HasForms
                 Section::make('Informasi Kepegawaian')->schema([
                     TextInput::make('nip')->label('NIP Baru')->maxLength(50),
                     TextInput::make('old_nip')->label('NIP Lama')->maxLength(50),
-                    TextInput::make('jabatan')->label('Jabatan')->maxLength(255),
-                    TextInput::make('pangkat_golongan')->label('Pangkat/Golongan')->maxLength(100),
+                    TextInput::make('jabatan')->label('Jabatan')->maxLength(255)->withProperCase(),
+                    TextInput::make('pangkat_golongan')->label('Pangkat/Golongan')->maxLength(100)->withProperCase(),
                     TextInput::make('employment_status')
                         ->label('Status kerja')
                         ->default('aktif')

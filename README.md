@@ -54,6 +54,20 @@ composer dev
 
 ## Changelog
 
+### 2026-11-23
+- **Tombol Proper Case Universal Seluruh Form Admin (`withProperCase`)**:
+  - **Macro Reaktif Filament (`AppServiceProvider`):** Mendaftarkan macro `withProperCase()` pada komponen `TextInput` dan `Textarea` Filament menggunakan concern `Macroable`. Macro menyisipkan suffix action berikon kilau (*heroicon-m-sparkles*) abu-abu yang secara cerdas menormalisasi spasi berulang dan mengonversi teks menjadi Title/Proper Case menggunakan `mb_convert_case($val, MB_CASE_TITLE, 'UTF-8')`.
+  - **Penerapan Luas pada Seluruh Resource:** Diterapkan secara menyeluruh pada semua input teks deskriptif di panel admin:
+    - *Manajemen Kegiatan (`SurveyResource`):* Nama Kegiatan, Tujuan Kegiatan, Dasar Surat (baik pada form utama maupun modal salin/copy kegiatan).
+    - *Peserta Kegiatan (`SurveyUserResource` & `ParticipantsRelationManager`):* Nama Lengkap dan Catatan Peserta.
+    - *Surat Tugas (`SuratTugasResource` & `CreateBulkSuratTugas`):* Jabatan, Keperluan, Tempat Tugas, Alat Angkutan, Maksud Perjalanan, Tempat Berangkat, dan Tempat Tujuan.
+    - *Laporan Perjalanan Dinas (`LaporanPerjalananDinasResource`):* Tujuan/Keperluan, Nama Pejabat yang Dikunjungi, Desa/Lokasi Pejabat, Poin Lapangan AI, dan Keterangan Foto.
+    - *Bukti Dukung Harian (`DailyActivityResource`):* Tujuan/Keperluan, Lokasi/Instansi, dan Nama Pejabat pada modal agregasi LPD.
+    - *Manajemen Pengguna & Profil (`UserResource`, `UserProfileResource`, & `ProfileMe`):* Nama Pengguna, Nama Lengkap, Panggilan, Tempat Lahir, Alamat Domisili, Jabatan, Pangkat/Golongan, dan Status Kepegawaian.
+    - *Kantor Cabang (`OfficeResource`):* Nama Kantor.
+    - *Pengaturan Sistem (`SystemSettingsPage`):* Nama Kantor Default, Kota Penetapan Sertifikat, Nama Pejabat Penandatangan, Jabatan Penandatangan, Nama PPK, dan Jabatan PPK.
+  - **Proteksi Field Sensitif:** Tetap mempertahankan format asli tanpa tombol Proper Case untuk field yang bersifat *case-sensitive*, numerik, atau kode sistem (NIP, email, password, nomor surat/sppd, koordinat GPS, kode MAK, prefix surat, dan path berkas/API keys).
+
 ### 2026-11-19
 - **Pembaruan Menyeluruh Manajemen Kegiatan & Peserta (Rebranding dari Survei)**:
   - **Unifikasi Terminologi (Survei → Kegiatan):** Mengubah seluruh istilah *"Manajemen Survei"*, *"Survei"*, dan *"Peserta Survei"* menjadi *"Manajemen Kegiatan"*, *"Kegiatan"*, dan *"Peserta Kegiatan"* pada sidebar panel Filament, header form, breadcrumbs, modal copy kegiatan, widget statistik dashboard, kalender penugasan, dan rekapitulasi presensi.

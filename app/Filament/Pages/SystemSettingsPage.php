@@ -96,7 +96,7 @@ class SystemSettingsPage extends Page implements HasForms
             Group::make()->schema([ // ====== KOLOM KIRI
                 Section::make('Lokasi Kantor Default')->schema([
                     TextInput::make('default_office_name')
-                        ->label('Nama Kantor')->required()->maxLength(100),
+                        ->label('Nama Kantor')->required()->maxLength(100)->withProperCase(),
 
                     Map::make('default_location')
                         ->label('Location')
@@ -148,9 +148,9 @@ class SystemSettingsPage extends Page implements HasForms
                 ])->columns(1),
 
                 Section::make('Pejabat Pembuat Komitmen (SPPD)')->schema([
-                    TextInput::make('ppk_name')->label('Nama PPK')->required(),
+                    TextInput::make('ppk_name')->label('Nama PPK')->required()->withProperCase(),
                     TextInput::make('ppk_nip')->label('NIP PPK')->required(),
-                    Textarea::make('ppk_title')->label('Jabatan PPK')->required()->rows(2),
+                    Textarea::make('ppk_title')->label('Jabatan PPK')->required()->rows(2)->withProperCase(),
 
                     Section::make('Template SPPD (.docx)')
                         ->description('Upload file .docx untuk SPPD. Variabel: ${nomor_sppd}, ${nama_ppk}, ${nip_ppk}, ${nama_pegawai}, ${nip_pegawai}, ${pangkat_golongan}, ${jabatan_pegawai}, ${tingkat_perjalanan}, ${maksud_perjalanan}, ${alat_angkutan}, ${tempat_berangkat}, ${tempat_tujuan}, ${lama_perjalanan}, ${tanggal_berangkat}, ${tanggal_kembali}, ${mak}, ${nomor_surat_tugas}, ${tanggal_surat}')
@@ -185,10 +185,10 @@ class SystemSettingsPage extends Page implements HasForms
                 ])->columns(1),
 
                 Section::make('Pejabat Penandatangan (Kepala)')->schema([
-                    TextInput::make('cert_city')->label('Kota Penetapan')->required(),
-                    TextInput::make('cert_signer_name')->label('Nama Pejabat')->required(),
+                    TextInput::make('cert_city')->label('Kota Penetapan')->required()->withProperCase(),
+                    TextInput::make('cert_signer_name')->label('Nama Pejabat')->required()->withProperCase(),
                     TextInput::make('cert_signer_nip')->label('NIP')->required(),
-                    Textarea::make('cert_signer_title')->label('Jabatan')->required()->rows(3),
+                    Textarea::make('cert_signer_title')->label('Jabatan')->required()->rows(3)->withProperCase(),
                     FileUpload::make('cert_signer_signature_path')
                         ->label('Scan Tanda Tangan')
                         ->image()

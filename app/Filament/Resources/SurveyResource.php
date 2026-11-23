@@ -44,16 +44,7 @@ class SurveyResource extends Resource
                 ->label('Nama Kegiatan')
                 ->required()
                 ->maxLength(255)
-                ->suffixAction(
-                    Forms\Components\Actions\Action::make('properCase')
-                        ->label('Proper Case')
-                        ->icon('heroicon-m-sparkles')
-                        ->color('gray')
-                        ->tooltip('Ubah ke format Proper Case (huruf kapital awal tiap kata)')
-                        ->action(function (Forms\Set $set, Forms\Get $get) {
-                            $set('name', self::toProperCase($get('name') ?? ''));
-                        })
-                )
+                ->withProperCase()
                 ->rules([
                     fn ($record) => function (string $attribute, $value, \Closure $fail) use ($record) {
                         $normalized = mb_strtolower(trim(preg_replace('/\s+/', ' ', $value)));
@@ -81,16 +72,7 @@ class SurveyResource extends Resource
                     ->label('Nama Kegiatan')
                     ->required()
                     ->maxLength(255)
-                    ->suffixAction(
-                        Forms\Components\Actions\Action::make('properCase')
-                            ->label('Proper Case')
-                            ->icon('heroicon-m-sparkles')
-                            ->color('gray')
-                            ->tooltip('Ubah ke format Proper Case (huruf kapital awal tiap kata)')
-                            ->action(function (Forms\Set $set, Forms\Get $get) {
-                                $set('name', self::toProperCase($get('name') ?? ''));
-                            })
-                    )
+                    ->withProperCase()
                     ->rules([
                         fn ($record) => function (string $attribute, $value, \Closure $fail) use ($record) {
                             $normalized = mb_strtolower(trim(preg_replace('/\s+/', ' ', $value)));
@@ -129,21 +111,13 @@ class SurveyResource extends Resource
 
                 Forms\Components\Textarea::make('tujuan')
                     ->label('Tujuan Kegiatan')
-                    ->suffixAction(
-                        Forms\Components\Actions\Action::make('properCaseTujuan')
-                            ->label('Proper Case')
-                            ->icon('heroicon-m-sparkles')
-                            ->color('gray')
-                            ->tooltip('Ubah ke format Proper Case')
-                            ->action(function (Forms\Set $set, Forms\Get $get) {
-                                $set('tujuan', self::toProperCase($get('tujuan') ?? ''));
-                            })
-                    )
+                    ->withProperCase()
                     ->columnSpanFull(),
 
                 Forms\Components\Textarea::make('dasar_surat')
                     ->label('Dasar Surat')
                     ->placeholder('Contoh: DIPA BPS Kabupaten Demak Tahun Anggaran 2025...')
+                    ->withProperCase()
                     ->required()
                     ->columnSpanFull(),
 
@@ -255,6 +229,7 @@ class SurveyResource extends Resource
                             ->label('Nama Kegiatan')
                             ->required()
                             ->maxLength(255)
+                            ->withProperCase()
                             ->default(fn (Survey $record) => 'Copy of ' . $record->name),
                         Forms\Components\Select::make('jenis_kegiatan')
                             ->label('Jenis Kegiatan')
@@ -268,11 +243,13 @@ class SurveyResource extends Resource
                             ->required(),
                         Forms\Components\Textarea::make('tujuan')
                             ->label('Tujuan Kegiatan')
+                            ->withProperCase()
                             ->default(fn (Survey $record) => $record->tujuan)
                             ->columnSpanFull(),
                         Forms\Components\Textarea::make('dasar_surat')
                             ->label('Dasar Surat')
                             ->required()
+                            ->withProperCase()
                             ->default(fn (Survey $record) => $record->dasar_surat)
                             ->columnSpanFull(),
                         Forms\Components\DatePicker::make('start_date')

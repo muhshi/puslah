@@ -199,6 +199,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
                             Forms\Components\TextInput::make('jabatan')
                                 ->label('Jabatan (Manual)')
                                 ->helperText('Berlaku sama untuk semua pegawai terpilih.')
+                                ->withProperCase()
                                 ->required(fn(Forms\Get $get) => $get('sumber_jabatan') === 'manual')
                                 ->visible(fn(Forms\Get $get) => $get('sumber_jabatan') === 'manual')
                                 ->maxLength(255),
@@ -209,11 +210,13 @@ class CreateBulkSuratTugas extends Page implements HasForms
 
                         Forms\Components\Textarea::make('keperluan')
                             ->label('Keperluan')
+                            ->withProperCase()
                             ->required()
                             ->columnSpanFull(),
 
                         Forms\Components\TextInput::make('tempat_tugas')
                             ->label('Tempat Tugas')
+                            ->withProperCase()
                             ->maxLength(255)
                             ->columnSpanFull(),
 

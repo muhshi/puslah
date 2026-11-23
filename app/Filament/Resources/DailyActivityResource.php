@@ -598,16 +598,19 @@ class DailyActivityResource extends Resource
                                     Forms\Components\TextInput::make('tujuan')
                                         ->label('Tujuan / Keperluan')
                                         ->required()
+                                        ->withProperCase()
                                         ->columnSpan(2),
 
                                     Forms\Components\TextInput::make('desa_pejabat')
                                         ->label('Lokasi / Instansi Tujuan')
                                         ->required()
+                                        ->withProperCase()
                                         ->columnSpan(1),
 
                                     Forms\Components\TextInput::make('nama_pejabat')
                                         ->label('Nama Pejabat yang Ditemui')
                                         ->placeholder('Contoh: Bapak Iman Teguh Raharto, S.Si, M.Si (atau - jika umum)')
+                                        ->withProperCase()
                                         ->columnSpan(3),
                                 ]),
 

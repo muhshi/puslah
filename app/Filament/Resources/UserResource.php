@@ -32,7 +32,8 @@ class UserResource extends Resource
                 Section::make()
                     ->schema([
                         Forms\Components\TextInput::make('name')
-                            ->required(),
+                            ->required()
+                            ->withProperCase(),
                         Forms\Components\TextInput::make('email')
                             ->email()
                             ->required(),
@@ -59,13 +60,15 @@ class UserResource extends Resource
 
                                 Forms\Components\TextInput::make('jabatan')
                                     ->label('Jabatan')
-                                    ->maxLength(100),
+                                    ->maxLength(100)
+                                    ->withProperCase(),
 
                                 Forms\Components\TextInput::make('pangkat_golongan')
                                     ->label('Pangkat/Golongan')
                                     ->placeholder('Contoh: Penata Muda Tingkat 1 / IIIb')
                                     ->maxLength(100)
-                                    ->helperText('Khusus Pegawai BPS'),
+                                    ->helperText('Khusus Pegawai BPS')
+                                    ->withProperCase(),
                             ])->columns(2)->columnSpanFull()
                     ])->columns(2)
             ]);

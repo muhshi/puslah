@@ -68,6 +68,7 @@ class ParticipantsRelationManager extends RelationManager
                     Forms\Components\TextInput::make('full_name')
                         ->label('Nama Lengkap di Sertifikat')
                         ->placeholder('Contoh: Instruktur Daerah')
+                        ->withProperCase()
                         ->helperText('Teks resmi yang akan dicetak pada sertifikat kegiatan.')
                         ->required()
                         ->maxLength(255),
@@ -90,7 +91,7 @@ class ParticipantsRelationManager extends RelationManager
             Forms\Components\TextInput::make('score')
                 ->numeric()->minValue(0)->maxValue(100)->nullable()->label('Skor'),
             Forms\Components\Textarea::make('notes')
-                ->label('Catatan')->columnSpanFull(),
+                ->label('Catatan')->withProperCase()->columnSpanFull(),
         ])->columns(2);
     }
 
@@ -168,7 +169,7 @@ class ParticipantsRelationManager extends RelationManager
                             ->required()
                             ->columnSpanFull(),
 
-                        Forms\Components\Textarea::make('notes')->label('Catatan')->columnSpanFull(),
+                        Forms\Components\Textarea::make('notes')->label('Catatan')->withProperCase()->columnSpanFull(),
                     ])
                     ->action(function (array $data, $livewire) {
                         /** @var \App\Models\Survey $survey */

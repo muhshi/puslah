@@ -65,6 +65,7 @@ class SurveyUserResource extends Resource
                     Forms\Components\TextInput::make('full_name')
                         ->label('Nama Lengkap di Sertifikat')
                         ->placeholder('Contoh: Instruktur Daerah')
+                        ->withProperCase()
                         ->helperText('Teks resmi yang akan dicetak pada sertifikat kegiatan.')
                         ->required()
                         ->maxLength(255),
@@ -87,7 +88,7 @@ class SurveyUserResource extends Resource
                 ->default('registered')->required(),
 
             Forms\Components\TextInput::make('score')->numeric()->minValue(0)->maxValue(100)->nullable()->label('Skor'),
-            Forms\Components\Textarea::make('notes')->columnSpanFull()->label('Catatan'),
+            Forms\Components\Textarea::make('notes')->withProperCase()->columnSpanFull()->label('Catatan'),
         ])->columns(2);
     }
 

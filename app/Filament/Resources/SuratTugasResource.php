@@ -139,6 +139,7 @@ class SuratTugasResource extends Resource
                         Forms\Components\TextInput::make('jabatan')
                             ->label('Jabatan (Saat Tugas)')
                             ->helperText('Otomatis diambil dari profil, bisa diedit jika perlu.')
+                            ->withProperCase()
                             ->required()
                             ->maxLength(255),
 
@@ -207,12 +208,14 @@ class SuratTugasResource extends Resource
                     ])->columns(1),
 
                     Forms\Components\Textarea::make('keperluan')
+                        ->withProperCase()
                         ->required()
                         ->columnSpanFull(),
 
                     Forms\Components\TextInput::make('tempat_tugas')
                         ->label('Tempat Tugas')
                         ->placeholder('Contoh: Kecamatan Demak')
+                        ->withProperCase()
                         ->maxLength(255)
                         ->columnSpanFull(),
                 ])->columns(2),
@@ -274,6 +277,7 @@ class SuratTugasResource extends Resource
                         Forms\Components\TextInput::make('alat_angkutan')
                             ->label('Alat Angkutan')
                             ->default('Kendaraan Pribadi')
+                            ->withProperCase()
                             ->maxLength(255),
 
                         Forms\Components\TextInput::make('mak')
@@ -285,16 +289,19 @@ class SuratTugasResource extends Resource
                         Forms\Components\Textarea::make('maksud_perjalanan')
                             ->label('Maksud Perjalanan Dinas')
                             ->default(fn(Get $get) => $get('keperluan'))
+                            ->withProperCase()
                             ->columnSpanFull(),
 
                         Forms\Components\TextInput::make('tempat_berangkat')
                             ->label('Tempat Berangkat')
                             ->default('Demak')
+                            ->withProperCase()
                             ->maxLength(255),
 
                         Forms\Components\TextInput::make('tempat_tujuan')
                             ->label('Tempat Tujuan')
                             ->placeholder('Kosongkan untuk mengikuti Tempat Tugas')
+                            ->withProperCase()
                             ->maxLength(255),
                     ])->columns(2)->visible(fn(Get $get) => $get('is_sppd')),
                 ]),

@@ -39,7 +39,8 @@ class OfficeResource extends Resource
                         Section::make()
                             ->schema([
                                 Forms\Components\TextInput::make('name')
-                                    ->required(),
+                                    ->required()
+                                    ->withProperCase(),
                                 Map::make('location')
                                     ->label('Location')
                                     ->columnSpanFull()

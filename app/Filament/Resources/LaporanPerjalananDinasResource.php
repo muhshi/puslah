@@ -266,7 +266,8 @@ class LaporanPerjalananDinasResource extends Resource
                             return $stId ? SuratTugas::find($stId)?->keperluan : null;
                         })
                         ->required()
-                        ->maxLength(255),
+                        ->maxLength(255)
+                        ->withProperCase(),
 
                     Forms\Components\DatePicker::make('tanggal_kunjungan')
                         ->label('Tanggal Kunjungan')
@@ -482,7 +483,8 @@ class LaporanPerjalananDinasResource extends Resource
                                         ->placeholder('Contoh: jam 8 jalan ke morodemak jam 9 ketemu sekdes pak mufna\'am, lanjut briefing taskforce, cek RT dan wawancara warga yang terlewat, istirahat, lanjut lagi sampai sore balik kantor.')
                                         ->rows(4)
                                         ->required()
-                                        ->helperText('Tulis kata kunci atau poin kegiatan. AI akan menyusunnya menjadi paragraf narasi dinas yang rapi dan mengalir lengkap dengan estimasi jam, istirahat, dan waktu tiba di kantor.'),
+                                        ->helperText('Tulis kata kunci atau poin kegiatan. AI akan menyusunnya menjadi paragraf narasi dinas yang rapi dan mengalir lengkap dengan estimasi jam, istirahat, dan waktu tiba di kantor.')
+                                        ->withProperCase(),
                                     Forms\Components\Radio::make('mode_pengisian')
                                         ->label('Metode Pengisian')
                                         ->options([
@@ -553,11 +555,13 @@ class LaporanPerjalananDinasResource extends Resource
 
                     Forms\Components\TextInput::make('nama_pejabat')
                         ->label('Nama Pejabat yang Dikunjungi')
-                        ->maxLength(255),
+                        ->maxLength(255)
+                        ->withProperCase(),
 
                     Forms\Components\TextInput::make('desa_pejabat')
                         ->label('Desa/Lokasi Pejabat')
-                        ->maxLength(255),
+                        ->maxLength(255)
+                        ->withProperCase(),
                 ])->columns(2),
 
                 Forms\Components\Section::make('Dokumentasi Foto')->schema([
@@ -616,7 +620,8 @@ class LaporanPerjalananDinasResource extends Resource
 
                             Forms\Components\Textarea::make('keterangan')
                                 ->label('Keterangan Foto')
-                                ->rows(2),
+                                ->rows(2)
+                                ->withProperCase(),
                         ])
                         ->extraItemActions([
                             Forms\Components\Actions\Action::make('downloadItem')

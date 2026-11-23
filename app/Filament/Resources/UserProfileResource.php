@@ -45,11 +45,14 @@ class UserProfileResource extends Resource
                     ->helperText('JPG/PNG, maks 2MB'),
                 Forms\Components\TextInput::make('full_name')
                     ->label('Nama Lengkap')
-                    ->required(),
+                    ->required()
+                    ->withProperCase(),
                 Forms\Components\TextInput::make('nickname')
-                    ->label('Nama Panggilan'),
+                    ->label('Nama Panggilan')
+                    ->withProperCase(),
                 Forms\Components\TextInput::make('birth_place')
-                    ->label('Tempat Lahir'),
+                    ->label('Tempat Lahir')
+                    ->withProperCase(),
                 Forms\Components\DatePicker::make('birth_date')
                     ->label('Tanggal Lahir'),
                 Forms\Components\Select::make('gender')
@@ -60,16 +63,19 @@ class UserProfileResource extends Resource
                     ]),
                 Forms\Components\Textarea::make('address')
                     ->label('Alamat')
+                    ->withProperCase()
                     ->columnSpanFull(),
                 Forms\Components\TextInput::make('phone')
                     ->label('No. HP / WA')
                     ->tel(),
                 Forms\Components\TextInput::make('employment_status')
                     ->label('Status Kepegawaian')
-                    ->required(),
+                    ->required()
+                    ->withProperCase(),
                 Forms\Components\TextInput::make('jabatan')
                     ->label('Jabatan')
-                    ->maxLength(100),
+                    ->maxLength(100)
+                    ->withProperCase(),
                 Forms\Components\TextInput::make('nip')
                     ->label('NIP')
                     ->maxLength(50)
@@ -77,7 +83,8 @@ class UserProfileResource extends Resource
                 Forms\Components\TextInput::make('pangkat_golongan')
                     ->label('Pangkat/Golongan')
                     ->maxLength(100)
-                    ->helperText('Contoh: Penata Muda Tingkat 1 / IIIb'),
+                    ->helperText('Contoh: Penata Muda Tingkat 1 / IIIb')
+                    ->withProperCase(),
             ]);
     }
 
