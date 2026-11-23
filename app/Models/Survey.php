@@ -30,6 +30,7 @@ class Survey extends Model
         'end_date',
         'is_active',
         'is_multiple',
+        'is_multiclass',
     ];
 
     public function getDescriptionAttribute(): ?string
@@ -47,6 +48,7 @@ class Survey extends Model
         'end_date' => 'date',
         'is_active' => 'boolean',
         'is_multiple' => 'boolean',
+        'is_multiclass' => 'boolean',
     ];
 
     public function participants(): BelongsToMany
@@ -65,6 +67,11 @@ class Survey extends Model
     public function surveyUsers(): HasMany
     {
         return $this->hasMany(SurveyUser::class);
+    }
+
+    public function classes(): HasMany
+    {
+        return $this->hasMany(SurveyClass::class);
     }
 
     /**

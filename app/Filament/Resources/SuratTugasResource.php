@@ -86,9 +86,68 @@ class SuratTugasResource extends Resource
                                 }
                             }),
 
+                        Forms\Components\Radio::make('tipe_penugasan')
+                            ->label('Metode Penugasan')
+                            ->options([
+                                'individu' => 'Individu (1 Pegawai)',
+                                'kolektif' => 'Kolektif / Terlampir (Banyak Petugas)',
+                            ])
+                            ->default('individu')
+                            ->inline()
+                            ->live()
+                            ->afterStateUpdated(function (Set $set, $state) {
+                                if ($state === 'kolektif') {
+                                    $terlampir = \App\Models\SuratTugas::getOrCreateTerlampirUser();
+                                    $set('user_id', $terlampir->id);
+                                    $set('jabatan', 'Terlampir');
+                                } else {
+                                    $set('user_id', null);
+                                    $set('jabatan', '');
+                                }
+                            }),
+
+                        Forms\Components\Select::make('participant_ids')
+                            ->label('Daftar Petugas yang Ditugaskan (Halaman Lampiran)')
+                            ->multiple()
+                            ->searchable()
+                            ->preload()
+                            ->live()
+                            ->options(function (Get $get) {
+                                $surveyId = $get('survey_id');
+                                if ($surveyId) {
+                                    $survey = \App\Models\Survey::with(['classes', 'surveyUsers.user.profile', 'surveyUsers.class'])->find($surveyId);
+                                    if ($survey) {
+                                        $participants = $survey->surveyUsers;
+                                        if ($survey->is_multiclass) {
+                                            return $participants->mapWithKeys(function ($su) {
+                                                $userName = $su->user?->profile?->full_name ?: ($su->user?->name ?: 'Petugas');
+                                                $className = $su->class?->name ?: 'Tanpa Kelas';
+                                                $role = $su->role ?: 'Peserta';
+                                                return [$su->user_id => "[{$className}] {$userName} ({$role})"];
+                                            });
+                                        } else {
+                                            return $participants->mapWithKeys(function ($su) {
+                                                $userName = $su->user?->profile?->full_name ?: ($su->user?->name ?: 'Petugas');
+                                                $role = $su->role ?: 'Peserta';
+                                                return [$su->user_id => "{$userName} ({$role})"];
+                                            });
+                                        }
+                                    }
+                                }
+
+                                return User::with('profile')->get()->mapWithKeys(function ($u) {
+                                    $name = $u->profile?->full_name ?: $u->name;
+                                    return [$u->id => "{$name}"];
+                                });
+                            })
+                            ->helperText('Petugas yang dipilih otomatis dicantumkan pada Halaman Lampiran Surat Tugas (dikelompokkan per kelas jika kegiatan multi-kelas).')
+                            ->visible(fn (Get $get) => $get('tipe_penugasan') === 'kolektif')
+                            ->required(fn (Get $get) => $get('tipe_penugasan') === 'kolektif'),
+
                         Forms\Components\Select::make('user_id')
                             ->label('Pegawai yang Ditugaskan')
                             ->relationship('user', 'name')
+                            ->visible(fn (Get $get) => $get('tipe_penugasan') !== 'kolektif')
                             ->options(function (Get $get) {
                                 $surveyId = $get('survey_id');
 
@@ -140,6 +199,8 @@ class SuratTugasResource extends Resource
                             ->label('Jabatan (Saat Tugas)')
                             ->helperText('Otomatis diambil dari profil, bisa diedit jika perlu.')
                             ->withProperCase()
+                            ->disabled(fn (Get $get) => $get('tipe_penugasan') === 'kolektif')
+                            ->dehydrated()
                             ->required()
                             ->maxLength(255),
 

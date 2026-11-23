@@ -55,6 +55,24 @@ composer dev
 ## Changelog
 
 ### 2026-11-23
+- **Fitur Multi-Kelas (Multiclass), Pembagian Kelas Peserta & Surat Tugas Kolektif Terlampir**:
+  - **Toggle Multi-Kelas pada Kegiatan (`SurveyResource`):** Menambahkan toggle `is_multiclass` (*Kegiatan Multi-Kelas*) pada form kegiatan dan kolom toggle interaktif langsung di tabel daftar kegiatan. Mendukung duplikasi kegiatan multi-kelas secara utuh beserta kelas-kelasnya pada modal copy.
+  - **Manajemen Kelas & Tab Dinamis (`ParticipantsRelationManager`):**
+    - Menyediakan entitas model & tabel `survey_classes` untuk membagi kegiatan ke dalam beberapa kelas paralel (misal: *Kelas A*, *Kelas B*).
+    - Menampilkan tab dinamis `[Nama Kelas]` yang berdampingan dengan tab bawaan (*Semua*, *Pegawai*, *Mitra*, dan *Tanpa Kelas*) lengkap dengan badge hitungan peserta *real-time*.
+    - Tombol aksi **Kelola Kelas** di header untuk membuat, mengubah, dan menghapus kelas dengan mudah melalui modal repeater interaktif.
+    - Kolom badge **Kelas** pada tabel peserta yang otomatis aktif jika kegiatan berstatus multi-kelas.
+    - Tombol aksi masal (*Bulk Action*) **Assign ke Kelas** untuk memindahkan beberapa peserta terpilih sekaligus ke kelas tertentu dalam satu kali klik.
+  - **Template & Import Excel Pembagian Kelas (`SurveyClassTemplateExport` & `SurveyClassAssignmentImport`):**
+    - Tombol **Download Template Kelas** untuk mengunduh daftar peserta kegiatan yang ada saat ini dalam format `.xlsx` (kolom: *No*, *Nama*, *Email*, *Sobat ID*, *Kelas*).
+    - Tombol **Import Pembagian Kelas** untuk mengunggah berkas Excel yang secara cerdas mencocokkan peserta via email, sobat_id, maupun nama. Jika nama kelas di Excel belum ada di sistem, kelas baru akan otomatis dibuatkan (*auto-create*).
+    - Penambahan kolom `sobat_id` pada profil pengguna (`user_profiles`) untuk sinkronisasi identitas mitra SOBAT BPS.
+  - **Surat Tugas Kolektif (Terlampir) & Halaman Lampiran PDF Dinamis (`SuratTugasResource` & `SuratTugasPdfService`):**
+    - Opsi pemilihan metode penugasan: *Individu* atau *Kolektif / Terlampir (Banyak Petugas)*.
+    - Pada mode kolektif, nama dan jabatan otomatis terkunci dan terisi **Terlampir**. Admin dapat memilih banyak peserta sekaligus (dikelompokkan rapi per kelas).
+    - Menyimpan relasi peserta kolektif pada tabel pivot `surat_tugas_participants`.
+    - Cetakan PDF Surat Tugas (`pdf_table_layout.blade.php`) secara otomatis menyisipkan halaman **Lampiran Surat Tugas** resmi BPS.
+    - Jika kegiatan memiliki multi-kelas, lampiran otomatis dikelompokkan per sub-header nama kelas masing-masing, **dengan tetap menampilkan nama kelasnya meskipun peserta yang dipilih hanya berasal dari 1 kelas**.
 - **Tombol Proper Case Universal Seluruh Form Admin (`withProperCase`)**:
   - **Macro Reaktif Filament (`AppServiceProvider`):** Mendaftarkan macro `withProperCase()` pada komponen `TextInput` dan `Textarea` Filament menggunakan concern `Macroable`. Macro menyisipkan suffix action berikon kilau (*heroicon-m-sparkles*) abu-abu yang secara cerdas menormalisasi spasi berulang dan mengonversi teks menjadi Title/Proper Case menggunakan `mb_convert_case($val, MB_CASE_TITLE, 'UTF-8')`.
   - **Penerapan Luas pada Seluruh Resource:** Diterapkan secara menyeluruh pada semua input teks deskriptif di panel admin:

@@ -2,6 +2,14 @@
 
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+
+if (! class_exists(\Laravel\Pulse\Support\PulseMigration::class)) {
+    return new class extends \Illuminate\Database\Migrations\Migration {
+        public function up(): void {}
+        public function down(): void {}
+    };
+}
+
 use Laravel\Pulse\Support\PulseMigration;
 
 return new class extends PulseMigration

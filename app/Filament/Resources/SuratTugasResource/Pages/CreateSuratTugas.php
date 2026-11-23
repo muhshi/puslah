@@ -12,9 +12,19 @@ class CreateSuratTugas extends CreateRecord
 
     public $is_sppd = false;
     public $sppdData = [];
+    public $participantIds = [];
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
+        if (($data['tipe_penugasan'] ?? 'individu') === 'kolektif') {
+            $terlampir = \App\Models\SuratTugas::getOrCreateTerlampirUser();
+            $data['user_id'] = $terlampir->id;
+            $data['jabatan'] = 'Terlampir';
+        }
+
+        $this->participantIds = $data['participant_ids'] ?? [];
+        unset($data['tipe_penugasan'], $data['participant_ids']);
+
         $abaikanValidasi = $data['abaikan_validasi'] ?? false;
         
         if (!$abaikanValidasi && ($overlap = \App\Models\SuratTugas::getOverlap($data['user_id'], $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null))) {
@@ -60,6 +70,10 @@ class CreateSuratTugas extends CreateRecord
                 $sppdData['ppk_title'] = $settings->ppk_title;
             }
             $this->record->sppd()->create($sppdData);
+        }
+
+        if (!empty($this->participantIds)) {
+            $this->record->participants()->sync($this->participantIds);
         }
     }
 }

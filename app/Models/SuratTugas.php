@@ -76,6 +76,30 @@ class SuratTugas extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function participants(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'surat_tugas_participants')
+            ->withPivot('survey_user_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Dapatkan atau buat user dummy "Terlampir" untuk surat tugas kolektif.
+     */
+    public static function getOrCreateTerlampirUser(): User
+    {
+        $existing = User::where('name', 'like', '%Terlampir%')->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        return User::create([
+            'name' => 'Terlampir',
+            'email' => 'terlampir@bps.go.id',
+            'password' => \Illuminate\Support\Facades\Hash::make('bps3321_terlampir_' . \Illuminate\Support\Str::random(10)),
+        ]);
+    }
+
     public function survey(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Survey::class);

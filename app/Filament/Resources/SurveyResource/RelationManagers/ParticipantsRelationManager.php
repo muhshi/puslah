@@ -24,6 +24,9 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use App\Services\CertificateIssuanceService;
+use App\Exports\SurveyClassTemplateExport;
+use App\Imports\SurveyClassAssignmentImport;
+use Maatwebsite\Excel\Facades\Excel;
 use Filament\Resources\Components\Tab;
 
 class ParticipantsRelationManager extends RelationManager
@@ -33,13 +36,36 @@ class ParticipantsRelationManager extends RelationManager
 
     public function getTabs(): array
     {
-        return [
+        /** @var \App\Models\Survey $survey */
+        $survey = $this->getOwnerRecord();
+
+        $tabs = [
             'semua' => Tab::make('Semua'),
             'mitra' => Tab::make('Mitra')
                 ->modifyQueryUsing(fn(Builder $query) => $query->whereHas('user.roles', fn($q) => $q->where('name', 'Mitra'))),
             'organik' => Tab::make('Pegawai')
                 ->modifyQueryUsing(fn(Builder $query) => $query->whereHas('user.roles', fn($q) => $q->where('name', 'Organik'))),
         ];
+
+        if ($survey && $survey->is_multiclass) {
+            $classes = $survey->classes()->withCount('surveyUsers')->get();
+            foreach ($classes as $class) {
+                $tabKey = 'class_' . $class->id;
+                $tabs[$tabKey] = Tab::make($class->name)
+                    ->badge($class->survey_users_count)
+                    ->modifyQueryUsing(fn(Builder $query) => $query->where('survey_class_id', $class->id));
+            }
+
+            $unassignedCount = SurveyUser::where('survey_id', $survey->id)->whereNull('survey_class_id')->count();
+            if ($unassignedCount > 0) {
+                $tabs['unassigned_class'] = Tab::make('Tanpa Kelas')
+                    ->badge($unassignedCount)
+                    ->badgeColor('warning')
+                    ->modifyQueryUsing(fn(Builder $query) => $query->whereNull('survey_class_id'));
+            }
+        }
+
+        return $tabs;
     }
 
     public function form(Form $form): Form
@@ -53,6 +79,11 @@ class ParticipantsRelationManager extends RelationManager
                 ->options(User::orderBy('name')->pluck('name', 'id'))
                 ->searchable()
                 ->preload()->required(),
+            Forms\Components\Select::make('survey_class_id')
+                ->label('Kelas Kegiatan')
+                ->options(fn () => $this->getOwnerRecord()->classes()->pluck('name', 'id'))
+                ->placeholder('Pilih kelas...')
+                ->visible(fn () => (bool) $this->getOwnerRecord()->is_multiclass),
             Forms\Components\Select::make('role')
                 ->label('Role / Peran')
                 ->options($roleOptions)
@@ -101,6 +132,13 @@ class ParticipantsRelationManager extends RelationManager
             ->recordTitleAttribute('id')
             ->columns([
                 Tables\Columns\TextColumn::make('user.name')->label('Nama')->searchable(),
+                Tables\Columns\TextColumn::make('class.name')
+                    ->label('Kelas')
+                    ->badge()
+                    ->color('success')
+                    ->default('-')
+                    ->visible(fn () => (bool) $this->getOwnerRecord()->is_multiclass)
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('role')
                     ->label('Role')
                     ->badge()
@@ -118,6 +156,157 @@ class ParticipantsRelationManager extends RelationManager
             ])
             ->headerActions([
                 Tables\Actions\CreateAction::make()->label('Tambah Peserta'),
+
+                Action::make('manageClasses')
+                    ->label('Kelola Kelas')
+                    ->icon('heroicon-o-academic-cap')
+                    ->color('warning')
+                    ->visible(fn () => (bool) $this->getOwnerRecord()->is_multiclass)
+                    ->modalHeading('Kelola Kelas Kegiatan')
+                    ->modalDescription('Tambahkan, sesuaikan, atau hapus kelas untuk kegiatan ini.')
+                    ->modalWidth(\Filament\Support\Enums\MaxWidth::Medium)
+                    ->form([
+                        Forms\Components\Repeater::make('classes')
+                            ->label('Daftar Kelas')
+                            ->schema([
+                                Forms\Components\Hidden::make('id'),
+                                Forms\Components\TextInput::make('name')
+                                    ->label('Nama Kelas')
+                                    ->placeholder('Misal: Kelas A, Kelas B')
+                                    ->required()
+                                    ->withProperCase(),
+                                Forms\Components\TextInput::make('description')
+                                    ->label('Keterangan / Ruangan')
+                                    ->placeholder('Opsional (misal: Ruang Rapat Lt 2)')
+                                    ->withProperCase(),
+                            ])
+                            ->columns(2)
+                            ->defaultItems(0)
+                            ->addActionLabel('Tambah Kelas Baru')
+                            ->reorderable(false),
+                    ])
+                    ->fillForm(function () {
+                        /** @var \App\Models\Survey $survey */
+                        $survey = $this->getOwnerRecord();
+                        return [
+                            'classes' => $survey->classes()->get()->map(fn ($c) => [
+                                'id' => $c->id,
+                                'name' => $c->name,
+                                'description' => $c->description,
+                            ])->toArray(),
+                        ];
+                    })
+                    ->action(function (array $data) {
+                        /** @var \App\Models\Survey $survey */
+                        $survey = $this->getOwnerRecord();
+                        $submittedClasses = $data['classes'] ?? [];
+                        $keepIds = [];
+
+                        foreach ($submittedClasses as $item) {
+                            if (!empty($item['id'])) {
+                                $cls = $survey->classes()->find($item['id']);
+                                if ($cls) {
+                                    $cls->update([
+                                        'name' => $item['name'],
+                                        'description' => $item['description'] ?? null,
+                                    ]);
+                                    $keepIds[] = $cls->id;
+                                }
+                            } else {
+                                $newCls = $survey->classes()->create([
+                                    'name' => $item['name'],
+                                    'description' => $item['description'] ?? null,
+                                ]);
+                                $keepIds[] = $newCls->id;
+                            }
+                        }
+
+                        // Hapus kelas yang dihapus dari modal
+                        $survey->classes()->whereNotIn('id', $keepIds)->delete();
+
+                        Notification::make()
+                            ->title('Daftar kelas berhasil diperbarui!')
+                            ->success()
+                            ->send();
+                    }),
+
+                Action::make('downloadTemplateKelas')
+                    ->label('Download Template Kelas')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->visible(fn () => (bool) $this->getOwnerRecord()->is_multiclass)
+                    ->action(function () {
+                        /** @var \App\Models\Survey $survey */
+                        $survey = $this->getOwnerRecord();
+                        $cleanName = \Illuminate\Support\Str::slug($survey->name, '_');
+                        $filename = "Template_Pembagian_Kelas_{$cleanName}_" . now()->format('Ymd_His') . ".xlsx";
+
+                        return Excel::download(new SurveyClassTemplateExport($survey), $filename);
+                    }),
+
+                Action::make('importKelas')
+                    ->label('Import Pembagian Kelas')
+                    ->icon('heroicon-o-arrow-up-tray')
+                    ->color('info')
+                    ->visible(fn () => (bool) $this->getOwnerRecord()->is_multiclass)
+                    ->modalHeading('Import Pembagian Kelas Peserta (Excel)')
+                    ->modalDescription('Unggah berkas Excel berisi kolom Nama, Email / Sobat ID, dan Kelas. Kelas baru akan dibuat otomatis jika belum ada.')
+                    ->modalSubmitActionLabel('Proses Import & Petakan')
+                    ->form([
+                        Forms\Components\FileUpload::make('excel_file')
+                            ->label('Berkas Excel (.xlsx / .csv)')
+                            ->acceptedFileTypes([
+                                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                                'application/vnd.ms-excel',
+                                'text/csv',
+                            ])
+                            ->disk('local')
+                            ->directory('temp-imports')
+                            ->required()
+                            ->helperText('Pastikan menggunakan format template yang telah diunduh dari menu "Download Template Kelas".'),
+                    ])
+                    ->action(function (array $data) {
+                        /** @var \App\Models\Survey $survey */
+                        $survey = $this->getOwnerRecord();
+                        $filePath = storage_path('app/' . $data['excel_file']);
+
+                        if (!file_exists($filePath)) {
+                            Notification::make()
+                                ->title('File tidak ditemukan')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        try {
+                            $importer = new SurveyClassAssignmentImport($survey);
+                            Excel::import($importer, $filePath);
+
+                            // Bersihkan file sementara
+                            @unlink($filePath);
+
+                            $msg = "Berhasil memetakan {$importer->success} peserta ke dalam kelas.";
+                            if ($importer->newClassesCount > 0) {
+                                $msg .= " Terdaftar {$importer->newClassesCount} kelas baru yang otomatis dibuat.";
+                            }
+                            if ($importer->skipped > 0) {
+                                $msg .= " (Dilewati: {$importer->skipped} baris yang tidak cocok dengan kegiatan ini).";
+                            }
+
+                            Notification::make()
+                                ->title('Import Pembagian Kelas Berhasil! ✨')
+                                ->body($msg)
+                                ->success()
+                                ->send();
+                        } catch (\Throwable $e) {
+                            @unlink($filePath);
+                            Notification::make()
+                                ->title('Gagal mengimpor file')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
 
                 Action::make('massAdd')
                     ->label('Tambah Peserta (Banyak)')
@@ -161,6 +350,13 @@ class ParticipantsRelationManager extends RelationManager
                                 ->helperText('Cari dan pilih pegawai dengan role Organik'),
                         ])->columns(2),
 
+                        Forms\Components\Select::make('survey_class_id')
+                            ->label('Kelas Kegiatan (Opsional)')
+                            ->options(fn () => $this->getOwnerRecord()->classes()->pluck('name', 'id'))
+                            ->placeholder('Pilih kelas untuk langsung membagi peserta...')
+                            ->visible(fn () => (bool) $this->getOwnerRecord()->is_multiclass)
+                            ->columnSpanFull(),
+
                         Forms\Components\Select::make('role')
                             ->label('Role / Peran untuk semua peserta di atas')
                             ->options(fn () => app(SystemSettings::class)->getRoleOptions())
@@ -185,14 +381,17 @@ class ParticipantsRelationManager extends RelationManager
                             return;
                         }
 
+                        $classId = !empty($data['survey_class_id']) ? (int) $data['survey_class_id'] : null;
+
                         foreach ($allUsers as $userId) {
                             SurveyUser::firstOrCreate(
                                 ['survey_id' => $survey->id, 'user_id' => $userId],
                                 [
-                                    'role'          => $data['role'] ?? 'Peserta',
-                                    'status'        => 'registered',
-                                    'registered_at' => $now,
-                                    'notes'         => $data['notes'] ?? null,
+                                    'survey_class_id' => $classId,
+                                    'role'            => $data['role'] ?? 'Peserta',
+                                    'status'          => 'registered',
+                                    'registered_at'   => $now,
+                                    'notes'           => $data['notes'] ?? null,
                                 ]
                             );
                         }
@@ -230,6 +429,34 @@ class ParticipantsRelationManager extends RelationManager
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
+                Tables\Actions\BulkAction::make('assignToClass')
+                    ->label('Assign ke Kelas')
+                    ->icon('heroicon-o-academic-cap')
+                    ->color('primary')
+                    ->visible(fn () => (bool) $this->getOwnerRecord()->is_multiclass)
+                    ->form([
+                        Forms\Components\Select::make('survey_class_id')
+                            ->label('Pilih Kelas Tujuan')
+                            ->options(fn () => [
+                                '' => '— Kosongkan Kelas (Tanpa Kelas) —',
+                            ] + $this->getOwnerRecord()->classes()->pluck('name', 'id')->toArray()),
+                    ])
+                    ->action(function (Collection $records, array $data): void {
+                        $classId = !empty($data['survey_class_id']) ? (int) $data['survey_class_id'] : null;
+                        foreach ($records as $row) {
+                            $row->update(['survey_class_id' => $classId]);
+                        }
+
+                        $className = $classId
+                            ? ($this->getOwnerRecord()->classes()->find($classId)?->name ?? 'Kelas')
+                            : 'Tanpa Kelas';
+
+                        Notification::make()
+                            ->title("Berhasil assign {$records->count()} peserta ke {$className}")
+                            ->success()
+                            ->send();
+                    })
+                    ->deselectRecordsAfterCompletion(),
                 Tables\Actions\BulkAction::make('approveSelected')
                     ->label('Approve & Terbitkan Sertifikat')
                     ->icon('heroicon-o-check-badge')

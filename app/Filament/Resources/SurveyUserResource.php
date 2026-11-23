@@ -44,7 +44,17 @@ class SurveyUserResource extends Resource
         return $form->schema([
             Forms\Components\Select::make('survey_id')
                 ->label('Kegiatan')
-                ->options(fn () => Survey::orderBy('name')->pluck('name', 'id'))->searchable()->required(),
+                ->options(fn () => Survey::orderBy('name')->pluck('name', 'id'))->searchable()->live()->required(),
+
+            Forms\Components\Select::make('survey_class_id')
+                ->label('Kelas Kegiatan')
+                ->options(function (Forms\Get $get) {
+                    $surveyId = $get('survey_id');
+                    if (!$surveyId) return [];
+                    return \App\Models\SurveyClass::where('survey_id', $surveyId)->pluck('name', 'id');
+                })
+                ->placeholder('Pilih kelas (opsional)...')
+                ->searchable(),
 
             Forms\Components\Select::make('user_id')
                 ->label('Peserta')
@@ -97,6 +107,7 @@ class SurveyUserResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('survey.name')->label('Kegiatan')->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('class.name')->label('Kelas')->badge()->color('success')->default('-')->sortable(),
                 Tables\Columns\TextColumn::make('user.name')->label('Peserta')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('role')
                     ->label('Role')

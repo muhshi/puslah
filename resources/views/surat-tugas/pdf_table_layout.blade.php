@@ -208,7 +208,7 @@
                 <td class="colon-col"><span class="f12 arial">:</span></td>
                 <td style="width: 50pt;"><span class="f12 arial">Nama</span></td>
                 <td style="width: 10pt;" class="text-center"><span class="f12 arial">:</span></td>
-                <td><b><span class="f12 arial">{{ $surat->user->profile->full_name ?? $surat->user->name }}</span></b>
+                <td><b><span class="f12 arial">{{ !empty($hasLampiran) ? 'Terlampir' : ($surat->user->profile->full_name ?? $surat->user->name) }}</span></b>
                 </td>
             </tr>
             <tr>
@@ -216,7 +216,7 @@
                 <td></td>
                 <td><span class="f12 arial">Jabatan</span></td>
                 <td class="text-center"><span class="f12 arial">:</span></td>
-                <td><span class="f12 arial">{{ $surat->jabatan }}</span></td>
+                <td><span class="f12 arial">{{ !empty($hasLampiran) ? 'Terlampir' : $surat->jabatan }}</span></td>
             </tr>
         </table>
 
@@ -266,6 +266,132 @@
         </table>
 
     </div>
+
+    @if(!empty($hasLampiran) && !empty($lampiranData))
+    <div style="page-break-before: always;"></div>
+    <div class="preview-container">
+        {{-- Header Lampiran --}}
+        <div style="margin-bottom: 10pt;">
+            <table style="width: 100%; border: none;">
+                <tr>
+                    <td style="width: 50pt; vertical-align: top;">
+                        <img src="{{ $logoBase64 }}" alt="Logo BPS" style="width:45pt; height:38pt;">
+                    </td>
+                    <td style="vertical-align: top; padding-left: 5pt;">
+                        <b class="italic"><span class="f12 arial">BADAN PUSAT STATISTIK KABUPATEN DEMAK</span></b><br>
+                        <b><span class="f14 arial">LAMPIRAN SURAT TUGAS</span></b>
+                    </td>
+                </tr>
+            </table>
+            <div style="height: 2pt; border-bottom: 1.5pt solid #333; margin-top: 5pt; margin-bottom: 8pt;"></div>
+
+            <table style="font-size: 10pt; line-height: 1.3;">
+                <tr>
+                    <td style="width: 60pt;"><span class="arial">Nomor</span></td>
+                    <td style="width: 10pt;" class="text-center">:</td>
+                    <td><b><span class="arial">{{ $surat->nomor_surat }}</span></b></td>
+                </tr>
+                <tr>
+                    <td><span class="arial">Tanggal</span></td>
+                    <td class="text-center">:</td>
+                    <td><span class="arial">{{ $surat->tanggal->translatedFormat('d F Y') }}</span></td>
+                </tr>
+                <tr>
+                    <td><span class="arial">Kegiatan</span></td>
+                    <td class="text-center">:</td>
+                    <td><span class="arial">{{ $surat->keperluan }}</span></td>
+                </tr>
+                @if($periode && $periode !== '-')
+                <tr>
+                    <td><span class="arial">Waktu</span></td>
+                    <td class="text-center">:</td>
+                    <td><span class="arial">{{ $periode }}</span></td>
+                </tr>
+                @endif
+                @if($surat->tempat_tugas)
+                <tr>
+                    <td><span class="arial">Tempat</span></td>
+                    <td class="text-center">:</td>
+                    <td><span class="arial">{{ $surat->tempat_tugas }}</span></td>
+                </tr>
+                @endif
+            </table>
+        </div>
+
+        <div style="height: 4pt;"></div>
+
+        {{-- Tabel Daftar Peserta / Petugas --}}
+        @foreach($lampiranData as $group)
+            @if(!empty($group['class_name']))
+                <div style="margin-top: 8pt; margin-bottom: 4pt; font-family: Arial, sans-serif; font-size: 10.5pt; font-weight: bold; color: #0f172a;">
+                    Kelas : {{ $group['class_name'] }}
+                </div>
+            @endif
+
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 10pt; font-family: Arial, sans-serif; font-size: 9.5pt;">
+                <thead>
+                    <tr style="background-color: #f1f5f9; text-align: center;">
+                        <th style="border: 1px solid #475569; padding: 4pt 3pt; width: 25pt;">No</th>
+                        <th style="border: 1px solid #475569; padding: 4pt 6pt; text-align: left;">Nama Petugas / Peserta</th>
+                        <th style="border: 1px solid #475569; padding: 4pt 6pt; width: 115pt;">NIP / Identitas</th>
+                        <th style="border: 1px solid #475569; padding: 4pt 6pt; width: 120pt;">Jabatan / Peran</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @php
+                        $groupNo = 1;
+                    @endphp
+                    @forelse($group['members'] as $item)
+                        @php
+                            $user = $item->user ?? null;
+                            $profile = $user?->profile ?? null;
+                            $nama = $profile?->full_name ?: ($user?->name ?: '-');
+                            $nip = $profile?->nip ?: ($profile?->old_nip ?: ($profile?->sobat_id ? 'SOBAT: ' . $profile->sobat_id : '-'));
+                            $role = $item->role ?? ($profile?->jabatan ?? '-');
+                        @endphp
+                        <tr>
+                            <td style="border: 1px solid #94a3b8; padding: 3.5pt 3pt; text-align: center;">{{ $groupNo++ }}</td>
+                            <td style="border: 1px solid #94a3b8; padding: 3.5pt 6pt;"><b>{{ $nama }}</b></td>
+                            <td style="border: 1px solid #94a3b8; padding: 3.5pt 6pt; text-align: center;">{{ $nip }}</td>
+                            <td style="border: 1px solid #94a3b8; padding: 3.5pt 6pt;">{{ $role }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" style="border: 1px solid #94a3b8; padding: 6pt; text-align: center; font-style: italic; color: #64748b;">
+                                Tidak ada data peserta terpilih
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        @endforeach
+
+        <div style="height: 10pt;"></div>
+
+        {{-- TTD Lampiran --}}
+        <table style="width: 100%;">
+            <tr>
+                <td style="width: 55%;"></td>
+                <td class="text-center">
+                    <span class="f12 arial">Demak, {{ $surat->tanggal->translatedFormat('d F Y') }}</span><br>
+                    <span class="f12 arial">{!! nl2br(e($surat->signer_title)) !!},</span><br>
+                    @if($surat->status === 'approved' && $qrBase64)
+                        <br>
+                        <img src="{{ $qrBase64 }}" width="55pt" height="55pt" alt="QR"><br>
+                        <br>
+                    @else
+                        <div style="margin: 6pt auto; padding: 8pt; border: 1px dashed #ef4444; border-radius: 4px; width: 160pt; background-color: #fef2f2;">
+                            <span style="font-family: Arial, sans-serif; font-size: 7.5pt; color: #dc2626; font-weight: bold;">
+                                [ DRAFT - MENUNGGU PERSETUJUAN ]
+                            </span>
+                        </div>
+                    @endif
+                    <b><span class="f12 arial">{{ $surat->signer_name }}</span></b>
+                </td>
+            </tr>
+        </table>
+    </div>
+    @endif
 
     {{-- Fixed Footer - positioned in the bottom margin --}}
     <div

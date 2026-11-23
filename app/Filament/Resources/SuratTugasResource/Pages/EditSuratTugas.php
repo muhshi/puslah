@@ -12,6 +12,7 @@ class EditSuratTugas extends EditRecord
 
     public $is_sppd = false;
     public $sppdData = [];
+    public $participantIds = [];
 
     protected function getHeaderActions(): array
     {
@@ -22,6 +23,11 @@ class EditSuratTugas extends EditRecord
 
     protected function mutateFormDataBeforeFill(array $data): array
     {
+        $hasParticipants = $this->record->participants()->exists();
+        $isKolektif = $hasParticipants || (stripos($this->record->user?->name, 'Terlampir') !== false);
+        $data['tipe_penugasan'] = $isKolektif ? 'kolektif' : 'individu';
+        $data['participant_ids'] = $this->record->participants()->pluck('users.id')->toArray();
+
         $sppd = $this->record->sppd;
         $data['is_sppd'] = $sppd !== null;
         if ($sppd) {
@@ -43,6 +49,15 @@ class EditSuratTugas extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        if (($data['tipe_penugasan'] ?? 'individu') === 'kolektif') {
+            $terlampir = \App\Models\SuratTugas::getOrCreateTerlampirUser();
+            $data['user_id'] = $terlampir->id;
+            $data['jabatan'] = 'Terlampir';
+        }
+
+        $this->participantIds = $data['participant_ids'] ?? [];
+        unset($data['tipe_penugasan'], $data['participant_ids']);
+
         $abaikanValidasi = $data['abaikan_validasi'] ?? false;
         
         if (!$abaikanValidasi && ($overlap = \App\Models\SuratTugas::getOverlap($data['user_id'], $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null, $this->record->id))) {
@@ -90,5 +105,7 @@ class EditSuratTugas extends EditRecord
         } else {
             $this->record->sppd()->delete();
         }
+
+        $this->record->participants()->sync($this->participantIds ?? []);
     }
 }

@@ -135,6 +135,12 @@ class SurveyResource extends Resource
                     ->helperText('Jika diaktifkan, satu pegawai bisa dibuatkan beberapa surat tugas pada kegiatan ini')
                     ->default(false)
                     ->required(),
+
+                Forms\Components\Toggle::make('is_multiclass')
+                    ->label('Kegiatan Multi-Kelas')
+                    ->helperText('Aktifkan jika kegiatan ini dibagi menjadi beberapa kelas pelatihan/pembelajaran')
+                    ->default(false)
+                    ->required(),
             ]);
     }
 
@@ -185,6 +191,9 @@ class SurveyResource extends Resource
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean()
                     ->label('Aktif'),
+                Tables\Columns\ToggleColumn::make('is_multiclass')
+                    ->label('Multi-Kelas')
+                    ->tooltip('Aktifkan jika kegiatan memiliki beberapa kelas peserta'),
                 Tables\Columns\TextColumn::make('participants_count')
                     ->counts('participants')
                     ->label('Peserta'),
@@ -264,6 +273,9 @@ class SurveyResource extends Resource
                         Forms\Components\Toggle::make('is_multiple')
                             ->label('Multiple Surat Tugas')
                             ->default(fn (Survey $record) => $record->is_multiple),
+                        Forms\Components\Toggle::make('is_multiclass')
+                            ->label('Kegiatan Multi-Kelas')
+                            ->default(fn (Survey $record) => $record->is_multiclass),
                         Forms\Components\Toggle::make('copy_participants')
                             ->label('Copy Peserta')
                             ->helperText('Centang untuk meng-copy semua peserta yang sudah di-assign ke kegiatan asli')
@@ -276,14 +288,26 @@ class SurveyResource extends Resource
                         $newSurvey = Survey::create($data);
 
                         if ($copyParticipants) {
+                            $classMap = [];
+                            if ($record->is_multiclass) {
+                                foreach ($record->classes as $oldClass) {
+                                    $newClass = $newSurvey->classes()->create([
+                                        'name' => $oldClass->name,
+                                        'description' => $oldClass->description,
+                                    ]);
+                                    $classMap[$oldClass->id] = $newClass->id;
+                                }
+                            }
+
                             $participants = $record->surveyUsers()->get();
                             foreach ($participants as $participant) {
                                 $newSurvey->surveyUsers()->create([
-                                    'user_id'       => $participant->user_id,
-                                    'role'          => $participant->role,
-                                    'status'        => $participant->status,
-                                    'registered_at' => now(),
-                                    'notes'         => $participant->notes,
+                                    'user_id'         => $participant->user_id,
+                                    'survey_class_id' => $classMap[$participant->survey_class_id] ?? null,
+                                    'role'            => $participant->role,
+                                    'status'          => $participant->status,
+                                    'registered_at'   => now(),
+                                    'notes'           => $participant->notes,
                                 ]);
                             }
                         }

@@ -16,6 +16,7 @@ class SurveyUser extends Pivot
     protected $fillable = [
         'survey_id',
         'user_id',
+        'survey_class_id',
         'role',
         'registered_at',
         'status',
@@ -30,6 +31,16 @@ class SurveyUser extends Pivot
     public function survey()
     {
         return $this->belongsTo(Survey::class);
+    }
+
+    public function surveyClass()
+    {
+        return $this->belongsTo(SurveyClass::class, 'survey_class_id');
+    }
+
+    public function class()
+    {
+        return $this->belongsTo(SurveyClass::class, 'survey_class_id');
     }
     public function user()
     {

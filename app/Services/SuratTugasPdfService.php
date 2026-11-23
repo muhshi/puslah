@@ -75,7 +75,64 @@ class SuratTugasPdfService
         // 4. Format tanggal periode tugas
         $periode = self::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
 
-        // 5. Generate PDF dengan DomPDF
+        // 5. Siapkan data Lampiran Peserta (Kolektif / Terlampir)
+        $participants = $record->participants()->with('profile')->get();
+        $isUserTerlampir = stripos($record->user?->name, 'Terlampir') !== false;
+        $hasLampiran = $participants->isNotEmpty() || $isUserTerlampir;
+        $lampiranData = [];
+
+        if ($hasLampiran && $record->survey) {
+            $survey = $record->survey;
+            $surveyUsers = \App\Models\SurveyUser::where('survey_id', $survey->id)
+                ->whereIn('user_id', $participants->pluck('id'))
+                ->with(['class', 'user.profile'])
+                ->get();
+
+            $foundUserIds = $surveyUsers->pluck('user_id')->toArray();
+            $missingUsers = $participants->filter(fn ($u) => !in_array($u->id, $foundUserIds));
+
+            if ($survey->is_multiclass) {
+                // Kelompokkan per kelas (bahkan jika hanya 1 kelas, tetap tampilkan nama kelasnya)
+                $grouped = $surveyUsers->groupBy(fn ($su) => $su->class?->name ?? 'Tanpa Kelas');
+                foreach ($grouped as $className => $items) {
+                    $lampiranData[] = [
+                        'class_name' => $className,
+                        'members' => $items,
+                    ];
+                }
+                if ($missingUsers->isNotEmpty()) {
+                    $lampiranData[] = [
+                        'class_name' => 'Peserta Lainnya',
+                        'members' => $missingUsers->map(fn ($u) => (object)[
+                            'user' => $u,
+                            'role' => $u->profile?->jabatan ?? 'Petugas',
+                        ]),
+                    ];
+                }
+            } else {
+                $allMembers = $surveyUsers;
+                if ($missingUsers->isNotEmpty()) {
+                    $allMembers = $allMembers->concat($missingUsers->map(fn ($u) => (object)[
+                        'user' => $u,
+                        'role' => $u->profile?->jabatan ?? 'Petugas',
+                    ]));
+                }
+                $lampiranData[] = [
+                    'class_name' => null,
+                    'members' => $allMembers,
+                ];
+            }
+        } elseif ($hasLampiran && $participants->isNotEmpty()) {
+            $lampiranData[] = [
+                'class_name' => null,
+                'members' => $participants->map(fn ($u) => (object)[
+                    'user' => $u,
+                    'role' => $u->profile?->jabatan ?? 'Petugas',
+                ]),
+            ];
+        }
+
+        // 6. Generate PDF dengan DomPDF
         /** @var DomPdfInstance $pdf */
         $pdf = Pdf::loadView('surat-tugas.pdf_table_layout', [
             'surat' => $record,
@@ -83,6 +140,8 @@ class SuratTugasPdfService
             'qrBase64' => $qrBase64,
             'periode' => $periode,
             'is_preview' => $isPreview,
+            'hasLampiran' => $hasLampiran,
+            'lampiranData' => $lampiranData,
         ])->setPaper('a4', 'portrait');
 
         // 6. Proteksi / Enkripsi jika Master Password diatur
