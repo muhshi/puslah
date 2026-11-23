@@ -15,8 +15,8 @@ class EnsureProfileComplete
             return $next($request);
         }
 
-        // izinkan akses ke halaman profil & logout supaya nggak nge-loop
-        if ($request->routeIs('filament.admin.pages.profile-me') || $request->routeIs('logout')) {
+        // izinkan logout supaya nggak nge-loop
+        if ($request->routeIs('logout') || $request->routeIs('filament.admin.auth.logout')) {
             return $next($request);
         }
 
@@ -24,8 +24,8 @@ class EnsureProfileComplete
         $complete = $p && $p->full_name && $p->birth_date && $p->address && $p->phone;
 
         if (!$complete) {
-            return redirect()->route('filament.admin.pages.profile-me')
-                ->with('message', 'Lengkapi profil Anda terlebih dahulu.');
+            $sipetraUrl = rtrim(config('services.sipetra.base_url', 'https://bpsdemak.com'), '/') . '/account';
+            return redirect()->away($sipetraUrl);
         }
 
         return $next($request);

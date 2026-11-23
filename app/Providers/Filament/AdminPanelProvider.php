@@ -3,7 +3,6 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\Dashboard;
-use App\Filament\Pages\ProfileMe;
 use App\Filament\Widgets\CalendarWidget;
 use App\Http\Middleware\EnsureProfileComplete;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
@@ -38,14 +37,10 @@ class AdminPanelProvider extends PanelProvider
             ->databaseNotifications()
             ->authGuard('web')
             ->userMenuItems([
-                MenuItem::make()
-                    ->label('Profile')
-                    ->url(fn(): string => ProfileMe::getUrl())
-                    ->icon('heroicon-o-user-circle'),
-                MenuItem::make()
+                'profile' => MenuItem::make()
                     ->label('Profil & Password (SIPETRA)')
                     ->url(fn (): string => rtrim(config('services.sipetra.base_url', 'https://bpsdemak.com'), '/') . '/account')
-                    ->icon('heroicon-o-shield-check')
+                    ->icon('heroicon-o-user-circle')
                     ->openUrlInNewTab(),
                 MenuItem::make()
                     ->label('Sinkronkan Profil dari SIPETRA')
@@ -65,12 +60,11 @@ class AdminPanelProvider extends PanelProvider
             ->font('Inter')
             ->brandName('DINAMIT')
             ->brandLogoHeight('3rem')
-            ->favicon(asset('images/logo_bps.png'))
+            ->favicon(fn () => asset('images/logo_bps.png'))
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
                 Dashboard::class,
-                ProfileMe::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([

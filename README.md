@@ -54,6 +54,13 @@ composer dev
 
 ## Changelog
 
+### 2026-11-23
+- **Konsolidasi SSOT Profil & Password Terpusat ke SIPETRA**:
+  - **Peniadaan Halaman Profil Lokal DINAMIT (`ProfileMe`):** Menghapus halaman dan view profil lokal (`ProfileMe.php` & `profile-me.blade.php`) serta pendaftarannya di sidebar navigasi panel untuk mencegah duplikasi antarmuka profil dan inkonsistensi data.
+  - **Satu Pintu Profil pada Menu Pengguna:** Memperbarui menu profil di dropdown avatar (`userMenuItems`) agar langsung mengarah ke halaman akun SIPETRA (`https://bpsdemak.com/account`) sebagai Single Source of Truth (SSOT), didampingi tombol sinkronisasi profil 1-klik.
+  - **Redirect Otomatis Rute Legacy:** Menambahkan redirect otomatis dari `/admin/profile-me` langsung menuju akun SIPETRA bagi pengguna yang mengakses tautan atau bookmark lama.
+  - **Integrasi Pintasan SIPETRA di CRUD Profil Pengguna:** Menambahkan tombol pintasan *"SIPETRA"* pada tabel dan form edit `UserProfileResource` agar admin dapat langsung beralih ke pengelolaan terpusat SIPETRA.
+
 ### 2026-11-21
 - **UI/UX Polish Tombol Login SIPETRA SSO**:
   - **Penyempurnaan Padding & Kontainer Badge Logo BPS (`login.blade.php`):** Membungkus logo BPS ke dalam container badge putih ber-radius (`rounded-lg bg-white p-1.5 shadow-sm`) agar logo tidak mepet/terpotong di latar tombol biru BPS (`#005596`), memberikan tampilan yang lebih rapi, proporsional, dan estetik.

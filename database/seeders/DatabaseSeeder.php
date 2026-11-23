@@ -144,7 +144,6 @@ class DatabaseSeeder extends Seeder
                 'page_AttendanceRecap',
                 'page_Leaderboard',
                 'page_MySurveys',
-                'page_ProfileMe',
                 'page_SystemSettingsPage',
                 'widget_AttendanceLast7DaysChart',
                 'widget_StatsOverviewWidget',
@@ -181,7 +180,6 @@ class DatabaseSeeder extends Seeder
                 'view_any_surat::tugas',
                 'page_Leaderboard',
                 'page_MySurveys',
-                'page_ProfileMe',
                 'widget_SuratTugasChartWidget',
             ],
             'Operator' => [
