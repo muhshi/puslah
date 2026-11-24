@@ -54,6 +54,13 @@ composer dev
 
 ## Changelog
 
+### 2026-11-24
+- **Redesain Landing Page Publik DINAMIT (`welcome.blade.php`)**:
+  - **Struktur Baru Berbasis Token CSS:** Mengganti layout lama (hero terpusat + kartu generik + strip statistik gelap) dengan hero split yang menampilkan cuplikan produk nyata, bagian layanan, alur penggunaan, akses, dan bantuan. Seluruh warna, tipografi, radius, dan bayangan memakai CSS variable semantik dengan identitas BPS (biru `#005596`, oranye sebagai aksen).
+  - **Cuplikan Produk Interaktif:** Menambahkan tab **Surat Tugas / Bukti Dukung / Sertifikat** pada mockup hero dengan dukungan keyboard (ARIA tab pattern), serta menu seluler yang dapat dibuka tanpa JS framework.
+  - **Data Statistik Langsung dari Database:** Mengganti angka statis dengan `User::count()`, `SuratTugas::count()`, `LaporanPerjalananDinas::count()`, dan `Survey::count()` (total survei/kegiatan, bukan hanya yang aktif) dengan format ribuan Indonesia.
+  - **Akses & Aksesibilitas:** Tombol menyesuaikan status login (`@auth`/`@else`) menuju dashboard atau halaman login Filament, logo memakai `asset()`, tahun footer dinamis, skip link, fokus keyboard terlihat, kontras teks minimum 4.5:1, dan `prefers-reduced-motion`.
+
 ### 2026-11-23
 - **Konsolidasi SSOT Profil & Password Terpusat ke SIPETRA**:
   - **Peniadaan Halaman Profil Lokal DINAMIT (`ProfileMe`):** Menghapus halaman dan view profil lokal (`ProfileMe.php` & `profile-me.blade.php`) serta pendaftarannya di sidebar navigasi panel untuk mencegah duplikasi antarmuka profil dan inkonsistensi data.
