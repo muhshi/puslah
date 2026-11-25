@@ -22,18 +22,24 @@
         get isStamped() {
             return !!$wire.get('{{ $parentPath }}.is_stamped');
         },
+        extractStorageUrl(val) {
+            if (typeof val !== 'string' || !val || val.startsWith('livewire-file:')) return null;
+            if (val.startsWith('http://') || val.startsWith('https://')) return val;
+            return '/storage/' + val.replace(/^public\//, '').replace(/^\//, '');
+        },
         get photoUrl() {
             let path = $wire.get('{{ $parentPath }}.file_path');
             if (!path) return this.fallbackUrl;
             if (typeof path === 'string') {
-                if (path.startsWith('http://') || path.startsWith('https://')) return path;
-                return '/storage/' + path.replace(/^public\//, '');
+                return this.extractStorageUrl(path) ?? this.fallbackUrl;
             }
             if (Array.isArray(path) && path.length > 0) {
-                let first = path[0];
-                if (typeof first === 'string') {
-                    if (first.startsWith('http://') || first.startsWith('https://')) return first;
-                    return '/storage/' + first.replace(/^public\//, '');
+                return this.extractStorageUrl(path[0]) ?? this.fallbackUrl;
+            }
+            if (typeof path === 'object') {
+                let values = Object.values(path);
+                if (values.length > 0) {
+                    return this.extractStorageUrl(values[0]) ?? this.fallbackUrl;
                 }
             }
             return this.fallbackUrl;

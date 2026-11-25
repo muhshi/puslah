@@ -26,7 +26,7 @@ use Filament\Support\Enums\Width;
 use App\Filament\Forms\Components\MapWithSearch;
 use Filament\Tables\Grouping\Group;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Forms\Components\Placeholder;
+use Filament\Infolists\Components\TextEntry;
 use Illuminate\Support\Str;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Filters\Filter;
@@ -56,10 +56,8 @@ use App\Models\User;
 use App\Services\DailyActivityAiService;
 use App\Services\LpdAiService;
 use Carbon\Carbon;
-use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
-use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -252,6 +250,7 @@ class DailyActivityResource extends Resource
                                             ->label('Berkas Bukti (Foto / PDF)')
                                             ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
                                             ->disk('public')
+                                            ->visibility('public')
                                             ->directory('daily-activities')
                                             ->maxSize(10240)
                                             ->required()
@@ -497,9 +496,9 @@ class DailyActivityResource extends Resource
                                 'surat_tugas_id' => $record->surat_tugas_id,
                             ])
                             ->schema([
-                                Placeholder::make('info_kegiatan')
+                                TextEntry::make('info_kegiatan')
                                     ->label('Kegiatan')
-                                    ->content(fn (DailyActivity $record) => $record->activity_date->translatedFormat('l, d F Y') . ' — ' . Str::limit($record->final_content, 120)),
+                                    ->state(fn (DailyActivity $record) => $record->activity_date->translatedFormat('l, d F Y') . ' — ' . Str::limit($record->final_content, 120)),
 
                                 Select::make('surat_tugas_id')
                                     ->label('Pilih Surat Tugas')
@@ -695,9 +694,9 @@ class DailyActivityResource extends Resource
                             $stNo = $st?->nomor_surat_tugas ?: 'DRAFT';
 
                             return [
-                                Placeholder::make('agregator_info')
+                                TextEntry::make('agregator_info')
                                     ->hiddenLabel()
-                                    ->content(new HtmlString("
+                                    ->state(new HtmlString("
                                         <div class='p-3.5 rounded-xl border border-primary-200 bg-primary-50/60 dark:bg-primary-950/20 text-xs space-y-1.5'>
                                             <div class='font-bold text-primary-900 dark:text-primary-200 flex items-center gap-1.5'>
                                                 <span>⚡ Agregator Bukti Dukung Harian BPS</span>
@@ -910,9 +909,9 @@ class DailyActivityResource extends Resource
                             ];
                         })
                         ->schema([
-                            Placeholder::make('activity_summary')
+                            TextEntry::make('activity_summary')
                                 ->label('Kegiatan')
-                                ->content(fn (DailyActivity $record) => $record->activity_date->translatedFormat('l, d F Y') . ' — ' . Str::limit($record->final_content, 120)),
+                                ->state(fn (DailyActivity $record) => $record->activity_date->translatedFormat('l, d F Y') . ' — ' . Str::limit($record->final_content, 120)),
 
                             Select::make('shared_work_reports')
                                 ->label('Pilih Wadah KIPAPP')
@@ -931,9 +930,9 @@ class DailyActivityResource extends Resource
                                 ->helperText('Pilih wadah yang ingin ditautkan. Anda juga bisa mengosongkan pilihan untuk mengeluarkan kegiatan dari semua wadah.')
                                 ->required(false),
 
-                            Placeholder::make('wadah_links_preview')
+                            TextEntry::make('wadah_links_preview')
                                 ->hiddenLabel()
-                                ->content(function (Get $get, ?DailyActivity $record) {
+                                ->state(function (Get $get, ?DailyActivity $record) {
                                     $selectedIds = $get('shared_work_reports');
                                     if ($selectedIds === null && $record) {
                                         $selectedIds = $record->sharedWorkReports->pluck('id')->toArray();
@@ -1033,10 +1032,10 @@ class DailyActivityResource extends Resource
                                 'uraian_kegiatan' => $narasiAwal,
                             ];
                         })
-                        ->form([
-                            Placeholder::make('selected_summary')
+                        ->schema([
+                            TextEntry::make('selected_summary')
                                 ->hiddenLabel()
-                                ->content(function (Collection $records) {
+                                ->state(function (Collection $records) {
                                     $count = $records->count();
                                     $totalPhotos = $records->sum(fn($r) => $r->attachments->count());
                                     $dates = $records->sortBy('activity_date')->pluck('activity_date')
@@ -1277,7 +1276,7 @@ class DailyActivityResource extends Resource
                         ->label('📁 Tautkan ke Wadah KIPAPP')
                         ->icon('heroicon-m-folder-plus')
                         ->color('warning')
-                        ->form([
+                        ->schema([
                             Select::make('shared_work_report_id')
                                 ->label('Pilih Wadah KIPAPP Tujuan')
                                 ->options(fn () => SharedWorkReport::where('user_id', Auth::id())->where('is_active', true)->latest()->pluck('title', 'id'))
@@ -1313,7 +1312,7 @@ class DailyActivityResource extends Resource
                         ->modalHeading('Buat Berkas Publik Bukti Dukung Multi-Hari')
                         ->modalDescription('Gabungkan kegiatan-kegiatan terpilih (baik rentang tanggal berurutan maupun melompat) menjadi 1 berkas resmi dengan tautan publik yang dapat dilampirkan ke E-Kinerja BPS.')
                         ->modalSubmitActionLabel('Buat Berkas & Tautan Publik 🚀')
-                        ->form([
+                        ->schema([
                             TextInput::make('title')
                                 ->label('Judul Berkas Bukti Dukung')
                                 ->placeholder('Contoh: Pelaksanaan Ground Check SBR Kecamatan Wedung')
@@ -1331,9 +1330,9 @@ class DailyActivityResource extends Resource
                                 ->placeholder('Tuliskan ringkasan atau lingkup pekerjaan multi-hari ini...')
                                 ->rows(2),
 
-                            Placeholder::make('summary_info')
+                            TextEntry::make('summary_info')
                                 ->label('Ringkasan Kegiatan Terpilih')
-                                ->content(function (Collection $records) {
+                                ->state(function (Collection $records) {
                                     $count = $records->count();
                                     $dates = $records->sortBy('activity_date')->pluck('activity_date')
                                         ->map(fn($d) => Carbon::parse($d)->translatedFormat('d M Y'))

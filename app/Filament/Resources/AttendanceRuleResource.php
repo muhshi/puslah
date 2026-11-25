@@ -31,12 +31,9 @@ use App\Filament\Resources\AttendanceRuleResource\Pages;
 use App\Filament\Resources\AttendanceRuleResource\RelationManagers;
 use App\Models\AttendanceRule;
 use App\Models\User;
-use Filament\Forms;
 use Filament\Resources\Resource;
-use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
 
 class AttendanceRuleResource extends Resource
