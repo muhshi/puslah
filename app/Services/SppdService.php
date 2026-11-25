@@ -168,9 +168,9 @@ class SppdService
         $template->setValue('tempat_berangkat', $sppd->tempat_berangkat ?? 'Demak');
         $template->setValue('tempat_tujuan', $sppd->tempat_tujuan ?? $record->tempat_tugas ?? '-');
 
-        $start = Carbon::parse($record->waktu_mulai);
-        $end = Carbon::parse($record->waktu_selesai);
-        $lama = $start->diffInDays($end) + 1;
+        $start = Carbon::parse($record->waktu_mulai)->startOfDay();
+        $end = Carbon::parse($record->waktu_selesai)->startOfDay();
+        $lama = (int) round($start->diffInDays($end, true)) + 1;
         $terbilangMap = [
             1 => 'satu', 2 => 'dua', 3 => 'tiga', 4 => 'empat', 5 => 'lima',
             6 => 'enam', 7 => 'tujuh', 8 => 'delapan', 9 => 'sembilan', 10 => 'sepuluh',

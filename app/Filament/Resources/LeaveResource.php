@@ -150,10 +150,10 @@ class LeaveResource extends Resource
                     ->badge()
                     ->color('gray')
                     ->getStateUsing(function (Leave $record) {
-                        $start = $record->start_date ? \Carbon\Carbon::parse($record->start_date) : null;
-                        $end = $record->end_date ? \Carbon\Carbon::parse($record->end_date) : null;
+                        $start = $record->start_date ? \Carbon\Carbon::parse($record->start_date)->startOfDay() : null;
+                        $end = $record->end_date ? \Carbon\Carbon::parse($record->end_date)->startOfDay() : null;
                         if (!$start || !$end) return '-';
-                        $days = $start->diffInDays($end) + 1;
+                        $days = (int) round($start->diffInDays($end, true)) + 1;
                         return "{$days} hari";
                     }),
                 Tables\Columns\TextColumn::make('status')

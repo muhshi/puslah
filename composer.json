@@ -9,13 +9,13 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "barryvdh/laravel-dompdf": "^2.0",
+        "barryvdh/laravel-dompdf": "^3.1",
         "bezhansalleh/filament-shield": "^3.2",
         "dotswan/filament-map-picker": "^1.2",
         "filament/filament": "^3.2.0",
-        "flowframe/laravel-trend": "^0.4.0",
+        "flowframe/laravel-trend": "^0.5.0",
         "joshembling/image-optimizer": "^1.5",
-        "laravel/framework": "^11.0",
+        "laravel/framework": "^12.0",
         "laravel/passport": "^13.4",
         "laravel/sanctum": "^4.0",
         "laravel/socialite": "^5.24",
@@ -38,9 +38,9 @@
         "laravel/pint": "^1.13",
         "laravel/sail": "^1.26",
         "mockery/mockery": "^1.6",
-        "nunomaduro/collision": "^8.0",
-        "pestphp/pest": "^2.34",
-        "pestphp/pest-plugin-laravel": "^2.4"
+        "nunomaduro/collision": "^8.1",
+        "pestphp/pest": "^3.0",
+        "pestphp/pest-plugin-laravel": "^3.0"
     },
     "autoload": {
         "psr-4": {

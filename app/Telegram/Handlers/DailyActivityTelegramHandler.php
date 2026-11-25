@@ -423,7 +423,7 @@ class DailyActivityTelegramHandler
         $recentActId = Cache::get("tg_recent_activity_{$user->id}");
         if ($recentActId) {
             $candidate = DailyActivity::find($recentActId);
-            if ($candidate && $candidate->created_at->diffInSeconds(now()) <= 90 && ($candidate->raw_content === 'Dokumentasi kegiatan' || str_starts_with($candidate->raw_content, 'Dokumen kegiatan:'))) {
+            if ($candidate && $candidate->created_at->diffInSeconds(now(), true) <= 90 && ($candidate->raw_content === 'Dokumentasi kegiatan' || str_starts_with($candidate->raw_content, 'Dokumen kegiatan:'))) {
                 $candidate->raw_content = $rawText;
                 $candidate->ai_formal_content = $formalContent;
                 $candidate->final_content = $formalContent;
@@ -612,7 +612,7 @@ class DailyActivityTelegramHandler
                 $recentActId = Cache::get("tg_recent_activity_{$user->id}");
                 if ($recentActId) {
                     $candidate = DailyActivity::find($recentActId);
-                    if ($candidate && $candidate->created_at->diffInSeconds(now()) <= 90) {
+                    if ($candidate && $candidate->created_at->diffInSeconds(now(), true) <= 90) {
                         if (empty($caption) || $candidate->raw_content === 'Dokumentasi kegiatan' || str_starts_with($candidate->raw_content, 'Dokumen kegiatan:')) {
                             $activity = $candidate;
                         }
@@ -1007,7 +1007,7 @@ class DailyActivityTelegramHandler
                 $recentActId = Cache::get("tg_recent_activity_{$user->id}");
                 if ($recentActId) {
                     $candidate = DailyActivity::find($recentActId);
-                    if ($candidate && $candidate->created_at->diffInSeconds(now()) <= 90) {
+                    if ($candidate && $candidate->created_at->diffInSeconds(now(), true) <= 90) {
                         // Jika dokumen tidak ada caption ATAU candidate masih berstatus 'Dokumentasi kegiatan',
                         // gabungkan ke kegiatan yang sama!
                         if (empty($caption) || $candidate->raw_content === 'Dokumentasi kegiatan' || str_starts_with($candidate->raw_content, 'Dokumen kegiatan:')) {
@@ -1508,7 +1508,8 @@ class DailyActivityTelegramHandler
                     [$start, $end] = [$end, $start];
                 }
 
-                if ($start->diffInDays($end) >= 1 && $start->diffInDays($end) <= 60) {
+                $diffDays = (int) round($start->diffInDays($end, true));
+                if ($diffDays >= 1 && $diffDays <= 60) {
                     return ['start' => $start, 'end' => $end];
                 }
             }
@@ -1525,7 +1526,8 @@ class DailyActivityTelegramHandler
                 $start = Carbon::createFromDate($year, $month, min($startDay, $endDay))->startOfDay();
                 $end = Carbon::createFromDate($year, $month, max($startDay, $endDay))->startOfDay();
 
-                if ($start->diffInDays($end) >= 1 && $start->diffInDays($end) <= 31) {
+                $diffDays = (int) round($start->diffInDays($end, true));
+                if ($diffDays >= 1 && $diffDays <= 31) {
                     return ['start' => $start, 'end' => $end];
                 }
             }
