@@ -23,13 +23,13 @@ use Filament\Actions\Action;
 use Illuminate\Support\Str;
 use App\Models\LaporanPerjalananDinas;
 use Filament\Actions\EditAction;
-use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
+use pxlrbt\FilamentExcel\Actions\ExportAction;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
 use pxlrbt\FilamentExcel\Columns\Column;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\BulkAction;
 use Illuminate\Database\Eloquent\Collection;
-use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use pxlrbt\FilamentExcel\Actions\ExportBulkAction;
 use App\Jobs\GenerateBulkSuratTugasZip;
 use Filament\Actions\DeleteBulkAction;
 use App\Filament\Resources\SuratTugasResource\Pages\ListSuratTugas;
@@ -48,7 +48,6 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Settings\SystemSettings;
-use Filament\Forms\Components\Split;
 use PhpOffice\PhpWord\TemplateProcessor;
 use App\Models\User;
 use App\Models\UserProfile;
@@ -661,7 +660,7 @@ class SuratTugasResource extends Resource
                         ->icon('heroicon-o-document-plus')
                         ->color('primary')
                         ->visible(fn() => auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag', 'Operator', 'Ketua Tim', 'Pegawai']))
-                        ->form([
+                        ->schema([
                             TextInput::make('nomor_urut_sppd_mulai')
                                 ->label('Nomor Urut Mulai')
                                 ->numeric()

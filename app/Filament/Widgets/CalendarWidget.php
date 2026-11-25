@@ -12,19 +12,13 @@ use App\Models\SuratTugas;
 use App\Models\LaporanPerjalananDinas;
 use Carbon\Carbon;
 use Filament\Actions\Action;
-use Filament\Actions\Concerns\InteractsWithActions;
-use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Concerns\InteractsWithInfolists;
-use Filament\Infolists\Contracts\HasInfolists;
 use Illuminate\Database\Eloquent\Model;
 use Saade\FilamentFullCalendar\Widgets\FullCalendarWidget;
 
-class CalendarWidget extends FullCalendarWidget implements HasActions, HasInfolists
+class CalendarWidget extends FullCalendarWidget
 {
-    use InteractsWithActions;
-    use InteractsWithInfolists;
 
     protected int|string|array $columnSpan = 'full';
 

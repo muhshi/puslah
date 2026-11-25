@@ -280,7 +280,7 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                         ->modalHeading(fn(Collection $records) => 'Buat Surat Tugas Kolektif — ' . $records->count() . ' Nomor Terpilih')
                         ->modalDescription('Pastikan jumlah pegawai yang dipilih tidak melebihi jumlah nomor yang Anda block. Sisa nomor block yang tidak terpakai akan tetap diblock.')
                         ->modalSubmitActionLabel('Buat Surat Tugas')
-                        ->form([
+                        ->schema([
                             Section::make('Pilih Survey & Pegawai')
                                 ->description('Pilih survey terlebih dahulu, lalu pilih pegawai dari peserta survey tersebut.')
                                 ->schema([

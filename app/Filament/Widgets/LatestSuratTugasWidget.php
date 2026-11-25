@@ -4,19 +4,18 @@ namespace App\Filament\Widgets;
 
 use App\Models\SuratTugas;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
 
 class LatestSuratTugasWidget extends BaseWidget
 {
-    protected static ?string $heading = 'Surat Tugas Terakhir';
     protected static ?int $sort = 3;
     protected int|string|array $columnSpan = 'full';
 
     public function table(Table $table): Table
     {
         return $table
+            ->heading('Surat Tugas Terakhir')
             ->query(SuratTugas::query()->with('user')->latest()->limit(5))
             ->columns([
                 TextColumn::make('nomor_surat')->label('Nomor')->sortable(),

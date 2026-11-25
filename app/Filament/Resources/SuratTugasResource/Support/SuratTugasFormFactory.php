@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\SuratTugasResource\Support;
 
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Placeholder;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Forms\Components\TextInput;
@@ -21,7 +21,6 @@ use App\Services\SuratTugasNumberingService;
 use App\Settings\SystemSettings;
 use Carbon\Carbon;
 use Exception;
-use Filament\Forms;
 use Illuminate\Support\Facades\DB;
 
 class SuratTugasFormFactory
@@ -44,9 +43,9 @@ class SuratTugasFormFactory
                 ->live();
         } elseif ($record !== null) {
             $preview = SuratTugasNumberingService::formatNomorSurat($record->nomor_urut, 'KP.650', $record->year);
-            $schema[] = Placeholder::make('nomor_surat_info')
+            $schema[] = TextEntry::make('nomor_surat_info')
                 ->label('Nomor Surat')
-                ->content($preview);
+                ->state($preview);
         }
 
         $schema = array_merge($schema, [

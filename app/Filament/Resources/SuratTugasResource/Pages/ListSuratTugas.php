@@ -23,6 +23,7 @@ use App\Models\Survey;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Storage;
 
 class ListSuratTugas extends ListRecords
 {
@@ -109,11 +110,13 @@ class ListSuratTugas extends ListRecords
                         ->label('File Excel (.xlsx)')
                         ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv'])
                         ->directory('imports')
+                        ->disk('public')
+                        ->visibility('public')
                         ->required()
                         ->helperText(new HtmlString('Download template: <a href="/templates/surat_tugas_import_template.xlsx" target="_blank" class="text-primary-600 hover:underline">surat_tugas_import_template.xlsx</a>')),
                 ])
                 ->action(function (array $data) {
-                    $filePath = storage_path('app/public/' . $data['file_excel']);
+                    $filePath = Storage::disk('public')->path($data['file_excel']);
                     $import = new SuratTugasImport(
                         $data['survey_id'],
                         $data['tanggal'],

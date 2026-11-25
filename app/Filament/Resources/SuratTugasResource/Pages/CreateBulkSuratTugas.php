@@ -17,7 +17,7 @@ use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\Placeholder;
+use Filament\Infolists\Components\TextEntry;
 use Illuminate\Support\HtmlString;
 use App\Models\UserProfile;
 use Exception;
@@ -26,7 +26,6 @@ use App\Filament\Resources\SuratTugasResource;
 use App\Models\SuratTugas;
 use App\Models\User;
 use App\Settings\SystemSettings;
-use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -276,9 +275,9 @@ class CreateBulkSuratTugas extends Page implements HasForms
 
 
 
-                                Placeholder::make('range_info')
+                                TextEntry::make('range_info')
                                     ->label('Preview Range Nomor')
-                                    ->content(function (Get $get) {
+                                    ->state(function (Get $get) {
                                         $mitraCount = count($get('mitra_user_ids') ?? []);
                                         $pegawaiCount = count($get('pegawai_bps_user_ids') ?? []);
                                         $totalPegawai = $mitraCount + $pegawaiCount;
@@ -323,9 +322,9 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                         return 'Pilih pegawai untuk melihat range nomor';
                                     }),
 
-                                Placeholder::make('skipped_warning')
-                                    ->label('')
-                                    ->content(function (Get $get) {
+                                TextEntry::make('skipped_warning')
+                                    ->hiddenLabel()
+                                    ->state(function (Get $get) {
                                         $tanggal = $get('tanggal');
                                         if (!$tanggal)
                                             return '';

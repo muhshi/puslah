@@ -22,7 +22,7 @@ use Filament\Forms\Components\Radio;
 use Exception;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Placeholder;
+use Filament\Infolists\Components\TextEntry;
 use Illuminate\Support\HtmlString;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Builder;
@@ -40,6 +40,7 @@ use App\Filament\Resources\LaporanPerjalananDinasResource\Pages\ListLaporanPerja
 use App\Filament\Resources\LaporanPerjalananDinasResource\Pages;
 use App\Models\LaporanPerjalananDinas;
 use App\Models\SuratTugas;
+use App\Models\User;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -624,10 +625,10 @@ class LaporanPerjalananDinasResource extends Resource
                                 )
                                 ->required(),
 
-                            Placeholder::make('foto_actions')
+                            TextEntry::make('foto_actions')
                                 ->hiddenLabel()
                                 ->visible(fn (Get $get) => !empty($get('file_path')))
-                                ->content(function (Get $get) {
+                                ->state(function (Get $get) {
                                     $path = $get('file_path');
                                     $val = is_array($path) ? (array_values($path)[0] ?? null) : $path;
                                     if (!$val) return null;

@@ -1,4 +1,4 @@
-<x-filament::widget>
+<x-filament-widgets::widget>
     <x-filament::section>
         @php
             $stSkippedCount = $this->getSkippedNumbersCount();
@@ -75,7 +75,7 @@
                             @php
                                 $tokens = array_filter(array_map('trim', explode(',', $ranges)));
                             @endphp
-                            <div class="rounded-xl bg-gray-50 dark:bg-white/5 p-3 ring-1 ring-gray-950/5 dark:ring-white/10 flex flex-col gap-2">
+                            <div wire:key="missing-month-{{ $activeTab }}-{{ $month }}" class="rounded-xl bg-gray-50 dark:bg-white/5 p-3 ring-1 ring-gray-950/5 dark:ring-white/10 flex flex-col gap-2">
                                 <div class="flex items-center justify-between gap-2 border-b border-gray-200 dark:border-white/10 pt-2">
                                     <h4 class="text-xs font-bold uppercase tracking-wider text-danger-600 dark:text-danger-400 mb-2">
                                         {{ $month }}
@@ -86,7 +86,7 @@
                                 </div>
                                 <div class="flex flex-wrap gap-2">
                                     @foreach ($tokens as $token)
-                                        <x-filament::badge color="warning" class="font-mono whitespace-nowrap">
+                                        <x-filament::badge wire:key="missing-token-{{ $activeTab }}-{{ $month }}-{{ $loop->index }}" color="warning" class="font-mono whitespace-nowrap">
                                             {{ $token }}
                                         </x-filament::badge>
                                     @endforeach
@@ -135,7 +135,7 @@
 
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         @foreach ($blockedGroups as $group)
-                            <div class="flex flex-col justify-between rounded-xl bg-white dark:bg-gray-900 p-4 shadow-sm ring-1 ring-gray-950/5 dark:ring-white/10 gap-3">
+                            <div wire:key="blocked-group-{{ $selectedYear }}-{{ md5($group['keterangan']) }}" class="flex flex-col justify-between rounded-xl bg-white dark:bg-gray-900 p-4 shadow-sm ring-1 ring-gray-950/5 dark:ring-white/10 gap-3">
                                 <div class="space-y-3">
                                     <div class="flex items-start justify-between gap-2">
                                         <h5 class="text-sm font-semibold text-gray-950 dark:text-white line-clamp-2" title="{{ $group['keterangan'] }}">
@@ -186,4 +186,4 @@
     </x-filament::section>
 
     <x-filament-actions::modals />
-</x-filament::widget>
+</x-filament-widgets::widget>

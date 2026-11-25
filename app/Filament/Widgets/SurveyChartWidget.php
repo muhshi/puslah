@@ -11,7 +11,7 @@ class SurveyChartWidget extends ChartWidget
 {
     protected ?string $heading = 'Grafik Jumlah Survei (Tahun Ini)';
     protected static ?int $sort = 3;
-    protected static bool $isLazy = true;
+    protected static ?bool $isLazyLoaded = true;
 
     protected function getData(): array
     {
