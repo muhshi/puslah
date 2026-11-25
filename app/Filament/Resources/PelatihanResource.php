@@ -104,8 +104,8 @@ class PelatihanResource extends Resource
                     ])
                     ->columns(2),
 
-                Section::make('Undangan & Materi')
-                    ->description('Data referensi surat undangan resmi dan tautan materi pelatihan')
+                Section::make('Surat Undangan')
+                    ->description('Nomor, tanggal, dan rujukan surat undangan resmi (isi surat dan jadwal dapat disesuaikan kembali pada file Word hasil unduhan)')
                     ->schema([
                         TextInput::make('nomor_surat_undangan')
                             ->label('Nomor Surat Undangan')
@@ -118,11 +118,6 @@ class PelatihanResource extends Resource
                             ->placeholder('Contoh: Surat Kepala BPS Provinsi Jawa Tengah Nomor B-1234/33000/VS.100/2026 perihal Pemanggilan Peserta Pelatihan...')
                             ->rows(2)
                             ->columnSpanFull(),
-                        TextInput::make('link_materi')
-                            ->label('Tautan Materi / Bahan Tayang')
-                            ->placeholder('https://s.bps.go.id/materi-pelatihan')
-                            ->url()
-                            ->columnSpanFull(),
                     ])
                     ->columns(2),
 
@@ -131,23 +126,23 @@ class PelatihanResource extends Resource
                     ->schema([
                         TextInput::make('program')
                             ->label('Program')
-                            ->placeholder('Contoh: Program Penyediaan dan Pelayanan Informasi Statistik')
+                            ->default('PROGRAM PENYEDIAAN DAN PELAYANAN INFORMASI STATISTIK (054.01.GG)')
                             ->columnSpanFull(),
                         TextInput::make('kegiatan_dipa')
                             ->label('Kegiatan DIPA')
-                            ->placeholder('Contoh: Penyediaan Data Statistik Pertanian'),
+                            ->default('PENYEDIAAN DAN PENGEMBANGAN STATISTIK HARGA (2903)'),
                         TextInput::make('klasifikasi_ro')
                             ->label('Klasifikasi RO (KRO)')
-                            ->placeholder('Contoh: 2900'),
+                            ->default('DATA DAN INFORMASI PUBLIK (2903.BMA)'),
                         TextInput::make('rincian_output')
                             ->label('Rincian Output (RO)')
-                            ->placeholder('Contoh: 2900.BMA'),
+                            ->default('PUBLIKASI/LAPORAN SPKRT (2903.BMA.007)'),
                         TextInput::make('komponen')
                             ->label('Komponen')
-                            ->placeholder('Contoh: 051'),
+                            ->default('PERSIAPAN (2903.BMA.009.051A)'),
                         TextInput::make('mak')
                             ->label('Mata Anggaran Keluaran (MAK)')
-                            ->default('524113')
+                            ->default('BELANJA PERJALANAN DINAS DALAM KOTA (524113)')
                             ->required(),
                         TextInput::make('biaya_transport')
                             ->label('Biaya Transportasi Standar (Rp)')

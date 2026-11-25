@@ -100,6 +100,7 @@ class PelatihanUiTest extends TestCase
             ->assertFormFieldDoesNotExist('ppk_user_id')
             ->assertFormFieldDoesNotExist('bendahara_user_id')
             ->assertFormFieldDoesNotExist('penyelenggara_user_id')
+            ->assertFormFieldDoesNotExist('link_materi')
             ->fillForm([
                 'name' => 'Pelatihan Susenas Maret 2026',
                 'description' => 'Pelatihan calon petugas Susenas',
@@ -110,7 +111,6 @@ class PelatihanUiTest extends TestCase
                 'kota_kegiatan' => 'Semarang',
                 'is_active' => true,
                 'is_multiple' => false,
-                'mak' => '524113',
                 'biaya_transport' => 120000,
                 'biaya_uang_harian' => 150000,
             ])
@@ -121,6 +121,12 @@ class PelatihanUiTest extends TestCase
         $this->assertNotNull($pelatihan);
         $this->assertTrue($pelatihan->is_pelatihan);
         $this->assertSame('Hotel Patra Semarang', $pelatihan->lokasi);
+        $this->assertSame('PROGRAM PENYEDIAAN DAN PELAYANAN INFORMASI STATISTIK (054.01.GG)', $pelatihan->program);
+        $this->assertSame('PENYEDIAAN DAN PENGEMBANGAN STATISTIK HARGA (2903)', $pelatihan->kegiatan_dipa);
+        $this->assertSame('DATA DAN INFORMASI PUBLIK (2903.BMA)', $pelatihan->klasifikasi_ro);
+        $this->assertSame('PUBLIKASI/LAPORAN SPKRT (2903.BMA.007)', $pelatihan->rincian_output);
+        $this->assertSame('PERSIAPAN (2903.BMA.009.051A)', $pelatihan->komponen);
+        $this->assertSame('BELANJA PERJALANAN DINAS DALAM KOTA (524113)', $pelatihan->mak);
         $this->assertSame(120000, $pelatihan->biaya_transport);
         $this->assertSame(150000, $pelatihan->biaya_uang_harian);
     }

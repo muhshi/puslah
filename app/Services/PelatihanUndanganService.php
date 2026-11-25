@@ -43,7 +43,6 @@ class PelatihanUndanganService
 
         $nomorSurat = $survey->nomor_surat_undangan ?: 'B-..../33210/'.date('Y');
         $rujukanSurat = $survey->rujukan_surat ?: ($survey->dasar_surat ?: 'DIPA BPS Kabupaten Demak Tahun Anggaran '.date('Y'));
-        $linkMateri = $survey->link_materi ?: 's.bps.go.id/materi-pelatihan';
 
         // Set Header & Letter Variables
         $template->setValue('nomor_surat', $nomorSurat);
@@ -54,7 +53,7 @@ class PelatihanUndanganService
         $template->setValue('periode_pelatihan', $data['periode']);
         $template->setValue('jumlah_hari', (string) $data['jumlah_hari']);
         $template->setValue('lokasi', $data['lokasi']);
-        $template->setValue('link_materi', $linkMateri);
+        $template->setValue('link_materi', $survey->link_materi ?? '');
 
         $template->setValue('jabatan_kepala', $data['kepala']['title']);
         $template->setValue('nama_kepala', $data['kepala']['name']);

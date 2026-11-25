@@ -55,6 +55,9 @@ composer dev
 ## Changelog
 
 ### 2026-11-25
+- **Default DIPA SPKRT & Pembersihan Template Undangan Pelatihan:**
+  - **Nilai Default Anggaran DIPA (`PelatihanResource.php`, `PelatihanSpjDataBuilder.php`):** Mengisi otomatis nilai default Program (`054.01.GG`), Kegiatan (`2903`), KRO (`2903.BMA`), RO (`2903.BMA.007`), Komponen (`2903.BMA.009.051A`), dan MAK (`524113`).
+  - **Penghapusan Field `link_materi` & Dokumentasi Placeholder (`template_undangan_pelatihan.docx`, `PelatihanUndanganService.php`, `SystemSettingsPage.php`):** Menghapus input *Tautan Materi / Bahan Tayang* dan baris tautannya dari template Word bawaan (sekaligus memperbaiki escaping XML `&amp;` di jadwal bawaan), serta menampilkan daftar lengkap variabel `${...}` pada pengaturan upload template undangan.
 - **Sentralisasi Pejabat Pelatihan (Kasubag Umum, PPK, Bendahara) & Full-Span DIPA:**
   - **Penambahan Kasubag Umum / Penanggung Jawab di Pengaturan Sistem (`SystemSettings`, `SystemSettingsPage`, `OfficialSettingsSyncService`):** Menambahkan dropdown & sinkronisasi profil pegawai untuk **Kasubag Umum / Penanggung Jawab** (`kasubag_umum_user_id`, `kasubag_umum_name`, `kasubag_umum_nip`, `kasubag_umum_title`) di tab *Pejabat & Persuratan*.
   - **Penyederhanaan Form Pelatihan (`PelatihanResource`, `PelatihanSpjDataBuilder`):** Menghapus input manual PPK, Bendahara, dan Penanggung Jawab dari form Pelatihan karena seluruh pejabat SPJ kini diambil langsung dari *Pengaturan Sistem*, sekaligus mengubah section **Anggaran DIPA & Translok** dan **Perlengkapan ATK (Opsional)** menjadi `columnSpanFull()`.

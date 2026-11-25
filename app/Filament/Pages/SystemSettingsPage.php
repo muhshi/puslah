@@ -220,7 +220,7 @@ class SystemSettingsPage extends Page implements HasForms
                                         ->downloadable()
                                         ->openable()
                                         ->hint(fn () => $this->formatStoredFileHint(app(SystemSettings::class)->undangan_pelatihan_template_path))
-                                        ->helperText('Kosongkan untuk memakai template default sistem. Isi jika ingin mengganti kop/redaksi surat undangan pelatihan.')
+                                        ->helperText('Kosongkan untuk memakai template default sistem. Variabel: ${nomor_surat}, ${hal}, ${tanggal_surat}, ${nama_kegiatan}, ${rujukan_surat}, ${periode_pelatihan}, ${jumlah_hari}, ${lokasi}, ${jabatan_kepala}, ${nama_kepala}, ${nip_kepala}, ${kelas_block} ... ${kelas_nama}, ${no}, ${nama}, ${asal}, ${bertugas_sebagai} ... ${/kelas_block}')
                                         ->columnSpanFull(),
                                 ])
                                 ->columns(1)

@@ -281,6 +281,8 @@ class PelatihanDocumentsTest extends TestCase
         $this->assertStringContainsString('Joko Widodo', $xml);
         $this->assertStringContainsString('Kelas A', $xml);
         $this->assertStringContainsString('Kelas B', $xml);
+        $this->assertStringNotContainsString('tautan:', $xml);
+        $this->assertStringNotContainsString('s.bps.go.id/materi-pelatihan', $xml);
     }
 
     public function test_render_daftar_hadir_pdf_generates_valid_pdf_stream(): void
