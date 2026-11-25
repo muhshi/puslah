@@ -20,16 +20,25 @@ class SurveyUser extends Pivot
         'status',
         'score',
         'notes',
+        'role_pelatihan',
+        'kelas',
+        'asal',
+        'tujuan',
+        'transport_override',
+        'uang_harian_override',
     ];
 
     protected $casts = [
         'registered_at' => 'datetime',
+        'transport_override' => 'integer',
+        'uang_harian_override' => 'integer',
     ];
 
     public function survey()
     {
         return $this->belongsTo(Survey::class);
     }
+
     public function user()
     {
         return $this->belongsTo(User::class);
