@@ -2,12 +2,31 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Fieldset;
+use Filament\Forms\Components\Select;
+use App\Models\User;
+use Filament\Schemas\Components\Group;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\ToggleButtons;
+use Filament\Tables\Columns\TextColumn;
+use Carbon\Carbon;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Actions\ViewAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\LeaveResource\Pages\ListLeaves;
+use App\Filament\Resources\LeaveResource\Pages\CreateLeave;
+use App\Filament\Resources\LeaveResource\Pages\ViewLeave;
+use App\Filament\Resources\LeaveResource\Pages\EditLeave;
 use App\Filament\Resources\LeaveResource\Pages;
 use App\Filament\Resources\LeaveResource\RelationManagers;
 use App\Models\Leave;
 use Filament\Forms;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -19,29 +38,29 @@ class LeaveResource extends Resource
 {
     protected static ?string $model = Leave::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-check';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-document-check';
 
-    protected static ?string $navigationGroup = 'Manajemen Presensi';
+    protected static string | \UnitEnum | null $navigationGroup = 'Manajemen Presensi';
     protected static ?string $navigationLabel = 'Izin';
     protected static ?string $modelLabel = 'Izin';
     protected static ?string $pluralModelLabel = 'Data Izin';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Formulir Permohonan & Verifikasi Izin')
+        return $schema
+            ->components([
+                Section::make('Formulir Permohonan & Verifikasi Izin')
                     ->description('Kelola permohonan izin tidak masuk kerja bagi pegawai dan proses persetujuan verifikator.')
                     ->icon('heroicon-o-document-check')
                     ->schema([
 
                         // Fieldset 1: Informasi Pemohon & Tanggal
-                        Forms\Components\Fieldset::make('Informasi Pegawai & Waktu Izin')
+                        Fieldset::make('Informasi Pegawai & Waktu Izin')
                             ->schema([
-                                Forms\Components\Select::make('user_id')
+                                Select::make('user_id')
                                     ->label('Nama Pegawai')
                                     ->prefixIcon('heroicon-m-user')
-                                    ->options(\App\Models\User::query()->orderBy('name')->pluck('name', 'id'))
+                                    ->options(User::query()->orderBy('name')->pluck('name', 'id'))
                                     ->default(Auth::id())
                                     ->searchable()
                                     ->preload()
@@ -51,8 +70,8 @@ class LeaveResource extends Resource
                                     ->helperText(fn () => (Auth::user()?->hasRole('super_admin') ?? false) ? 'Super Admin dapat mengajukan izin atas nama pegawai lain.' : null)
                                     ->columnSpanFull(),
 
-                                Forms\Components\Group::make([
-                                    Forms\Components\DatePicker::make('start_date')
+                                Group::make([
+                                    DatePicker::make('start_date')
                                         ->label('Tanggal Mulai Izin')
                                         ->prefixIcon('heroicon-m-calendar-days')
                                         ->native(false)
@@ -60,7 +79,7 @@ class LeaveResource extends Resource
                                         ->closeOnDateSelection()
                                         ->required(),
 
-                                    Forms\Components\DatePicker::make('end_date')
+                                    DatePicker::make('end_date')
                                         ->label('Tanggal Selesai Izin')
                                         ->prefixIcon('heroicon-m-calendar-days')
                                         ->native(false)
@@ -72,7 +91,7 @@ class LeaveResource extends Resource
                                 ->columns(2)
                                 ->columnSpanFull(),
 
-                                Forms\Components\Textarea::make('reason')
+                                Textarea::make('reason')
                                     ->label('Alasan / Keperluan Izin')
                                     ->placeholder('Tuliskan alasan permohonan izin tidak masuk kerja secara jelas...')
                                     ->rows(3)
@@ -82,9 +101,9 @@ class LeaveResource extends Resource
                             ->columnSpanFull(),
 
                         // Fieldset 2: Verifikasi & Persetujuan
-                        Forms\Components\Fieldset::make('Status Verifikasi & Catatan')
+                        Fieldset::make('Status Verifikasi & Catatan')
                             ->schema([
-                                Forms\Components\ToggleButtons::make('status')
+                                ToggleButtons::make('status')
                                     ->label('Status Permohonan')
                                     ->options([
                                         'pending' => 'Menunggu Verifikasi',
@@ -108,7 +127,7 @@ class LeaveResource extends Resource
                                     ->dehydrated()
                                     ->columnSpanFull(),
 
-                                Forms\Components\Textarea::make('note')
+                                Textarea::make('note')
                                     ->label('Catatan Verifikator')
                                     ->placeholder('Catatan atau alasan persetujuan / penolakan izin jika ada...')
                                     ->rows(2)
@@ -133,30 +152,30 @@ class LeaveResource extends Resource
                 }
             })
             ->columns([
-                Tables\Columns\TextColumn::make('user.name')
+                TextColumn::make('user.name')
                     ->label('Nama Pegawai')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('start_date')
+                TextColumn::make('start_date')
                     ->label('Mulai Izin')
                     ->date('d M Y')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('end_date')
+                TextColumn::make('end_date')
                     ->label('Selesai Izin')
                     ->date('d M Y')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('duration')
+                TextColumn::make('duration')
                     ->label('Durasi')
                     ->badge()
                     ->color('gray')
                     ->getStateUsing(function (Leave $record) {
-                        $start = $record->start_date ? \Carbon\Carbon::parse($record->start_date)->startOfDay() : null;
-                        $end = $record->end_date ? \Carbon\Carbon::parse($record->end_date)->startOfDay() : null;
+                        $start = $record->start_date ? Carbon::parse($record->start_date)->startOfDay() : null;
+                        $end = $record->end_date ? Carbon::parse($record->end_date)->startOfDay() : null;
                         if (!$start || !$end) return '-';
                         $days = (int) round($start->diffInDays($end, true)) + 1;
                         return "{$days} hari";
                     }),
-                Tables\Columns\TextColumn::make('status')
+                TextColumn::make('status')
                     ->label('Status')
                     ->badge()
                     ->formatStateUsing(fn (string $state): string => match ($state) {
@@ -170,24 +189,24 @@ class LeaveResource extends Resource
                         default => 'warning',
                     })
                     ->searchable(),
-                Tables\Columns\TextColumn::make('reason')
+                TextColumn::make('reason')
                     ->label('Keperluan Izin')
                     ->limit(35)
                     ->tooltip(fn ($state) => $state)
                     ->toggleable(),
-                Tables\Columns\TextColumn::make('note')
+                TextColumn::make('note')
                     ->label('Catatan Verifikator')
                     ->limit(35)
                     ->tooltip(fn ($state) => $state)
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('Diajukan Pada')
                     ->dateTime('d M Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('status')
+                SelectFilter::make('status')
                     ->label('Filter Status')
                     ->options([
                         'pending' => 'Menunggu Verifikasi',
@@ -195,14 +214,14 @@ class LeaveResource extends Resource
                         'rejected' => 'Ditolak',
                     ]),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+            ->recordActions([
+                ViewAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
@@ -218,10 +237,10 @@ class LeaveResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListLeaves::route('/'),
-            'create' => Pages\CreateLeave::route('/create'),
-            'view' => Pages\ViewLeave::route('/{record}'),
-            'edit' => Pages\EditLeave::route('/{record}/edit'),
+            'index' => ListLeaves::route('/'),
+            'create' => CreateLeave::route('/create'),
+            'view' => ViewLeave::route('/{record}'),
+            'edit' => EditLeave::route('/{record}/edit'),
         ];
     }
 }

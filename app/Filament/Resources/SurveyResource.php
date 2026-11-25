@@ -2,12 +2,33 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\TrashedFilter;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreBulkAction;
+use App\Filament\Resources\SurveyResource\Pages\ListSurveys;
+use App\Filament\Resources\SurveyResource\Pages\CreateSurvey;
+use App\Filament\Resources\SurveyResource\Pages\EditSurvey;
+use App\Filament\Resources\SurveyResource\Pages\ListSurveyActivities;
 use App\Filament\Resources\SurveyResource\Pages;
 use App\Filament\Resources\SurveyResource\RelationManagers;
 use App\Filament\Resources\SurveyResource\RelationManagers\ParticipantsRelationManager;
 use App\Models\Survey;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -18,35 +39,35 @@ class SurveyResource extends Resource
 {
     protected static ?string $model = Survey::class;
 
-    protected static ?string $navigationIcon = 'heroicon-m-clipboard-document-check';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-m-clipboard-document-check';
 
-    protected static ?string $navigationGroup = 'Manajemen Survei';
+    protected static string | \UnitEnum | null $navigationGroup = 'Manajemen Survei';
     protected static ?string $navigationLabel = 'Survei';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('name')
+        return $schema
+            ->components([
+                TextInput::make('name')
                     ->label('Nama Survei')
                     ->required()
                     ->maxLength(255),
-                Forms\Components\Textarea::make('description')
+                Textarea::make('description')
                     ->label('Deskripsi')
                     ->columnSpanFull(),
-                Forms\Components\Textarea::make('dasar_surat')
+                Textarea::make('dasar_surat')
                     ->label('Dasar Surat')
                     ->placeholder('Contoh: DIPA BPS Kabupaten Demak Tahun Anggaran 2025...')
                     ->required()
                     ->columnSpanFull(),
-                Forms\Components\DatePicker::make('start_date')
+                DatePicker::make('start_date')
                     ->label('Mulai'),
-                Forms\Components\DatePicker::make('end_date')
+                DatePicker::make('end_date')
                     ->label('Selesai'),
-                Forms\Components\Toggle::make('is_active')
+                Toggle::make('is_active')
                     ->default(true)
                     ->required(),
-                Forms\Components\Toggle::make('is_multiple')
+                Toggle::make('is_multiple')
                     ->label('Multiple Surat Tugas')
                     ->helperText('Jika diaktifkan, satu pegawai bisa dibuatkan beberapa surat tugas pada survey ini')
                     ->default(false)
@@ -58,71 +79,71 @@ class SurveyResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->searchable()
                     ->sortable()
                     ->label('Nama'),
-                Tables\Columns\TextColumn::make('start_date')
+                TextColumn::make('start_date')
                     ->date('d M Y')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('end_date')
+                TextColumn::make('end_date')
                     ->date('d M Y')
                     ->sortable(),
-                Tables\Columns\IconColumn::make('is_active')
+                IconColumn::make('is_active')
                     ->boolean(),
-                Tables\Columns\TextColumn::make('participants_count')
+                TextColumn::make('participants_count')
                     ->counts('participants')
                     ->label('Peserta'),
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
+                TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('deleted_at')
+                TextColumn::make('deleted_at')
                     ->dateTime()
                     ->sortable()
             ])
             ->filters([
-                Tables\Filters\TrashedFilter::make(),
+                TrashedFilter::make(),
             ])
-            ->actions([
-                Tables\Actions\Action::make('copy')
+            ->recordActions([
+                Action::make('copy')
                     ->label('Copy')
                     ->icon('heroicon-o-document-duplicate')
                     ->color('info')
                     ->modalHeading('Copy Survey')
                     ->modalDescription('Ubah data survey sebelum menyimpan. Petugas yang sudah di-assign akan ter-copy.')
-                    ->form([
-                        Forms\Components\TextInput::make('name')
+                    ->schema([
+                        TextInput::make('name')
                             ->label('Nama Survei')
                             ->required()
                             ->maxLength(255)
                             ->default(fn(Survey $record) => 'Copy of ' . $record->name),
-                        Forms\Components\Textarea::make('description')
+                        Textarea::make('description')
                             ->label('Deskripsi')
                             ->default(fn(Survey $record) => $record->description)
                             ->columnSpanFull(),
-                        Forms\Components\Textarea::make('dasar_surat')
+                        Textarea::make('dasar_surat')
                             ->label('Dasar Surat')
                             ->required()
                             ->default(fn(Survey $record) => $record->dasar_surat)
                             ->columnSpanFull(),
-                        Forms\Components\DatePicker::make('start_date')
+                        DatePicker::make('start_date')
                             ->label('Mulai')
                             ->default(fn(Survey $record) => $record->start_date),
-                        Forms\Components\DatePicker::make('end_date')
+                        DatePicker::make('end_date')
                             ->label('Selesai')
                             ->default(fn(Survey $record) => $record->end_date),
-                        Forms\Components\Toggle::make('is_active')
+                        Toggle::make('is_active')
                             ->label('Aktif')
                             ->default(fn(Survey $record) => $record->is_active),
-                        Forms\Components\Toggle::make('is_multiple')
+                        Toggle::make('is_multiple')
                             ->label('Multiple Surat Tugas')
                             ->default(fn(Survey $record) => $record->is_multiple),
-                        Forms\Components\Toggle::make('copy_participants')
+                        Toggle::make('copy_participants')
                             ->label('Copy Petugas/Peserta')
                             ->helperText('Centang untuk meng-copy semua petugas yang sudah di-assign ke survey asli')
                             ->default(true),
@@ -147,7 +168,7 @@ class SurveyResource extends Resource
                             }
                         }
 
-                        \Filament\Notifications\Notification::make()
+                        Notification::make()
                             ->title('Survey berhasil di-copy!')
                             ->body($copyParticipants
                                 ? 'Survey baru dibuat dengan ' . $participants->count() . ' petugas.'
@@ -155,23 +176,23 @@ class SurveyResource extends Resource
                             ->success()
                             ->send();
                     }),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('activities')
+                EditAction::make(),
+                Action::make('activities')
                     ->label('History')
                     ->icon('heroicon-o-clock')
                     ->color('info')
                     ->url(fn ($record) => SurveyResource::getUrl('activities', ['record' => $record])),
-                Tables\Actions\DeleteAction::make(),
-                Tables\Actions\ForceDeleteAction::make(),
-                Tables\Actions\RestoreAction::make(),
+                DeleteAction::make(),
+                ForceDeleteAction::make(),
+                RestoreAction::make(),
             ])
             ->defaultSort('created_at', 'desc')
             ->modifyQueryUsing(fn(Builder $query) => $query->orderBy('is_active', 'desc')->orderBy('created_at', 'desc'))
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                    Tables\Actions\ForceDeleteBulkAction::make(),
-                    Tables\Actions\RestoreBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
+                    RestoreBulkAction::make(),
                 ]),
             ]);
     }
@@ -194,10 +215,10 @@ class SurveyResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSurveys::route('/'),
-            'create' => Pages\CreateSurvey::route('/create'),
-            'edit' => Pages\EditSurvey::route('/{record}/edit'),
-            'activities' => Pages\ListSurveyActivities::route('/{record}/activities'),
+            'index' => ListSurveys::route('/'),
+            'create' => CreateSurvey::route('/create'),
+            'edit' => EditSurvey::route('/{record}/edit'),
+            'activities' => ListSurveyActivities::route('/{record}/activities'),
         ];
     }
 }

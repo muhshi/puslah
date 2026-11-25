@@ -2,25 +2,26 @@
 
 namespace App\Filament\Pages;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Forms\Components\Select;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Get;
 use Filament\Pages\Page;
 
 use App\Settings\SystemSettings;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
-use Filament\Forms\Components\Group;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Set;
 use Illuminate\Support\Facades\Auth;
 
 class SystemSettingsPage extends Page implements HasForms
@@ -28,10 +29,10 @@ class SystemSettingsPage extends Page implements HasForms
     use InteractsWithForms;
     use HasPageShield;
     protected static ?string $slug = 'system-settings';
-    protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
-    protected static ?string $navigationGroup = 'Pengaturan';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-cog-6-tooth';
+    protected static string | \UnitEnum | null $navigationGroup = 'Pengaturan';
     protected static ?string $title = 'Pengaturan Sistem';
-    protected static string $view = 'filament.pages.system-settings-page';
+    protected string $view = 'filament.pages.system-settings-page';
     protected static ?int $navigationSort = 70;
 
     public ?array $data = [];
@@ -67,9 +68,9 @@ class SystemSettingsPage extends Page implements HasForms
         ]);
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form->schema([
+        return $schema->components([
             Section::make('Format Nomor Surat')
                 ->description('Pastikan format sesuai: {Prefix}-{Urut}/{KodeKantor}/{Klasifikasi}/{Tahun}')
                 ->schema([
@@ -239,7 +240,7 @@ class SystemSettingsPage extends Page implements HasForms
                                 ->revealable()
                                 ->placeholder('AIzaSy...')
                                 ->helperText('Dapatkan gratis di https://aistudio.google.com/app/apikey. Jika dikosongkan di sini, sistem akan menggunakan nilai dari .env (GEMINI_API_KEY).'),
-                            Forms\Components\Select::make('gemini_model')
+                            Select::make('gemini_model')
                                 ->label('Model AI Gemini')
                                 ->options([
                                     'gemini-3.5-flash' => 'Gemini 3.5 Flash (Sangat Cepat & Cerdas - Rekomendasi)',

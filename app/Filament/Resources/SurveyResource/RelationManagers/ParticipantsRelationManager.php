@@ -3,18 +3,32 @@
 namespace App\Filament\Resources\SurveyResource\RelationManagers;
 
 
+use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Actions\CreateAction;
+use Filament\Actions\Action;
+use Filament\Schemas\Components\Section;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkAction;
+use Throwable;
+use Filament\Actions\DeleteBulkAction;
+use App\Models\CertificateTemplate;
+use App\Models\Survey;
 use App\Models\Certificate;
 use App\Models\SurveyUser;
 use App\Models\User;
 use App\Settings\SystemSettings;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Forms;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
-use Filament\Tables\Actions\Action;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -24,7 +38,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use App\Services\CertificateIssuanceService;
-use Filament\Resources\Components\Tab;
 
 class ParticipantsRelationManager extends RelationManager
 {
@@ -42,21 +55,21 @@ class ParticipantsRelationManager extends RelationManager
         ];
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Select::make('user_id')
+        return $schema->components([
+            Select::make('user_id')
                 ->label('User')
                 ->options(User::orderBy('name')
                     ->pluck('name', 'id'))
                 ->searchable()
                 ->preload()->required(),
-            Forms\Components\Select::make('status')
+            Select::make('status')
                 ->options(['registered' => 'registered', 'approved' => 'approved'])
                 ->default('registered')->required(),
-            Forms\Components\TextInput::make('score')
+            TextInput::make('score')
                 ->numeric()->minValue(0)->maxValue(100)->nullable(),
-            Forms\Components\Textarea::make('notes')
+            Textarea::make('notes')
                 ->columnSpanFull(),
         ])->columns(2);
     }
@@ -66,27 +79,27 @@ class ParticipantsRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('id')
             ->columns([
-                Tables\Columns\TextColumn::make('user.name')->label('Nama')->searchable(),
-                Tables\Columns\TextColumn::make('status')->colors([
+                TextColumn::make('user.name')->label('Nama')->searchable(),
+                TextColumn::make('status')->colors([
                     'warning' => 'registered',
                     'success' => 'approved',
                 ]),
-                Tables\Columns\TextColumn::make('score')->label('Skor')->numeric(),
-                Tables\Columns\TextColumn::make('registered_at')->since()->label('Terdaftar'),
-                Tables\Columns\IconColumn::make('certificate_exists')
+                TextColumn::make('score')->label('Skor')->numeric(),
+                TextColumn::make('registered_at')->since()->label('Terdaftar'),
+                IconColumn::make('certificate_exists')
                     ->label('Sertifikat')
                     ->state(fn(SurveyUser $r) => Certificate::where('survey_id', $r->survey_id)->where('user_id', $r->user_id)->exists())
                     ->boolean(),
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make()->label('Tambah Peserta'),
+                CreateAction::make()->label('Tambah Peserta'),
 
                 Action::make('massAdd')
                     ->label('Tambah Peserta (Banyak)')
                     ->icon('heroicon-o-user-plus')
-                    ->form([
+                    ->schema([
                         Section::make('Peserta Survei')->schema([
-                            Forms\Components\Select::make('mitra_users')
+                            Select::make('mitra_users')
                                 ->label('Pegawai Mitra')
                                 ->multiple()
                                 ->searchable()
@@ -104,7 +117,7 @@ class ParticipantsRelationManager extends RelationManager
                                 })
                                 ->helperText('Cari dan pilih pegawai dengan role Mitra'),
 
-                            Forms\Components\Select::make('pegawai_bps_users')
+                            Select::make('pegawai_bps_users')
                                 ->label('Pegawai Organik')
                                 ->multiple()
                                 ->searchable()
@@ -123,10 +136,10 @@ class ParticipantsRelationManager extends RelationManager
                                 ->helperText('Cari dan pilih pegawai dengan role Organik'),
                         ])->columns(2),
 
-                        Forms\Components\Textarea::make('notes')->label('Catatan')->columnSpanFull(),
+                        Textarea::make('notes')->label('Catatan')->columnSpanFull(),
                     ])
                     ->action(function (array $data, $livewire) {
-                        /** @var \App\Models\Survey $survey */
+                        /** @var Survey $survey */
                         $survey = $livewire->getOwnerRecord(); // record parent (Survey)
                         $now = now();
 
@@ -160,9 +173,9 @@ class ParticipantsRelationManager extends RelationManager
                             ->send();
                     }),
             ])
-            ->actions([
+            ->recordActions([
 
-                Tables\Actions\EditAction::make(),
+                EditAction::make(),
                 Action::make('approve')
                     ->label('Approve + Sertifikat')
                     ->icon('heroicon-o-check-circle')
@@ -184,10 +197,10 @@ class ParticipantsRelationManager extends RelationManager
                     })
                     ->openUrlInNewTab()
                     ->visible(fn(SurveyUser $r) => Certificate::where('survey_id', $r->survey_id)->where('user_id', $r->user_id)->exists()),
-                Tables\Actions\DeleteAction::make(),
+                DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkAction::make('approveSelected')
+            ->toolbarActions([
+                BulkAction::make('approveSelected')
                     ->label('Approve & Terbitkan Sertifikat')
                     ->icon('heroicon-o-check-badge')
                     ->requiresConfirmation()
@@ -202,12 +215,12 @@ class ParticipantsRelationManager extends RelationManager
                                 }
                             }
                             Notification::make()->title('Approved & sertifikat diterbitkan')->success()->send();
-                        } catch (\Throwable $e) {
+                        } catch (Throwable $e) {
                             Notification::make()->title('Gagal')->body($e->getMessage())->danger()->send();
                             Log::error('RM bulk approve error', ['e' => $e]);
                         }
                     }),
-                Tables\Actions\BulkAction::make('unapproveSelected')
+                BulkAction::make('unapproveSelected')
                     ->label('Batal Approve (Bulk)')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
@@ -227,7 +240,7 @@ class ParticipantsRelationManager extends RelationManager
                             ->success()
                             ->send();
                     }),
-                Tables\Actions\DeleteBulkAction::make(),
+                DeleteBulkAction::make(),
             ])
             ->defaultSort('survey_users.id', 'desc');
     }
@@ -244,7 +257,7 @@ class ParticipantsRelationManager extends RelationManager
             }
 
             // Check if template exists
-            $template = \App\Models\CertificateTemplate::where('active', 1)->first();
+            $template = CertificateTemplate::where('active', 1)->first();
             if (!$template) {
                 Notification::make()
                     ->title('Gagal: Tidak ada template sertifikat yang aktif')
@@ -258,7 +271,7 @@ class ParticipantsRelationManager extends RelationManager
             $r->update(['status' => 'approved']);
             Notification::make()->title('Approved & sertifikat terbit')->success()->send();
 
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Notification::make()
                 ->title('Error saat menerbitkan sertifikat')
                 ->body($e->getMessage())

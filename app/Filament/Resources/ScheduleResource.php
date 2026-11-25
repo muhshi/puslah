@@ -2,13 +2,21 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Select;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Actions\ViewAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\ScheduleResource\Pages\ListSchedules;
 use App\Filament\Resources\ScheduleResource\Pages;
 use App\Filament\Resources\ScheduleResource\RelationManagers;
 use App\Models\Schedule;
 use Filament\Forms;
 use Filament\Forms\Components\Group;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -20,32 +28,32 @@ class ScheduleResource extends Resource
 {
     protected static ?string $model = Schedule::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-calendar-days';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-calendar-days';
 
-    protected static ?string $navigationGroup = 'Manajemen Kantor Cabang';
+    protected static string | \UnitEnum | null $navigationGroup = 'Manajemen Kantor Cabang';
     protected static ?string $navigationLabel = 'Jadwal';
     protected static ?int $navigationSort = 81;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Section::make()
                     ->schema([
-                        Forms\Components\Select::make('user_id')
+                        Select::make('user_id')
                             ->relationship('user', 'name')
                             ->searchable()
                             ->unique()
                             ->preload()
                             ->native(false)
                             ->required(),
-                        Forms\Components\Select::make('shift_id')
+                        Select::make('shift_id')
                             ->relationship('shift', 'name')
                             ->searchable()
                             ->preload()
                             ->native(false)
                             ->required(),
-                        Forms\Components\Select::make('office_id')
+                        Select::make('office_id')
                             ->relationship('office', 'name')
                             ->searchable()
                             ->preload()
@@ -66,28 +74,28 @@ class ScheduleResource extends Resource
                 }
             })
             ->columns([
-                Tables\Columns\TextColumn::make('user.name')
+                TextColumn::make('user.name')
                     ->label('Name')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('user.email')
+                TextColumn::make('user.email')
                     ->label('Email'),
 
-                Tables\Columns\TextColumn::make('shift.name')
+                TextColumn::make('shift.name')
                     ->description(fn(Schedule $record): string => $record->shift->start_time . ' - ' . $record->shift->end_time)
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('office.name')
+                TextColumn::make('office.name')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
+                TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('deleted_at')
+                TextColumn::make('deleted_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -95,14 +103,14 @@ class ScheduleResource extends Resource
             ->filters([
                 //
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+            ->recordActions([
+                ViewAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -117,7 +125,7 @@ class ScheduleResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSchedules::route('/'),
+            'index' => ListSchedules::route('/'),
             //'create' => Pages\CreateSchedule::route('/create'),
             //'view' => Pages\ViewSchedule::route('/{record}'),
             //'edit' => Pages\EditSchedule::route('/{record}/edit'),

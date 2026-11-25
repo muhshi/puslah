@@ -2,6 +2,7 @@
 
 namespace App\Imports;
 
+use Throwable;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Maatwebsite\Excel\Concerns\OnEachRow;
@@ -52,7 +53,7 @@ class UsersImport implements OnEachRow, WithHeadingRow
 
             $this->success++;
 
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $this->failed++;
         }
     }

@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\SuratTugasResource\Widgets;
 
+use App\Filament\Resources\SuratTugasResource\Support\SuratTugasFormFactory;
+use Exception;
 use App\Models\BlockedSuratTugasNumber;
 use App\Models\Sppd;
 use App\Models\SuratTugas;
@@ -24,7 +26,7 @@ class SkippedNumbersInfoWidget extends Widget implements HasActions, HasForms
     use InteractsWithActions;
     use InteractsWithForms;
 
-    protected static string $view = 'filament.resources.surat-tugas-resource.widgets.skipped-numbers-info';
+    protected string $view = 'filament.resources.surat-tugas-resource.widgets.skipped-numbers-info';
 
     protected int|string|array $columnSpan = 'full';
 
@@ -130,7 +132,7 @@ class SkippedNumbersInfoWidget extends Widget implements HasActions, HasForms
             })
             ->modalDescription('Pilih nomor urut terblokir yang akan digunakan. Setelah Surat Tugas berhasil dibuat, nomor tersebut otomatis di-release.')
             ->modalSubmitActionLabel('Buat Surat Tugas')
-            ->form(function (array $arguments) {
+            ->schema(function (array $arguments) {
                 $ket = $arguments['keterangan'] ?? '';
                 $query = BlockedSuratTugasNumber::where('year', $this->selectedYear);
 
@@ -157,7 +159,7 @@ class SkippedNumbersInfoWidget extends Widget implements HasActions, HasForms
 
                 $firstRecordId = $blockedRecords->first()?->id;
 
-                return \App\Filament\Resources\SuratTugasResource\Support\SuratTugasFormFactory::getBlockedNumberFormSchema(null, $options, $firstRecordId);
+                return SuratTugasFormFactory::getBlockedNumberFormSchema(null, $options, $firstRecordId);
             })
             ->action(function (array $data) {
                 $record = BlockedSuratTugasNumber::find($data['blocked_id'] ?? null);
@@ -170,14 +172,14 @@ class SkippedNumbersInfoWidget extends Widget implements HasActions, HasForms
                 }
 
                 try {
-                    \App\Filament\Resources\SuratTugasResource\Support\SuratTugasFormFactory::createSuratTugasFromBlocked($record, $data);
+                    SuratTugasFormFactory::createSuratTugasFromBlocked($record, $data);
 
                     Notification::make()
                         ->title('Surat Tugas berhasil dibuat!')
                         ->body("Nomor #{$record->nomor_urut} telah digunakan dan nomor terblokir otomatis di-release.")
                         ->success()
                         ->send();
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     $msg = $e->getMessage();
                     $body = str_starts_with($msg, 'Overlap:') ? substr($msg, 9) : $msg;
                     Notification::make()

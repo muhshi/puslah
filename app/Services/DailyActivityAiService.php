@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use Throwable;
+use Illuminate\Support\Collection;
 use App\Settings\SystemSettings;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
@@ -227,7 +229,7 @@ EOT;
     /**
      * Merangkum seluruh kegiatan harian dalam satu wadah KIPAPP menjadi 1-2 paragraf ringkasan capaian SKP / E-Kinerja.
      *
-     * @param \Illuminate\Support\Collection|array $activities
+     * @param Collection|array $activities
      * @param string $containerTitle
      * @return string
      */
@@ -239,7 +241,7 @@ EOT;
         }
 
         $items = collect($activities)->map(function ($act, $i) {
-            $tgl = $act->activity_date ? \Carbon\Carbon::parse($act->activity_date)->format('d/m/Y') : '-';
+            $tgl = $act->activity_date ? Carbon::parse($act->activity_date)->format('d/m/Y') : '-';
             $konten = $act->final_content ?: $act->raw_content;
             return ($i + 1) . ". [{$tgl}] {$konten}";
         })->implode("\n");
@@ -351,7 +353,7 @@ EOT;
                     }
                 }
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::info('AI date extraction skipped: ' . $e->getMessage());
         }
 

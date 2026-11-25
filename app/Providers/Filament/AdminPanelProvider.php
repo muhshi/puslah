@@ -2,6 +2,9 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\Login;
+use Filament\Widgets\AccountWidget;
+use Filament\Widgets\FilamentInfoWidget;
 use App\Filament\Pages\Dashboard;
 use App\Filament\Widgets\CalendarWidget;
 use App\Http\Middleware\EnsureProfileComplete;
@@ -33,7 +36,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login(\App\Filament\Pages\Auth\Login::class)
+            ->login(Login::class)
             ->databaseNotifications()
             ->authGuard('web')
             ->userMenuItems([
@@ -50,11 +53,11 @@ class AdminPanelProvider extends PanelProvider
                 'logout' => MenuItem::make()->label('Log out'),
             ])
             ->colors([
-                'primary' => Color::hex('#005596'), // BPS Blue
+                'primary' => Color::generateV3Palette('#005596'), // BPS Blue
                 'gray' => Color::Slate,
-                'info' => Color::hex('#03A9F4'),    // Light Blue
-                'success' => Color::hex('#6CBE45'), // BPS Green
-                'warning' => Color::hex('#F2911B'), // BPS Orange
+                'info' => Color::generateV3Palette('#03A9F4'),    // Light Blue
+                'success' => Color::generateV3Palette('#6CBE45'), // BPS Green
+                'warning' => Color::generateV3Palette('#F2911B'), // BPS Orange
                 'danger' => Color::Red,
             ])
             ->font('Inter')
@@ -68,8 +71,8 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
-                Widgets\AccountWidget::class,
-                Widgets\FilamentInfoWidget::class,
+                AccountWidget::class,
+                FilamentInfoWidget::class,
                 CalendarWidget::class,
             ])
             ->middleware([

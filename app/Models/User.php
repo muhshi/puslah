@@ -76,7 +76,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     }
     public function profile()
     {
-        return $this->hasOne(\App\Models\UserProfile::class);
+        return $this->hasOne(UserProfile::class);
     }
 
     public function suratTugas()
@@ -86,7 +86,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
 
     public function dailyActivities()
     {
-        return $this->hasMany(\App\Models\DailyActivity::class);
+        return $this->hasMany(DailyActivity::class);
     }
 
     protected static function booted()

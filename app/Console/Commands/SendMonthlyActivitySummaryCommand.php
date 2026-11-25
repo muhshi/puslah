@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use Throwable;
 use App\Models\DailyActivity;
 use App\Models\User;
 use Carbon\Carbon;
@@ -118,7 +119,7 @@ class SendMonthlyActivitySummaryCommand extends Command
                         parse_mode: 'Markdown'
                     );
                     $this->info("Terkirim ke {$user->name} ({$missingCount} hari kosong).");
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     $this->error("Gagal mengirim ke {$user->name}: " . $e->getMessage());
                     Log::error("Monthly recap telegram error for {$user->id}: " . $e->getMessage());
                 }

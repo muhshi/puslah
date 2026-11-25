@@ -7,12 +7,12 @@ use Illuminate\Support\Facades\Auth;
 
 class PhotoStamp extends Page
 {
-    protected static ?string $navigationIcon = 'heroicon-o-camera';
-    protected static ?string $navigationGroup = 'Alat Bantu';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-camera';
+    protected static string | \UnitEnum | null $navigationGroup = 'Alat Bantu';
     protected static ?string $title = 'Stempel Foto';
     protected static ?string $navigationLabel = 'Stempel Foto';
     protected static ?string $slug = 'stempel-foto';
-    protected static string $view = 'filament.pages.photo-stamp';
+    protected string $view = 'filament.pages.photo-stamp';
 
     public static function canAccess(): bool
     {

@@ -2,6 +2,10 @@
 
 namespace App\Imports;
 
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Hash;
+use App\Models\SurveyUser;
+use App\Models\Sppd;
 use App\Models\SuratTugas;
 use App\Models\User;
 use App\Settings\SystemSettings;
@@ -38,7 +42,7 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
         $this->nomorUrutMulai = $nomorUrutMulai;
         
         $this->settings = app(SystemSettings::class);
-        $this->year = \Carbon\Carbon::parse($tanggal)->year;
+        $this->year = Carbon::parse($tanggal)->year;
     }
 
     public function collection(Collection $rows)
@@ -117,7 +121,7 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
 
             // 3. Identify and Create Missing Users
             $usersToProcess = []; // To store final User objects
-            $defaultPassword = \Illuminate\Support\Facades\Hash::make('Mitra3321'); // Hashed once!
+            $defaultPassword = Hash::make('Mitra3321'); // Hashed once!
 
             foreach ($validRows as $key => $vRow) {
                 $email = $vRow['email'];
@@ -148,7 +152,7 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
             $userIds = collect($usersToProcess)->pluck('id')->toArray();
 
             // 4. Bulk Fetch Survey Participants & Existing Surat Tugas
-            $existingParticipants = \App\Models\SurveyUser::where('survey_id', $this->surveyId)
+            $existingParticipants = SurveyUser::where('survey_id', $this->surveyId)
                 ->whereIn('user_id', $userIds)
                 ->pluck('user_id')
                 ->flip(); // [user_id => index] for fast isset lookup
@@ -270,7 +274,7 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
             if (!empty($surveyUserInserts)) {
                 // chunking inserts just in case of hundreds of rows
                 foreach (array_chunk($surveyUserInserts, 500) as $chunk) {
-                    \App\Models\SurveyUser::insert($chunk);
+                    SurveyUser::insert($chunk);
                 }
             }
 
@@ -279,7 +283,7 @@ class SuratTugasImport implements ToCollection, WithHeadingRow
                     $st = SuratTugas::create($insert['surat_tugas']);
                     if ($insert['sppd']) {
                         $insert['sppd']['surat_tugas_id'] = $st->id;
-                        \App\Models\Sppd::create($insert['sppd']);
+                        Sppd::create($insert['sppd']);
                     }
                 }
             }

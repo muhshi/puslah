@@ -2,6 +2,16 @@
 
 namespace App\Filament\Pages;
 
+use Filament\Tables\Contracts\HasTable;
+use Filament\Forms\Contracts\HasForms;
+use Filament\Tables\Concerns\InteractsWithTable;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Section;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Actions\Action;
+use Illuminate\Support\Collection;
 use App\Models\Attendance;
 use App\Models\Leave;
 use App\Models\Survey;
@@ -10,8 +20,6 @@ use App\Models\User;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Carbon\Carbon;
 use Filament\Forms;
-use Filament\Forms\Components\Group;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Pages\Page;
 use Filament\Tables;
@@ -24,16 +32,16 @@ use Illuminate\Support\Facades\DB;
  * Rekap Presensi per Individu, ter-filter per Survey.
  * - Jika user bukan role "super_admin", hanya menampilkan datanya sendiri.
  */
-class AttendanceRecap extends Page implements Tables\Contracts\HasTable, Forms\Contracts\HasForms
+class AttendanceRecap extends Page implements HasTable, HasForms
 {
-    use Tables\Concerns\InteractsWithTable;
-    use Forms\Concerns\InteractsWithForms;
+    use InteractsWithTable;
+    use InteractsWithForms;
     use HasPageShield;
 
-    protected static ?string $navigationIcon = 'heroicon-c-clipboard-document-list';
-    protected static ?string $navigationGroup = 'Manajemen Presensi';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-c-clipboard-document-list';
+    protected static string | \UnitEnum | null $navigationGroup = 'Manajemen Presensi';
     protected static ?string $navigationLabel = 'Rekap Presensi';
-    protected static string $view = 'filament.pages.attendance-recap';
+    protected string $view = 'filament.pages.attendance-recap';
     protected static ?int $navigationSort = 10;
 
     public ?int $surveyId = null;
@@ -71,10 +79,10 @@ class AttendanceRecap extends Page implements Tables\Contracts\HasTable, Forms\C
         }
     }
 
-    public function form(Forms\Form $form): Forms\Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Group::make()
                     ->schema([
                         Section::make('Filter Rekap Presensi')
@@ -104,7 +112,7 @@ class AttendanceRecap extends Page implements Tables\Contracts\HasTable, Forms\C
     }
 
     /**
-     * @return \Filament\Tables\Table
+     * @return Table
      */
     public function table(Table $table): Table
     {
@@ -113,42 +121,42 @@ class AttendanceRecap extends Page implements Tables\Contracts\HasTable, Forms\C
             ->defaultSort('name', 'asc')
             ->query(fn() => $this->baseQuery())
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label('Nama Pegawai')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('present_count')
+                TextColumn::make('present_count')
                     ->label('Hadir')
                     ->badge()
                     ->color('success')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('late_count')
+                TextColumn::make('late_count')
                     ->label('Terlambat')
                     ->badge()
                     ->color(fn ($state) => (int) $state > 0 ? 'warning' : 'gray')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('under_7h_count')
+                TextColumn::make('under_7h_count')
                     ->label('< 7 Jam')
                     ->badge()
                     ->color(fn ($state) => (int) $state > 0 ? 'warning' : 'gray')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('no_checkout_count')
+                TextColumn::make('no_checkout_count')
                     ->label('Tidak Checkout')
                     ->badge()
                     ->color(fn ($state) => (int) $state > 0 ? 'danger' : 'gray')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('leave_approved_days')
+                TextColumn::make('leave_approved_days')
                     ->label('Izin (Approved)')
                     ->badge()
                     ->color(fn ($state) => (int) $state > 0 ? 'info' : 'gray')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('alpa_days')
+                TextColumn::make('alpa_days')
                     ->label('Alpa (tanpa izin)')
                     ->tooltip('Perkiraan: Hari kerja − Hadir − Izin')
                     ->badge()
@@ -166,10 +174,10 @@ class AttendanceRecap extends Page implements Tables\Contracts\HasTable, Forms\C
                     }),
             ])
             ->filters([])
-            ->actions([])
-            ->bulkActions([])
+            ->recordActions([])
+            ->toolbarActions([])
             ->headerActions([
-                Tables\Actions\Action::make('export_csv')
+                Action::make('export_csv')
                     ->label('Export CSV')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->action(function () {
@@ -182,7 +190,7 @@ class AttendanceRecap extends Page implements Tables\Contracts\HasTable, Forms\C
                         }
                         $workdays = $this->estimateWorkdays($start, $end);
 
-                        /** @var \Illuminate\Support\Collection<int,array<string,int|string>> $rows */
+                        /** @var Collection<int,array<string,int|string>> $rows */
                         $rows = $this->baseQuery()->get()->map(function ($u) use ($workdays) {
                             return [
                                 'Nama' => $u->name,
@@ -218,7 +226,7 @@ class AttendanceRecap extends Page implements Tables\Contracts\HasTable, Forms\C
     /**
      * Query rekap realtime langsung dari tabel attendances dan leaves
      *
-     * @return \Illuminate\Database\Eloquent\Builder<\App\Models\User>
+     * @return \Illuminate\Database\Eloquent\Builder<User>
      */
     protected function baseQuery(): Builder
     {

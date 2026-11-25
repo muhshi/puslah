@@ -2,19 +2,22 @@
 
 namespace App\Filament\Widgets;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use App\Filament\Resources\SuratTugasResource;
+use App\Filament\Resources\LaporanPerjalananDinasResource;
+use Filament\Schemas\Components\Grid;
+use App\Models\User;
 use App\Models\SuratTugas;
 use App\Models\LaporanPerjalananDinas;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
-use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Toggle;
-use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Concerns\InteractsWithInfolists;
 use Filament\Infolists\Contracts\HasInfolists;
-use Filament\Infolists\Infolist;
 use Illuminate\Database\Eloquent\Model;
 use Saade\FilamentFullCalendar\Widgets\FullCalendarWidget;
 
@@ -52,7 +55,7 @@ class CalendarWidget extends FullCalendarWidget implements HasActions, HasInfoli
     {
         $events = [];
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = auth()->user();
 
         $suratTugasList = SuratTugas::query()
@@ -100,7 +103,7 @@ class CalendarWidget extends FullCalendarWidget implements HasActions, HasInfoli
     {
         $events = [];
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = auth()->user();
 
         $lpdList = LaporanPerjalananDinas::query()
@@ -168,7 +171,7 @@ class CalendarWidget extends FullCalendarWidget implements HasActions, HasInfoli
             ->modalWidth('md')
             ->modalSubmitAction(false)
             ->modalCancelActionLabel('Tutup')
-            ->infolist(function (Infolist $infolist, array $arguments): Infolist {
+            ->schema(function (Schema $schema, array $arguments): Schema {
                 $info = $arguments['info'] ?? [];
                 $props = $info['extendedProps'] ?? [];
                 $resourceType = $props['resource'] ?? '';
@@ -177,14 +180,14 @@ class CalendarWidget extends FullCalendarWidget implements HasActions, HasInfoli
                 $endTime = isset($info['end']) ? Carbon::parse($info['end'])->translatedFormat('d F Y H:i') : null;
                 $timeRange = $endTime ? "{$startTime} s/d {$endTime}" : $startTime;
 
-                return $infolist
+                return $schema
                     ->state([
                         'petugas' => $props['user_name'] ?? '-',
                         'survey' => $props['survey_name'] ?? '-',
                         'keperluan' => ($resourceType === 'st') ? ($props['keperluan'] ?? '-') : ($props['tujuan'] ?? '-'),
                         'waktu' => $timeRange,
                     ])
-                    ->schema([
+                    ->components([
                         Section::make()
                             ->schema([
                                 TextEntry::make('petugas')
@@ -227,7 +230,7 @@ class CalendarWidget extends FullCalendarWidget implements HasActions, HasInfoli
 
     private function checkEditPermission(string $resourceType, array $props): bool
     {
-        /** @var \App\Models\User|null $user */
+        /** @var User|null $user */
         $user = auth()->user();
 
         if (!$user) {
@@ -252,8 +255,8 @@ class CalendarWidget extends FullCalendarWidget implements HasActions, HasInfoli
         }
 
         return match ($resourceType) {
-            'st' => \App\Filament\Resources\SuratTugasResource::getUrl('edit', ['record' => $modelId]),
-            'lpd' => \App\Filament\Resources\LaporanPerjalananDinasResource::getUrl('edit', ['record' => $modelId]),
+            'st' => SuratTugasResource::getUrl('edit', ['record' => $modelId]),
+            'lpd' => LaporanPerjalananDinasResource::getUrl('edit', ['record' => $modelId]),
             default => null,
         };
     }

@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use Throwable;
+use Imagick;
 use App\Models\CertificateTemplate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -68,7 +70,7 @@ class CertificateImageService
             }
 
             return self::encodeDataUri($data, $mime);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error("Failed to process certificate image [{$path}]: " . $e->getMessage());
             return null;
         }
@@ -88,9 +90,9 @@ class CertificateImageService
     public static function convertWebpToStandardImage(string $rawData, ?string $originalPath = null): ?array
     {
         // 1. Try Imagick
-        if (class_exists(\Imagick::class)) {
+        if (class_exists(Imagick::class)) {
             try {
-                $imagick = new \Imagick();
+                $imagick = new Imagick();
                 $imagick->readImageBlob($rawData);
                 $imagick->setImageFormat('jpeg');
                 $imagick->setImageCompressionQuality(90);
@@ -102,7 +104,7 @@ class CertificateImageService
                     self::maybeCacheConverted($originalPath, $jpegData, 'jpg');
                     return ['data' => $jpegData, 'mime' => 'image/jpeg'];
                 }
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 Log::debug('Imagick WebP conversion failed: ' . $e->getMessage());
             }
         }
@@ -122,7 +124,7 @@ class CertificateImageService
                         return ['data' => $jpegData, 'mime' => 'image/jpeg'];
                     }
                 }
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 Log::debug('GD WebP conversion failed: ' . $e->getMessage());
             }
         }
@@ -162,7 +164,7 @@ class CertificateImageService
                 if (file_exists($tempJpg)) {
                     @unlink($tempJpg);
                 }
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 Log::debug('CLI WebP conversion failed: ' . $e->getMessage());
             }
         }
@@ -211,7 +213,7 @@ class CertificateImageService
                 CertificateTemplate::where('signer_image_path', $originalPath)
                     ->update(['signer_image_path' => $newPath]);
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // ignore cache write error
         }
     }

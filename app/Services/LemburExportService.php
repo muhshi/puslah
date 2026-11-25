@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Exception;
 use App\Models\LaporanLembur;
 use App\Settings\SystemSettings;
 use Carbon\Carbon;
@@ -104,7 +105,7 @@ class LemburExportService
                         'height' => 320,
                         'ratio' => true,
                     ]);
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     $template->setValue($fotoField, '[Error format foto]');
                 }
             } else {

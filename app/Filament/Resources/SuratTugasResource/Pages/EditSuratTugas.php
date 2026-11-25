@@ -2,6 +2,13 @@
 
 namespace App\Filament\Resources\SuratTugasResource\Pages;
 
+use Filament\Actions\DeleteAction;
+use App\Models\SuratTugas;
+use App\Models\User;
+use Illuminate\Validation\ValidationException;
+use Carbon\Carbon;
+use App\Services\SppdService;
+use App\Settings\SystemSettings;
 use App\Filament\Resources\SuratTugasResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
@@ -16,7 +23,7 @@ class EditSuratTugas extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            DeleteAction::make(),
         ];
     }
 
@@ -45,11 +52,11 @@ class EditSuratTugas extends EditRecord
     {
         $abaikanValidasi = $data['abaikan_validasi'] ?? false;
         
-        if (!$abaikanValidasi && ($overlap = \App\Models\SuratTugas::getOverlap($data['user_id'], $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null, $this->record->id))) {
-            $user = \App\Models\User::find($data['user_id']);
+        if (!$abaikanValidasi && ($overlap = SuratTugas::getOverlap($data['user_id'], $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null, $this->record->id))) {
+            $user = User::find($data['user_id']);
             $userName = $user ? $user->name : 'Pegawai ini';
-            $overlapMsg = \App\Models\SuratTugas::formatOverlapMessage($userName, $overlap);
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            $overlapMsg = SuratTugas::formatOverlapMessage($userName, $overlap);
+            throw ValidationException::withMessages([
                 'waktu_mulai' => $overlapMsg,
                 'waktu_selesai' => $overlapMsg,
             ]);
@@ -66,8 +73,8 @@ class EditSuratTugas extends EditRecord
                     $nomorUrutSppd = (int) $matches[1];
                 }
             } elseif ($nomorUrutSppd && (int) $nomorUrutSppd !== (int) $existingSppd?->nomor_urut_sppd) {
-                $year = isset($data['tanggal']) ? \Carbon\Carbon::parse($data['tanggal'])->year : now()->year;
-                $nomorSppd = \App\Services\SppdService::formatNomorSppd(
+                $year = isset($data['tanggal']) ? Carbon::parse($data['tanggal'])->year : now()->year;
+                $nomorSppd = SppdService::formatNomorSppd(
                     $nomorUrutSppd,
                     $data['kode_klasifikasi_sppd'] ?? 'KP.650',
                     $year
@@ -98,7 +105,7 @@ class EditSuratTugas extends EditRecord
     protected function afterSave(): void
     {
         if ($this->is_sppd) {
-            $settings = app(\App\Settings\SystemSettings::class);
+            $settings = app(SystemSettings::class);
             $sppdData = $this->sppdData;
             if (empty($sppdData['ppk_name'])) {
                 $sppdData['ppk_name'] = $settings->ppk_name;

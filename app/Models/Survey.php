@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -57,10 +59,10 @@ class Survey extends Model
     /**
      * Scope untuk survei yang memiliki aktivitas presensi dari anggotanya
      */
-    public function scopeWithAttendanceActivity(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    public function scopeWithAttendanceActivity(Builder $query): Builder
     {
         return $query->whereExists(function ($sub) {
-            $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+            $sub->select(DB::raw(1))
                 ->from('survey_users')
                 ->join('attendances', 'attendances.user_id', '=', 'survey_users.user_id')
                 ->whereColumn('survey_users.survey_id', 'surveys.id')

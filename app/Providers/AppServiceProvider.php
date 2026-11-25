@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use Filament\Auth\Http\Responses\Contracts\LogoutResponse;
+use App\Http\Responses\SsoLogoutResponse;
+use Laravel\Socialite\Contracts\Factory;
+use Laravel\Passport\Passport;
 use App\Models\User;
 use App\Observers\UserObserver;
 use Illuminate\Support\Facades\URL;
@@ -14,8 +18,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        if (interface_exists(\Filament\Http\Responses\Auth\Contracts\LogoutResponse::class)) {
-            $this->app->singleton(\Filament\Http\Responses\Auth\Contracts\LogoutResponse::class, \App\Http\Responses\SsoLogoutResponse::class);
+        if (interface_exists(LogoutResponse::class)) {
+            $this->app->singleton(LogoutResponse::class, SsoLogoutResponse::class);
         }
     }
 
@@ -30,13 +34,13 @@ class AppServiceProvider extends ServiceProvider
 
         User::observe(UserObserver::class);
 
-        $socialite = $this->app->make(\Laravel\Socialite\Contracts\Factory::class);
+        $socialite = $this->app->make(Factory::class);
         $socialite->extend('sipetra', function ($app) use ($socialite) {
             $config = $app['config']['services.sipetra'];
 
-            return $socialite->buildProvider(\App\Providers\SipetraSocialiteProvider::class, $config);
+            return $socialite->buildProvider(SipetraSocialiteProvider::class, $config);
         });
 
-        \Laravel\Passport\Passport::viewPrefix('auth.oauth');
+        Passport::viewPrefix('auth.oauth');
     }
 }

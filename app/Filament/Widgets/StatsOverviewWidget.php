@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Models\Survey;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use App\Models\SuratTugas;
@@ -23,7 +24,7 @@ class StatsOverviewWidget extends BaseWidget
                 ->color('warning')
                 ->url(route('filament.admin.resources.surat-tugas.index', ['tableFilters[status][value]' => 'pending'])),
 
-            Stat::make('Survey Aktif', \App\Models\Survey::where('is_active', 1)
+            Stat::make('Survey Aktif', Survey::where('is_active', 1)
                 ->where(function ($query) {
                     $query->whereNull('start_date')
                         ->orWhereDate('start_date', '<=', now());

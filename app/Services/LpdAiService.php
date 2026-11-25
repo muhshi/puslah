@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use Carbon\Carbon;
+use Throwable;
+use App\Models\DailyActivity;
 use App\Models\LaporanPerjalananDinas;
 use App\Models\SuratTugas;
 use App\Models\User;
@@ -120,7 +123,7 @@ class LpdAiService
         $surveyName = $suratTugas?->survey?->name ?? 'Kegiatan BPS';
         $tujuan = $params['tujuan'] ?? $suratTugas?->keperluan ?? 'Tugas Lapangan BPS';
         $tanggal = $params['tanggal_kunjungan'] ?? null;
-        $tanggalFormatted = $tanggal ? \Carbon\Carbon::parse($tanggal)->translatedFormat('l, d F Y') : 'hari tugas';
+        $tanggalFormatted = $tanggal ? Carbon::parse($tanggal)->translatedFormat('l, d F Y') : 'hari tugas';
 
         $userId = $params['user_id'] ?? $suratTugas?->user_id ?? Auth::id();
         $user = $userId ? User::find($userId) : Auth::user();
@@ -234,7 +237,7 @@ EOT;
                 $errBody = $res->json('error.message') ?? $res->body();
                 $lastError = "Model {$currentModel} (HTTP {$status}): {$errBody}";
                 Log::warning("Gemini model {$currentModel} gagal, mencoba model alternatif...", ['error' => $lastError]);
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 $lastError = "Model {$currentModel}: " . $e->getMessage();
                 Log::warning("Gemini model {$currentModel} exception, mencoba model alternatif...", ['error' => $lastError]);
             }
@@ -279,18 +282,18 @@ EOT;
      * Menyintesis multi-kegiatan satu hari menjadi 4 segmen waktu resmi BPS:
      * Keberangkatan, Pelaksanaan Substansi/Koordinasi Teknis, ISHOMA, dan Kepulangan.
      *
-     * @param iterable<\App\Models\DailyActivity> $activities
-     * @param \App\Models\SuratTugas $suratTugas
-     * @param \App\Models\User $user
-     * @param \Carbon\Carbon $activityDate
+     * @param iterable<DailyActivity> $activities
+     * @param SuratTugas $suratTugas
+     * @param User $user
+     * @param Carbon $activityDate
      * @return array{narasi: string, nama_pejabat: ?string, desa_pejabat: ?string, summary_items: array}
      */
-    public function generateChronologicalFromActivities($activities, SuratTugas $suratTugas, User $user, \Carbon\Carbon $activityDate): array
+    public function generateChronologicalFromActivities($activities, SuratTugas $suratTugas, User $user, Carbon $activityDate): array
     {
         $activitiesCol = collect($activities)->sortBy(function ($act) {
             $firstAttTime = $act->attachments->first()?->captured_at;
-            if ($firstAttTime) return \Carbon\Carbon::parse($firstAttTime)->timestamp;
-            if ($act->started_at) return \Carbon\Carbon::parse($act->activity_date->format('Y-m-d') . ' ' . $act->started_at)->timestamp;
+            if ($firstAttTime) return Carbon::parse($firstAttTime)->timestamp;
+            if ($act->started_at) return Carbon::parse($act->activity_date->format('Y-m-d') . ' ' . $act->started_at)->timestamp;
             return $act->created_at?->timestamp ?? 0;
         });
 
@@ -301,7 +304,7 @@ EOT;
             $timeStr = "";
             $firstAtt = $act->attachments->first();
             if ($firstAtt && $firstAtt->captured_at) {
-                $timeStr = " (Foto jam " . \Carbon\Carbon::parse($firstAtt->captured_at)->format('H:i') . " WIB)";
+                $timeStr = " (Foto jam " . Carbon::parse($firstAtt->captured_at)->format('H:i') . " WIB)";
             } elseif ($act->started_at) {
                 $timeStr = " (Pukul " . substr($act->started_at, 0, 5) . " WIB)";
             }
@@ -387,7 +390,7 @@ EOT;
                             $response = $res;
                             break;
                         }
-                    } catch (\Throwable $e) {
+                    } catch (Throwable $e) {
                         Log::warning("Gemini chronological LPD model {$currentModel} failed: " . $e->getMessage());
                     }
                 }
@@ -410,7 +413,7 @@ EOT;
                         ];
                     }
                 }
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 Log::warning('LpdAiService chronological generation error: ' . $e->getMessage());
             }
         }

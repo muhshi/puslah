@@ -13,9 +13,9 @@ use Livewire\Attributes\Url;
 
 class Dashboard extends BaseDashboard
 {
-    protected static ?string $navigationIcon = 'heroicon-o-home';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-home';
 
-    protected static string $view = 'filament.pages.dashboard';
+    protected string $view = 'filament.pages.dashboard';
     #[Url] public ?string $dateFrom = null;
     #[Url] public ?string $dateUntil = null;
 
@@ -41,7 +41,7 @@ class Dashboard extends BaseDashboard
         ];
     }
 
-    public function getColumns(): int|string|array
+    public function getColumns(): int|array
     {
         return 2;
     }

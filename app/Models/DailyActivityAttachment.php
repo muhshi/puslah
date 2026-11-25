@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\PhotoWatermarkService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -71,7 +72,7 @@ class DailyActivityAttachment extends Model
             $caption = $this->dailyActivity->raw_content;
         }
 
-        $success = app(\App\Services\PhotoWatermarkService::class)->applyWatermark($fullPath, [
+        $success = app(PhotoWatermarkService::class)->applyWatermark($fullPath, [
             'latitude' => $this->latitude ?: -6.894561,
             'longitude' => $this->longitude ?: 110.637492,
             'captured_at' => $this->captured_at ?: now(),

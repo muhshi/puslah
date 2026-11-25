@@ -2,12 +2,28 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use App\Models\Survey;
+use App\Models\SurveyUser;
+use App\Models\SuratTugas;
+use App\Models\User;
+use Filament\Tables\Filters\Filter;
+use Filament\Forms\Components\DatePicker;
+use Filament\Actions\ViewAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\AttendanceResource\Pages\ListAttendances;
+use App\Filament\Resources\AttendanceResource\Pages\CreateAttendance;
+use App\Filament\Resources\AttendanceResource\Pages\ViewAttendance;
 use App\Filament\Resources\AttendanceResource\Pages;
 use App\Filament\Resources\AttendanceResource\RelationManagers;
 use App\Models\Attendance;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -19,44 +35,44 @@ class AttendanceResource extends Resource
 {
     protected static ?string $model = Attendance::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-check';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-clipboard-document-check';
 
-    protected static ?string $navigationGroup = 'Manajemen Presensi';
+    protected static string | \UnitEnum | null $navigationGroup = 'Manajemen Presensi';
 
     protected static ?string $navigationLabel = 'Presensi';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Select::make('user_id')
+        return $schema
+            ->components([
+                Select::make('user_id')
                     ->label('Nama')
                     ->relationship('user', 'name')
                     ->disabled()
                     ->required(),
-                Forms\Components\TextInput::make('schedule_latitude')
+                TextInput::make('schedule_latitude')
                     ->required()
                     ->numeric(),
-                Forms\Components\TextInput::make('schedule_longitude')
+                TextInput::make('schedule_longitude')
                     ->required()
                     ->numeric(),
-                Forms\Components\TextInput::make('schedule_start_time')
+                TextInput::make('schedule_start_time')
                     ->required(),
-                Forms\Components\TextInput::make('schedule_end_time')
+                TextInput::make('schedule_end_time')
                     ->required(),
-                Forms\Components\TextInput::make('start_latitude')
+                TextInput::make('start_latitude')
                     ->required()
                     ->numeric(),
-                Forms\Components\TextInput::make('start_longitude')
+                TextInput::make('start_longitude')
                     ->required()
                     ->numeric(),
-                Forms\Components\TextInput::make('start_time')
+                TextInput::make('start_time')
                     ->required(),
-                Forms\Components\TextInput::make('end_time')
+                TextInput::make('end_time')
                     ->required(),
-                Forms\Components\TextInput::make('end_latitude')
+                TextInput::make('end_latitude')
                     ->numeric(),
-                Forms\Components\TextInput::make('end_longitude')
+                TextInput::make('end_longitude')
                     ->numeric(),
             ]);
     }
@@ -72,16 +88,16 @@ class AttendanceResource extends Resource
                 }
             })
             ->columns([
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('Tanggal')
                     ->searchable()
                     ->date()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('user.name')
+                TextColumn::make('user.name')
                     ->label('Name')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('is_late')
+                TextColumn::make('is_late')
                     ->label('Status')
                     ->badge()
                     ->getStateUsing(function ($record) {
@@ -90,14 +106,14 @@ class AttendanceResource extends Resource
                     ->color(function ($record) {
                         return $record->isLate() ? 'danger' : 'success';
                     }),
-                Tables\Columns\TextColumn::make('start_time')
+                TextColumn::make('start_time')
                     ->label('Jam Datang')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('end_time')
+                TextColumn::make('end_time')
                     ->label('Jam Pulang')
                     ->sortable()
                     ->formatStateUsing(fn($state) => $state ?: ''),
-                Tables\Columns\TextColumn::make('work_duration')
+                TextColumn::make('work_duration')
                     ->label('Durasi Kerja')
                     ->getStateUsing(fn($record) => $record->workDuration())
                     ->color(function ($record) {
@@ -106,20 +122,20 @@ class AttendanceResource extends Resource
                         }
                         return $record->underSevenHours() ? 'danger' : 'success';
                     }),
-                Tables\Columns\TextColumn::make('updated_at')
+                TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('deleted_at')
+                TextColumn::make('deleted_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
-                Tables\Filters\SelectFilter::make('survey_id')
+                SelectFilter::make('survey_id')
                     ->label('Kegiatan Aktif')
-                    ->options(fn() => \App\Models\Survey::where('is_active', true)
+                    ->options(fn() => Survey::where('is_active', true)
                         ->has('participants')
                         ->orderBy('name')
                         ->pluck('name', 'id'))
@@ -131,22 +147,22 @@ class AttendanceResource extends Resource
                         }
 
                         $surveyId = $data['value'];
-                        $suUserIds = \App\Models\SurveyUser::where('survey_id', $surveyId)->pluck('user_id');
-                        $stUserIds = \App\Models\SuratTugas::where('survey_id', $surveyId)->pluck('user_id');
+                        $suUserIds = SurveyUser::where('survey_id', $surveyId)->pluck('user_id');
+                        $stUserIds = SuratTugas::where('survey_id', $surveyId)->pluck('user_id');
                         $userIds = $suUserIds->merge($stUserIds)->unique()->filter()->values();
 
                         return $query->whereIn('attendances.user_id', $userIds);
                     }),
 
-                Tables\Filters\SelectFilter::make('user_id')
+                SelectFilter::make('user_id')
                     ->label('Pegawai')
-                    ->options(\App\Models\User::orderBy('name')->pluck('name', 'id'))
+                    ->options(User::orderBy('name')->pluck('name', 'id'))
                     ->searchable(),
 
-                Tables\Filters\Filter::make('created_at')
+                Filter::make('created_at')
                     ->form([
-                        Forms\Components\DatePicker::make('from')->label('Dari'),
-                        Forms\Components\DatePicker::make('until')->label('Sampai'),
+                        DatePicker::make('from')->label('Dari'),
+                        DatePicker::make('until')->label('Sampai'),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
@@ -154,8 +170,8 @@ class AttendanceResource extends Resource
                             ->when($data['until'], fn($q, $date) => $q->whereDate('created_at', '<=', $date));
                     }),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
+            ->recordActions([
+                ViewAction::make(),
                 //Tables\Actions\EditAction::make(),
             ])
             ->headerActions([
@@ -163,9 +179,9 @@ class AttendanceResource extends Resource
                     ->label('Export XLSX')
                     ->color('success')
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -180,9 +196,9 @@ class AttendanceResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListAttendances::route('/'),
-            'create' => Pages\CreateAttendance::route('/create'),
-            'view' => Pages\ViewAttendance::route('/{record}'),
+            'index' => ListAttendances::route('/'),
+            'create' => CreateAttendance::route('/create'),
+            'view' => ViewAttendance::route('/{record}'),
             //'edit' => Pages\EditAttendance::route('/{record}/edit'),
         ];
     }

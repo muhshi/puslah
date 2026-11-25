@@ -2,6 +2,15 @@
 
 namespace App\Filament\Resources\SuratTugasResource\Support;
 
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Placeholder;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\DatePicker;
+use Filament\Schemas\Components\Group;
+use Filament\Forms\Components\Toggle;
 use App\Models\BlockedSuratTugasNumber;
 use App\Models\SuratTugas;
 use App\Models\Survey;
@@ -13,8 +22,6 @@ use App\Settings\SystemSettings;
 use Carbon\Carbon;
 use Exception;
 use Filament\Forms;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
 use Illuminate\Support\Facades\DB;
 
 class SuratTugasFormFactory
@@ -29,7 +36,7 @@ class SuratTugasFormFactory
 
         // Jika dipanggil dari Widget dengan multiple opsi nomor terblokir
         if ($blockedOptions !== null) {
-            $schema[] = Forms\Components\Select::make('blocked_id')
+            $schema[] = Select::make('blocked_id')
                 ->label('Pilih Nomor Urut Terblokir')
                 ->options($blockedOptions)
                 ->default($defaultBlockedId)
@@ -37,13 +44,13 @@ class SuratTugasFormFactory
                 ->live();
         } elseif ($record !== null) {
             $preview = SuratTugasNumberingService::formatNomorSurat($record->nomor_urut, 'KP.650', $record->year);
-            $schema[] = Forms\Components\Placeholder::make('nomor_surat_info')
+            $schema[] = Placeholder::make('nomor_surat_info')
                 ->label('Nomor Surat')
                 ->content($preview);
         }
 
         $schema = array_merge($schema, [
-            Forms\Components\Select::make('survey_id')
+            Select::make('survey_id')
                 ->label('Survey (Opsional)')
                 ->options(Survey::where('is_active', true)->pluck('name', 'id'))
                 ->searchable()
@@ -65,7 +72,7 @@ class SuratTugasFormFactory
                     }
                 }),
 
-            Forms\Components\Select::make('user_id')
+            Select::make('user_id')
                 ->label('Pegawai yang Ditugaskan')
                 ->options(function (Get $get) {
                     $surveyId = $get('survey_id');
@@ -96,39 +103,39 @@ class SuratTugasFormFactory
                     }
                 }),
 
-            Forms\Components\TextInput::make('jabatan')
+            TextInput::make('jabatan')
                 ->label('Jabatan (Saat Tugas)')
                 ->required()
                 ->maxLength(255),
 
-            Forms\Components\TextInput::make('kode_klasifikasi')
+            TextInput::make('kode_klasifikasi')
                 ->label('Klasifikasi')
                 ->default('KP.650')
                 ->required(),
 
-            Forms\Components\Textarea::make('keperluan')
+            Textarea::make('keperluan')
                 ->label('Keperluan')
                 ->required(),
 
-            Forms\Components\TextInput::make('tempat_tugas')
+            TextInput::make('tempat_tugas')
                 ->label('Tempat Tugas')
                 ->maxLength(255),
 
-            Forms\Components\DatePicker::make('tanggal')
+            DatePicker::make('tanggal')
                 ->label('Tanggal Surat')
                 ->required()
                 ->default(now()),
 
-            Forms\Components\Group::make([
-                Forms\Components\Toggle::make('abaikan_validasi')
+            Group::make([
+                Toggle::make('abaikan_validasi')
                     ->label('Abaikan Validasi Bentrok')
                     ->helperText('Hanya untuk Admin.')
                     ->default(false)
                     ->visible(fn() => auth()->user()?->hasAnyRole(['super_admin', 'Kepala', 'Kasubag'])),
-                Forms\Components\DatePicker::make('waktu_mulai')
+                DatePicker::make('waktu_mulai')
                     ->label('Mulai')
                     ->default(now()),
-                Forms\Components\DatePicker::make('waktu_selesai')
+                DatePicker::make('waktu_selesai')
                     ->label('Selesai')
                     ->default(now()),
             ])->columns(2),

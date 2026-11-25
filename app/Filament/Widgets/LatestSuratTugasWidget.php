@@ -2,6 +2,8 @@
 
 namespace App\Filament\Widgets;
 
+use App\Models\SuratTugas;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
@@ -15,13 +17,13 @@ class LatestSuratTugasWidget extends BaseWidget
     public function table(Table $table): Table
     {
         return $table
-            ->query(\App\Models\SuratTugas::query()->with('user')->latest()->limit(5))
+            ->query(SuratTugas::query()->with('user')->latest()->limit(5))
             ->columns([
-                Tables\Columns\TextColumn::make('nomor_surat')->label('Nomor')->sortable(),
-                Tables\Columns\TextColumn::make('user.name')->label('Pegawai'),
-                Tables\Columns\TextColumn::make('keperluan')->limit(50),
-                Tables\Columns\TextColumn::make('tanggal')->date()->label('Tanggal'),
-                Tables\Columns\TextColumn::make('status')
+                TextColumn::make('nomor_surat')->label('Nomor')->sortable(),
+                TextColumn::make('user.name')->label('Pegawai'),
+                TextColumn::make('keperluan')->limit(50),
+                TextColumn::make('tanggal')->date()->label('Tanggal'),
+                TextColumn::make('status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
                         'approved' => 'success',

@@ -2,6 +2,51 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\DatePicker;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Grid;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Actions\Action;
+use Filament\Schemas\Components\Utilities\Set;
+use Throwable;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\FileUpload;
+use App\Services\ImageExifExtractorService;
+use Filament\Forms\Components\ViewField;
+use Filament\Schemas\Components\Actions;
+use App\Services\PhotoWatermarkService;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Support\Enums\Width;
+use App\Filament\Forms\Components\MapWithSearch;
+use Filament\Tables\Grouping\Group;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Forms\Components\Placeholder;
+use Illuminate\Support\Str;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Tables\Filters\SelectFilter;
+use App\Models\SharedWorkReport;
+use Filament\Actions\ActionGroup;
+use Illuminate\Support\HtmlString;
+use Filament\Forms\Components\RichEditor;
+use App\Services\WorkReportGeneratorService;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\BulkAction;
+use Illuminate\Database\Eloquent\Collection;
+use App\Models\Survey;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\DailyActivityResource\Pages\ListDailyActivities;
+use App\Filament\Resources\DailyActivityResource\Pages\CreateDailyActivity;
+use App\Filament\Resources\DailyActivityResource\Pages\EditDailyActivity;
 use App\Filament\Resources\DailyActivityResource\Pages;
 use App\Models\DailyActivity;
 use App\Models\LaporanFoto;
@@ -12,7 +57,6 @@ use App\Services\DailyActivityAiService;
 use App\Services\LpdAiService;
 use Carbon\Carbon;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -24,8 +68,8 @@ class DailyActivityResource extends Resource
 {
     protected static ?string $model = DailyActivity::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-check';
-    protected static ?string $navigationGroup = 'Manajemen Dokumen';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-clipboard-document-check';
+    protected static string | \UnitEnum | null $navigationGroup = 'Manajemen Dokumen';
     protected static ?string $navigationLabel = 'Bukti Dukung Harian';
     protected static ?string $pluralModelLabel = 'Bukti Dukung Harian';
     protected static ?string $modelLabel = 'Kegiatan Harian';
@@ -49,17 +93,17 @@ class DailyActivityResource extends Resource
         return $query;
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Informasi Kegiatan')
+        return $schema
+            ->components([
+                Section::make('Informasi Kegiatan')
                     ->columns(2)
                     ->schema([
-                        Forms\Components\Hidden::make('user_id')
+                        Hidden::make('user_id')
                             ->default(fn () => Auth::id()),
 
-                        Forms\Components\Toggle::make('is_range')
+                        Toggle::make('is_range')
                             ->label('Isi Rentang Tanggal (Multi-Hari)')
                             ->helperText('Aktifkan jika kegiatan berlangsung beberapa hari dan ingin dicatat untuk masing-masing hari.')
                             ->default(false)
@@ -67,41 +111,41 @@ class DailyActivityResource extends Resource
                             ->visibleOn('create')
                             ->columnSpanFull(),
 
-                        Forms\Components\DatePicker::make('activity_date')
+                        DatePicker::make('activity_date')
                             ->label('Tanggal Kegiatan')
-                            ->required(fn (string $operation, Forms\Get $get) => $operation !== 'create' || !$get('is_range'))
+                            ->required(fn (string $operation, Get $get) => $operation !== 'create' || !$get('is_range'))
                             ->default(Carbon::today())
                             ->displayFormat('d/m/Y')
-                            ->visible(fn (string $operation, Forms\Get $get) => $operation !== 'create' || !$get('is_range'))
+                            ->visible(fn (string $operation, Get $get) => $operation !== 'create' || !$get('is_range'))
                             ->columnSpan(1),
 
-                        Forms\Components\Grid::make(3)
+                        Grid::make(3)
                             ->schema([
-                                Forms\Components\DatePicker::make('range_start')
+                                DatePicker::make('range_start')
                                     ->label('Tanggal Mulai')
-                                    ->required(fn (string $operation, Forms\Get $get) => $operation === 'create' && (bool) $get('is_range'))
+                                    ->required(fn (string $operation, Get $get) => $operation === 'create' && (bool) $get('is_range'))
                                     ->default(Carbon::today())
                                     ->displayFormat('d/m/Y'),
 
-                                Forms\Components\DatePicker::make('range_end')
+                                DatePicker::make('range_end')
                                     ->label('Tanggal Selesai')
-                                    ->required(fn (string $operation, Forms\Get $get) => $operation === 'create' && (bool) $get('is_range'))
+                                    ->required(fn (string $operation, Get $get) => $operation === 'create' && (bool) $get('is_range'))
                                     ->default(Carbon::today())
                                     ->afterOrEqual('range_start')
                                     ->displayFormat('d/m/Y'),
 
-                                Forms\Components\Toggle::make('skip_weekends')
+                                Toggle::make('skip_weekends')
                                     ->label('Lewati Sabtu & Minggu')
                                     ->helperText('Hanya catat pada hari kerja aktif')
                                     ->default(true)
                                     ->inline(false),
                             ])
-                            ->visible(fn (string $operation, Forms\Get $get) => $operation === 'create' && (bool) $get('is_range'))
+                            ->visible(fn (string $operation, Get $get) => $operation === 'create' && (bool) $get('is_range'))
                             ->columnSpanFull(),
 
-                        Forms\Components\Select::make('surat_tugas_id')
+                        Select::make('surat_tugas_id')
                             ->label('Tautan Surat Tugas')
-                            ->options(function (Forms\Get $get) {
+                            ->options(function (Get $get) {
                                 $userId = Auth::id();
                                 return SuratTugas::where('user_id', $userId)
                                     ->latest('tanggal')
@@ -118,7 +162,7 @@ class DailyActivityResource extends Resource
                             ->helperText('Kosongkan jika merupakan pekerjaan rutin harian non-surat tugas.')
                             ->columnSpan(1),
 
-                        Forms\Components\Select::make('sharedWorkReports')
+                        Select::make('sharedWorkReports')
                             ->relationship('sharedWorkReports', 'title', modifyQueryUsing: fn ($query) => $query->where('user_id', Auth::id())->where('is_active', true)->latest())
                             ->label('Wadah Butir KIPAPP / E-Kinerja')
                             ->multiple()
@@ -128,24 +172,24 @@ class DailyActivityResource extends Resource
                             ->helperText('1 kegiatan dapat dimasukkan ke lebih dari 1 wadah butir KIPAPP sekaligus.')
                             ->columnSpan(2),
 
-                        Forms\Components\Hidden::make('status')
+                        Hidden::make('status')
                             ->default('submitted'),
                     ]),
 
-                Forms\Components\Section::make('Uraian Narasi Kegiatan')
+                Section::make('Uraian Narasi Kegiatan')
                     ->description('Tulis catatan singkat atau gunakan Gemini AI untuk memoles bahasa laporan.')
                     ->schema([
-                        Forms\Components\Textarea::make('raw_content')
+                        Textarea::make('raw_content')
                             ->label('Catatan Kasar / Draft Kegiatan')
                             ->placeholder('Contoh: Koordinasi sama diskominfo terkait data sektoral, benerin format tabel yg belum lengkap')
                             ->rows(3)
                             ->required()
                             ->hintActions([
-                                Forms\Components\Actions\Action::make('ai_polish')
+                                Action::make('ai_polish')
                                     ->label('✨ Poles AI')
                                     ->color('primary')
                                     ->icon('heroicon-m-sparkles')
-                                    ->action(function (Forms\Get $get, Forms\Set $set) {
+                                    ->action(function (Get $get, Set $set) {
                                         $raw = trim($get('raw_content') ?? '');
                                         if (empty($raw)) {
                                             Notification::make()
@@ -175,7 +219,7 @@ class DailyActivityResource extends Resource
                                                 ->title('✨ Narasi Berhasil Dipoles!')
                                                 ->body('Narasi formal telah diisikan ke kolom Narasi Laporan di bawah.')
                                                 ->send();
-                                        } catch (\Throwable $e) {
+                                        } catch (Throwable $e) {
                                             Notification::make()
                                                 ->danger()
                                                 ->title('Gagal Memproses AI')
@@ -185,26 +229,26 @@ class DailyActivityResource extends Resource
                                     }),
                             ]),
 
-                        Forms\Components\Textarea::make('final_content')
+                        Textarea::make('final_content')
                             ->label('Narasi Formal Laporan (Siap Cetak)')
                             ->helperText('Teks ini yang akan dicantumkan pada berkas bukti dukung / dokumen Word.')
                             ->rows(4)
                             ->required(),
                     ]),
 
-                Forms\Components\Section::make('Foto Dokumentasi & Bukti Visual')
+                Section::make('Foto Dokumentasi & Bukti Visual')
                     ->description('Unggah satu atau beberapa foto kegiatan sebagai bukti dukung.')
                     ->schema([
-                        Forms\Components\Repeater::make('attachments')
+                        Repeater::make('attachments')
                             ->relationship('attachments')
                             ->label('Daftar Foto Bukti')
                             ->defaultItems(0)
                             ->columns(2)
                             ->reorderable('sort_order')
                             ->schema([
-                                Forms\Components\Grid::make(1)
+                                Grid::make(1)
                                     ->schema([
-                                        Forms\Components\FileUpload::make('file_path')
+                                        FileUpload::make('file_path')
                                             ->label('Berkas Bukti (Foto / PDF)')
                                             ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
                                             ->disk('public')
@@ -212,7 +256,7 @@ class DailyActivityResource extends Resource
                                             ->maxSize(10240)
                                             ->required()
                                             ->live()
-                                            ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                            ->afterStateUpdated(function ($state, Set $set) {
                                                 if (!$state) return;
 
                                                 $realPath = null;
@@ -228,7 +272,7 @@ class DailyActivityResource extends Resource
                                                         $set('captured_at', now()->format('Y-m-d H:i:s'));
                                                         $set('is_stamped', true);
                                                     } else {
-                                                        $exif = app(\App\Services\ImageExifExtractorService::class)->extract($realPath);
+                                                        $exif = app(ImageExifExtractorService::class)->extract($realPath);
                                                         if (!empty($exif['latitude'])) $set('latitude', $exif['latitude']);
                                                         if (!empty($exif['longitude'])) $set('longitude', $exif['longitude']);
                                                         if (!empty($exif['captured_at'])) {
@@ -240,19 +284,19 @@ class DailyActivityResource extends Resource
                                                 }
                                             }),
 
-                                        Forms\Components\ViewField::make('stamped_preview')
+                                        ViewField::make('stamped_preview')
                                             ->view('filament.forms.components.stamped-image-preview'),
 
-                                        Forms\Components\Actions::make([
-                                            Forms\Components\Actions\Action::make('burn_stamp_now')
-                                                ->label(fn (Forms\Get $get) => $get('is_stamped') ? '✅ Foto Sudah Berstempel Resmi' : '⚡ Cap Stempel Permanen ke File')
-                                                ->icon(fn (Forms\Get $get) => $get('is_stamped') ? 'heroicon-m-check-badge' : 'heroicon-m-sparkles')
-                                                ->color(fn (Forms\Get $get) => $get('is_stamped') ? 'gray' : 'warning')
-                                                ->disabled(fn (Forms\Get $get) => (bool) $get('is_stamped'))
+                                        Actions::make([
+                                            Action::make('burn_stamp_now')
+                                                ->label(fn (Get $get) => $get('is_stamped') ? '✅ Foto Sudah Berstempel Resmi' : '⚡ Cap Stempel Permanen ke File')
+                                                ->icon(fn (Get $get) => $get('is_stamped') ? 'heroicon-m-check-badge' : 'heroicon-m-sparkles')
+                                                ->color(fn (Get $get) => $get('is_stamped') ? 'gray' : 'warning')
+                                                ->disabled(fn (Get $get) => (bool) $get('is_stamped'))
                                                 ->requiresConfirmation()
                                                 ->modalHeading('Cap Stempel Permanen ke File')
                                                 ->modalDescription('Koordinat, waktu, dan logo instansi akan digambar langsung (burn-in) secara permanen ke dalam file foto menggunakan PHP GD. Lanjutkan?')
-                                                ->action(function (Forms\Get $get, Forms\Set $set) {
+                                                ->action(function (Get $get, Set $set) {
                                                     if ($get('is_stamped')) {
                                                         Notification::make()->info()->title('Foto Sudah Berstempel')->body('Foto ini sudah memiliki stempel resmi BPS.')->send();
                                                         return;
@@ -280,7 +324,7 @@ class DailyActivityResource extends Resource
                                                     $time = $get('captured_at') ?: now();
                                                     $caption = $get('caption') ?: 'Dokumentasi Pelaksanaan Tugas';
 
-                                                    $ok = app(\App\Services\PhotoWatermarkService::class)->applyWatermark($realPath, [
+                                                    $ok = app(PhotoWatermarkService::class)->applyWatermark($realPath, [
                                                         'latitude' => $lat,
                                                         'longitude' => $lng,
                                                         'captured_at' => $time,
@@ -300,44 +344,44 @@ class DailyActivityResource extends Resource
                                     ])
                                     ->columnSpan(1),
 
-                                Forms\Components\Grid::make(1)
+                                Grid::make(1)
                                     ->schema([
-                                        Forms\Components\TextInput::make('caption')
+                                        TextInput::make('caption')
                                             ->label('Keterangan / Kategori Foto')
                                             ->placeholder('Contoh: Koordinasi bersama Kades')
                                             ->live(),
 
-                                        Forms\Components\DateTimePicker::make('captured_at')
+                                        DateTimePicker::make('captured_at')
                                             ->label('Waktu Foto')
                                             ->displayFormat('d/m/Y H:i')
                                             ->live(),
 
-                                        Forms\Components\Grid::make(2)
+                                        Grid::make(2)
                                             ->schema([
-                                                Forms\Components\TextInput::make('latitude')
+                                                TextInput::make('latitude')
                                                     ->label('Latitude')
                                                     ->numeric()
                                                     ->placeholder('-6.8945')
                                                     ->live(),
 
-                                                Forms\Components\TextInput::make('longitude')
+                                                TextInput::make('longitude')
                                                     ->label('Longitude')
                                                     ->numeric()
                                                     ->placeholder('110.6385')
                                                     ->live(),
                                             ]),
 
-                                        Forms\Components\Actions::make([
-                                            Forms\Components\Actions\Action::make('pick_coordinate_map')
+                                        Actions::make([
+                                            Action::make('pick_coordinate_map')
                                                 ->label('Pilih Titik di Peta 📍')
                                                 ->icon('heroicon-m-map-pin')
                                                 ->color('info')
                                                 ->button()
                                                 ->modalHeading('Pilih Titik Koordinat Lokasi di Peta')
                                                 ->modalDescription('Cari nama wilayah/desa/kecamatan atau klik & geser penanda (marker) pada peta.')
-                                                ->modalWidth(\Filament\Support\Enums\MaxWidth::FourExtraLarge)
+                                                ->modalWidth(Width::FourExtraLarge)
                                                 ->modalSubmitActionLabel('Gunakan Titik Ini 📍')
-                                                ->fillForm(function (Forms\Get $get) {
+                                                ->fillForm(function (Get $get) {
                                                     $lat = (float) ($get('latitude') ?: -6.894561);
                                                     $lng = (float) ($get('longitude') ?: 110.637492);
                                                     return [
@@ -347,17 +391,17 @@ class DailyActivityResource extends Resource
                                                         ],
                                                     ];
                                                 })
-                                                ->form([
-                                                    \App\Filament\Forms\Components\MapWithSearch::make('map_location')
+                                                ->schema([
+                                                    MapWithSearch::make('map_location')
                                                         ->label('Peta & Pencarian Wilayah')
                                                         ->columnSpanFull()
-                                                        ->default(function (Forms\Get $get) {
+                                                        ->default(function (Get $get) {
                                                             $lat = (float) ($get('latitude') ?: -6.894561);
                                                             $lng = (float) ($get('longitude') ?: 110.637492);
                                                             return ['lat' => $lat, 'lng' => $lng];
                                                         }),
                                                 ])
-                                                ->action(function (array $data, Forms\Set $set) {
+                                                ->action(function (array $data, Set $set) {
                                                     $loc = $data['map_location'] ?? [];
                                                     if (is_string($loc)) {
                                                         $loc = json_decode($loc, true) ?: [];
@@ -369,13 +413,13 @@ class DailyActivityResource extends Resource
                                                 }),
                                         ])->extraAttributes(['class' => 'my-3']),
 
-                                        Forms\Components\Toggle::make('is_stamped')
+                                        Toggle::make('is_stamped')
                                             ->label('Sudah Ada Stempel Bawaan')
                                             ->helperText('Aktifkan jika foto sudah memiliki cap koordinat & waktu bawaan (misal: Open Camera).')
                                             ->live()
                                             ->default(false),
 
-                                        Forms\Components\Select::make('stamp_position')
+                                        Select::make('stamp_position')
                                             ->label('Posisi Stempel Watermark')
                                             ->options([
                                                 'bottom-left' => 'Pojok Kiri Bawah (Standar)',
@@ -384,7 +428,7 @@ class DailyActivityResource extends Resource
                                             ])
                                             ->default('bottom-left')
                                             ->helperText('Pilih posisi agar stempel tidak menutupi wajah atau objek utama foto.')
-                                            ->visible(fn (Forms\Get $get) => !$get('is_stamped')),
+                                            ->visible(fn (Get $get) => !$get('is_stamped')),
                                     ])
                                     ->columnSpan(1),
                             ]),
@@ -400,15 +444,15 @@ class DailyActivityResource extends Resource
             ->recordUrl(null)
             ->recordAction(null)
             ->defaultGroup(
-                Tables\Grouping\Group::make('activity_date')
+                Group::make('activity_date')
                     ->label('Tanggal Kegiatan')
                     ->collapsible()
                     ->titlePrefixedWithLabel(false)
                     ->getKeyFromRecordUsing(fn (DailyActivity $record): string =>
-                        $record->activity_date ? \Carbon\Carbon::parse($record->activity_date)->toDateString() : ''
+                        $record->activity_date ? Carbon::parse($record->activity_date)->toDateString() : ''
                     )
                     ->getTitleFromRecordUsing(fn (DailyActivity $record): string =>
-                        $record->activity_date ? \Carbon\Carbon::parse($record->activity_date)->locale('id')->translatedFormat('l, d F Y') : '-'
+                        $record->activity_date ? Carbon::parse($record->activity_date)->locale('id')->translatedFormat('l, d F Y') : '-'
                     )
                     ->orderQueryUsing(function (Builder $query, string $direction, $livewire = null) {
                         $direction = $livewire?->getTableGroupingDirection() ?? 'desc';
@@ -416,17 +460,17 @@ class DailyActivityResource extends Resource
                     })
             )
             ->columns([
-                Tables\Columns\TextColumn::make('activity_date')
+                TextColumn::make('activity_date')
                     ->label('Tanggal')
                     ->date('d M Y')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                Tables\Columns\TextColumn::make('user.name')
+                TextColumn::make('user.name')
                     ->label('Pegawai')
                     ->visible(false),
 
-                Tables\Columns\TextColumn::make('surat_tugas_id')
+                TextColumn::make('surat_tugas_id')
                     ->label('Surat Tugas')
                     ->state(function (DailyActivity $record): string {
                         return $record->suratTugas?->nomor_surat ? "No. {$record->suratTugas->nomor_surat}" : 'Kegiatan Rutin';
@@ -443,21 +487,21 @@ class DailyActivityResource extends Resource
                         });
                     })
                     ->action(
-                        Tables\Actions\Action::make('change_surat_tugas')
+                        Action::make('change_surat_tugas')
                             ->label('Atur Surat Tugas')
                             ->modalHeading('Atur Surat Tugas Kegiatan')
                             ->modalDescription('Tautkan kegiatan ini ke Surat Tugas yang sesuai, atau kosongkan untuk menjadikannya Kegiatan Rutin.')
-                            ->modalWidth(\Filament\Support\Enums\MaxWidth::Medium)
+                            ->modalWidth(Width::Medium)
                             ->modalSubmitActionLabel('Simpan Perubahan')
                             ->fillForm(fn (DailyActivity $record): array => [
                                 'surat_tugas_id' => $record->surat_tugas_id,
                             ])
-                            ->form([
-                                Forms\Components\Placeholder::make('info_kegiatan')
+                            ->schema([
+                                Placeholder::make('info_kegiatan')
                                     ->label('Kegiatan')
-                                    ->content(fn (DailyActivity $record) => $record->activity_date->translatedFormat('l, d F Y') . ' — ' . \Illuminate\Support\Str::limit($record->final_content, 120)),
+                                    ->content(fn (DailyActivity $record) => $record->activity_date->translatedFormat('l, d F Y') . ' — ' . Str::limit($record->final_content, 120)),
 
-                                Forms\Components\Select::make('surat_tugas_id')
+                                Select::make('surat_tugas_id')
                                     ->label('Pilih Surat Tugas')
                                     ->options(function (DailyActivity $record) {
                                         $userId = $record->user_id ?: Auth::id();
@@ -467,7 +511,7 @@ class DailyActivityResource extends Resource
                                             ->take(50)
                                             ->get()
                                             ->mapWithKeys(function ($st) {
-                                                $tgl = $st->tanggal ? \Carbon\Carbon::parse($st->tanggal)->format('d/m/Y') : '-';
+                                                $tgl = $st->tanggal ? Carbon::parse($st->tanggal)->format('d/m/Y') : '-';
                                                 $nomor = $st->nomor_surat ?: ($st->nomor_surat_tugas ?: 'DRAFT');
                                                 $keperluan = $st->keperluan ?: $st->tempat_tugas ?: 'Penugasan Lapangan';
                                                 return [$st->id => "[{$tgl}] No. {$nomor} — {$keperluan}"];
@@ -478,15 +522,15 @@ class DailyActivityResource extends Resource
                                     ->placeholder('— Tanpa Surat Tugas (Kegiatan Rutin) —')
                                     ->helperText('Pilih surat tugas yang relevan, atau kosongkan jika ini kegiatan rutin non-surat tugas.'),
 
-                                Forms\Components\Actions::make([
-                                    Forms\Components\Actions\Action::make('lepas_st_sekarang')
+                                Actions::make([
+                                    Action::make('lepas_st_sekarang')
                                         ->label('🗑️ Lepas Surat Tugas Sekarang')
                                         ->color('danger')
                                         ->visible(fn (DailyActivity $record) => !empty($record->surat_tugas_id))
                                         ->requiresConfirmation()
                                         ->modalHeading('Lepas Kaitan Surat Tugas?')
                                         ->modalDescription('Kegiatan ini akan dikembalikan menjadi kegiatan rutin non-surat tugas.')
-                                        ->action(function (DailyActivity $record, Forms\Set $set) {
+                                        ->action(function (DailyActivity $record, Set $set) {
                                             $record->update(['surat_tugas_id' => null]);
                                             $set('surat_tugas_id', null);
                                             Notification::make()
@@ -518,21 +562,21 @@ class DailyActivityResource extends Resource
                             })
                     ),
 
-                Tables\Columns\TextColumn::make('final_content')
+                TextColumn::make('final_content')
                     ->label('Uraian Narasi Kegiatan')
                     ->limit(70)
                     ->wrap()
                     ->tooltip(fn (DailyActivity $record) => $record->final_content)
                     ->description(fn (DailyActivity $record) => view('filament.tables.columns.activity-wadah-badges', ['record' => $record])),
 
-                Tables\Columns\TextColumn::make('attachments_count')
+                TextColumn::make('attachments_count')
                     ->counts('attachments')
                     ->label('Foto')
                     ->badge()
                     ->icon('heroicon-m-camera')
                     ->color(fn ($state) => $state > 0 ? 'success' : 'gray'),
 
-                Tables\Columns\IconColumn::make('laporan_perjalanan_dinas_id')
+                IconColumn::make('laporan_perjalanan_dinas_id')
                     ->label('LPD')
                     ->boolean()
                     ->trueIcon('heroicon-o-check-circle')
@@ -541,7 +585,7 @@ class DailyActivityResource extends Resource
                     ->falseColor('gray')
                     ->tooltip(fn (DailyActivity $record) => $record->laporan_perjalanan_dinas_id ? 'Sudah disalin ke LPD' : 'Belum disalin ke LPD'),
 
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('Waktu Input')
                     ->dateTime('d M Y, H:i')
                     ->sortable()
@@ -550,10 +594,10 @@ class DailyActivityResource extends Resource
             ])
             ->defaultSort('activity_date', 'desc')
             ->filters([
-                Tables\Filters\Filter::make('activity_date')
+                Filter::make('activity_date')
                     ->form([
-                        Forms\Components\DatePicker::make('from')->label('Dari Tanggal'),
-                        Forms\Components\DatePicker::make('until')->label('Sampai Tanggal'),
+                        DatePicker::make('from')->label('Dari Tanggal'),
+                        DatePicker::make('until')->label('Sampai Tanggal'),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
@@ -561,19 +605,19 @@ class DailyActivityResource extends Resource
                             ->when($data['until'], fn ($q, $date) => $q->whereDate('activity_date', '<=', $date));
                     }),
 
-                Tables\Filters\TernaryFilter::make('has_surat_tugas')
+                TernaryFilter::make('has_surat_tugas')
                     ->label('Terkait Surat Tugas')
                     ->queries(
                         true: fn ($query) => $query->whereNotNull('surat_tugas_id'),
                         false: fn ($query) => $query->whereNull('surat_tugas_id'),
                     ),
 
-                Tables\Filters\SelectFilter::make('wadah_kipapp')
+                SelectFilter::make('wadah_kipapp')
                     ->label('Wadah KIPAPP')
                     ->placeholder('Semua Kegiatan')
                     ->options(function () {
                         $options = ['unassigned' => '⚠️ Belum Masuk Wadah'];
-                        $reports = \App\Models\SharedWorkReport::where('user_id', Auth::id())
+                        $reports = SharedWorkReport::where('user_id', Auth::id())
                             ->where('is_active', true)
                             ->latest()
                             ->pluck('title', 'id')
@@ -597,17 +641,17 @@ class DailyActivityResource extends Resource
                         });
                     }),
             ])
-            ->actions([
+            ->recordActions([
                 // Kelompok Aksi Manajemen Baris Kegiatan
-                Tables\Actions\ActionGroup::make([
-                    Tables\Actions\Action::make('convert_to_lpd')
+                ActionGroup::make([
+                    Action::make('convert_to_lpd')
                         ->label('Salin Baris Ini ke LPD')
                         ->icon('heroicon-m-arrow-top-right-on-square')
                         ->color('success')
                         ->visible(fn (DailyActivity $record) => !empty($record->surat_tugas_id) && empty($record->laporan_perjalanan_dinas_id))
                         ->modalHeading('Konversi Bukti Dukung ke Laporan Perjalanan Dinas (LPD)')
                         ->modalDescription('Gabungkan seluruh catatan kegiatan dan dokumentasi foto pada tanggal ini menjadi satu berkas LPD resmi.')
-                        ->modalWidth(\Filament\Support\Enums\MaxWidth::FourExtraLarge)
+                        ->modalWidth(Width::FourExtraLarge)
                         ->modalSubmitActionLabel('Buat LPD Resmi 🚀')
                         ->fillForm(function (DailyActivity $record): array {
                             $st = $record->suratTugas;
@@ -620,7 +664,7 @@ class DailyActivityResource extends Resource
                                 ->get();
 
                             $lpdAiService = app(LpdAiService::class);
-                            $actDate = \Carbon\Carbon::parse($record->activity_date);
+                            $actDate = Carbon::parse($record->activity_date);
                             $user = $record->user ?? Auth::user();
 
                             $generated = $lpdAiService->generateChronologicalFromActivities(
@@ -637,7 +681,7 @@ class DailyActivityResource extends Resource
                                 'uraian_kegiatan' => $generated['narasi'],
                             ];
                         })
-                        ->form(function (DailyActivity $record): array {
+                        ->schema(function (DailyActivity $record): array {
                             $st = $record->suratTugas;
                             $sameDayActivities = DailyActivity::where('user_id', $record->user_id)
                                 ->whereDate('activity_date', $record->activity_date)
@@ -647,13 +691,13 @@ class DailyActivityResource extends Resource
 
                             $totalAct = $sameDayActivities->count();
                             $totalPhotos = $sameDayActivities->flatMap->attachments->count();
-                            $dateStr = \Carbon\Carbon::parse($record->activity_date)->translatedFormat('l, d F Y');
+                            $dateStr = Carbon::parse($record->activity_date)->translatedFormat('l, d F Y');
                             $stNo = $st?->nomor_surat_tugas ?: 'DRAFT';
 
                             return [
-                                Forms\Components\Placeholder::make('agregator_info')
+                                Placeholder::make('agregator_info')
                                     ->hiddenLabel()
-                                    ->content(new \Illuminate\Support\HtmlString("
+                                    ->content(new HtmlString("
                                         <div class='p-3.5 rounded-xl border border-primary-200 bg-primary-50/60 dark:bg-primary-950/20 text-xs space-y-1.5'>
                                             <div class='font-bold text-primary-900 dark:text-primary-200 flex items-center gap-1.5'>
                                                 <span>⚡ Agregator Bukti Dukung Harian BPS</span>
@@ -667,33 +711,33 @@ class DailyActivityResource extends Resource
                                         </div>
                                     ")),
 
-                                Forms\Components\Grid::make(3)->schema([
-                                    Forms\Components\TextInput::make('tujuan')
+                                Grid::make(3)->schema([
+                                    TextInput::make('tujuan')
                                         ->label('Tujuan / Keperluan')
                                         ->required()
                                         ->columnSpan(2),
 
-                                    Forms\Components\TextInput::make('desa_pejabat')
+                                    TextInput::make('desa_pejabat')
                                         ->label('Lokasi / Instansi Tujuan')
                                         ->required()
                                         ->columnSpan(1),
 
-                                    Forms\Components\TextInput::make('nama_pejabat')
+                                    TextInput::make('nama_pejabat')
                                         ->label('Nama Pejabat yang Ditemui')
                                         ->placeholder('Contoh: Bapak Iman Teguh Raharto, S.Si, M.Si (atau - jika umum)')
                                         ->columnSpan(3),
                                 ]),
 
-                                Forms\Components\RichEditor::make('uraian_kegiatan')
+                                RichEditor::make('uraian_kegiatan')
                                     ->label('Uraian Narasi Kronologis LPD (Per Jam)')
                                     ->required()
                                     ->helperText('Format standar BPS: Runtut per jam dari keberangkatan pagi, substansi & koordinasi teknis, ISHOMA, hingga kepulangan.')
                                     ->hintAction(
-                                        Forms\Components\Actions\Action::make('regenerate_ai')
+                                        Action::make('regenerate_ai')
                                             ->label('✨ Susun Ulang Kronologis via AI')
                                             ->icon('heroicon-m-sparkles')
                                             ->color('primary')
-                                            ->action(function (Forms\Set $set, DailyActivity $record) {
+                                            ->action(function (Set $set, DailyActivity $record) {
                                                 $st = $record->suratTugas;
                                                 if (!$st) return;
 
@@ -704,7 +748,7 @@ class DailyActivityResource extends Resource
                                                     ->get();
 
                                                 $lpdAiService = app(LpdAiService::class);
-                                                $actDate = \Carbon\Carbon::parse($record->activity_date);
+                                                $actDate = Carbon::parse($record->activity_date);
                                                 $user = $record->user ?? Auth::user();
 
                                                 $gen = $lpdAiService->generateChronologicalFromActivities(
@@ -751,7 +795,7 @@ class DailyActivityResource extends Resource
 
                             // 2. Validasi Rentang Tanggal Surat Tugas
                             $range = LaporanPerjalananDinas::getDateRangeForSuratTugas($st);
-                            $actDate = \Carbon\Carbon::parse($record->activity_date)->startOfDay();
+                            $actDate = Carbon::parse($record->activity_date)->startOfDay();
 
                             if ($range['start'] && $actDate->lt($range['start'])) {
                                 Notification::make()
@@ -801,7 +845,7 @@ class DailyActivityResource extends Resource
                                 ->get();
 
                             $allAttachments = $sameDayActivities->flatMap->attachments->sortBy(function ($att) {
-                                return $att->captured_at ? \Carbon\Carbon::parse($att->captured_at)->timestamp : ($att->created_at?->timestamp ?? 0);
+                                return $att->captured_at ? Carbon::parse($att->captured_at)->timestamp : ($att->created_at?->timestamp ?? 0);
                             });
 
                             $fotoOrder = 1;
@@ -825,36 +869,36 @@ class DailyActivityResource extends Resource
                                 ->title('LPD Berhasil Diterbitkan! 🎉')
                                 ->body("Data {$sameDayActivities->count()} bukti dukung dan {$totalFotoDisalin} foto dokumentasi hari ini telah berhasil disintesis ke LPD resmi.")
                                 ->actions([
-                                    \Filament\Notifications\Actions\Action::make('buka_lpd')
+                                    Action::make('buka_lpd')
                                         ->label('Buka LPD')
                                         ->url(route('filament.admin.resources.laporan-perjalanan-dinas.edit', ['record' => $lpd->id])),
                                 ])
                                 ->send();
                         }),
 
-                    Tables\Actions\Action::make('export_docx')
+                    Action::make('export_docx')
                         ->label('Unduh Dokumen Word')
                         ->icon('heroicon-m-document-arrow-down')
                         ->color('info')
                         ->action(function (DailyActivity $record) {
                             try {
-                                $generator = app(\App\Services\WorkReportGeneratorService::class);
+                                $generator = app(WorkReportGeneratorService::class);
                                 $user = $record->user ?? Auth::user();
                                 $res = $generator->generateWordReport($user, [$record], $record->activity_date->translatedFormat('d F Y'));
 
                                 return response()->download($res['path'], $res['name']);
-                            } catch (\Throwable $e) {
+                            } catch (Throwable $e) {
                                 Notification::make()->danger()->title('Gagal Membuat Dokumen')->body($e->getMessage())->send();
                             }
                         }),
 
-                    Tables\Actions\Action::make('manage_wadah')
+                    Action::make('manage_wadah')
                         ->label('Atur Wadah KIPAPP')
                         ->icon('heroicon-m-folder')
                         ->color('success')
                         ->modalHeading('Atur Wadah KIPAPP Kegiatan')
                         ->modalDescription('Pilih satu atau beberapa wadah KIPAPP untuk membundel bukti dukung ini, atau salin tautan berkas publiknya.')
-                        ->modalWidth(\Filament\Support\Enums\MaxWidth::Large)
+                        ->modalWidth(Width::Large)
                         ->modalSubmitActionLabel('Simpan Pilihan Wadah')
                         ->fillForm(function (DailyActivity $record): array {
                             $reportIds = $record->sharedWorkReports->pluck('id')->toArray();
@@ -865,12 +909,12 @@ class DailyActivityResource extends Resource
                                 'shared_work_reports' => $reportIds,
                             ];
                         })
-                        ->form([
-                            Forms\Components\Placeholder::make('activity_summary')
+                        ->schema([
+                            Placeholder::make('activity_summary')
                                 ->label('Kegiatan')
-                                ->content(fn (DailyActivity $record) => $record->activity_date->translatedFormat('l, d F Y') . ' — ' . \Illuminate\Support\Str::limit($record->final_content, 120)),
+                                ->content(fn (DailyActivity $record) => $record->activity_date->translatedFormat('l, d F Y') . ' — ' . Str::limit($record->final_content, 120)),
 
-                            Forms\Components\Select::make('shared_work_reports')
+                            Select::make('shared_work_reports')
                                 ->label('Pilih Wadah KIPAPP')
                                 ->multiple()
                                 ->searchable()
@@ -878,7 +922,7 @@ class DailyActivityResource extends Resource
                                 ->live()
                                 ->options(function (DailyActivity $record) {
                                     $userId = $record->user_id ?: Auth::id();
-                                    return \App\Models\SharedWorkReport::where('user_id', $userId)
+                                    return SharedWorkReport::where('user_id', $userId)
                                         ->where('is_active', true)
                                         ->latest()
                                         ->pluck('title', 'id');
@@ -887,9 +931,9 @@ class DailyActivityResource extends Resource
                                 ->helperText('Pilih wadah yang ingin ditautkan. Anda juga bisa mengosongkan pilihan untuk mengeluarkan kegiatan dari semua wadah.')
                                 ->required(false),
 
-                            Forms\Components\Placeholder::make('wadah_links_preview')
+                            Placeholder::make('wadah_links_preview')
                                 ->hiddenLabel()
-                                ->content(function (Forms\Get $get, ?DailyActivity $record) {
+                                ->content(function (Get $get, ?DailyActivity $record) {
                                     $selectedIds = $get('shared_work_reports');
                                     if ($selectedIds === null && $record) {
                                         $selectedIds = $record->sharedWorkReports->pluck('id')->toArray();
@@ -899,7 +943,7 @@ class DailyActivityResource extends Resource
                                     }
                                     $selectedIds = array_filter(array_map('intval', (array) $selectedIds));
                                     $reports = !empty($selectedIds)
-                                        ? \App\Models\SharedWorkReport::whereIn('id', $selectedIds)->get()
+                                        ? SharedWorkReport::whereIn('id', $selectedIds)->get()
                                         : collect();
 
                                     return view('filament.forms.components.wadah-modal-links', [
@@ -921,32 +965,32 @@ class DailyActivityResource extends Resource
                                 ->send();
                         }),
 
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\DeleteAction::make(),
+                    EditAction::make(),
+                    DeleteAction::make(),
                 ])
                 ->tooltip('Pilihan Aksi')
                 ->icon('heroicon-m-ellipsis-vertical')
                 ->color('gray'),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
+            ->toolbarActions([
+                BulkActionGroup::make([
                     // 1. Buat Laporan Perjalanan Dinas (LPD) dari Baris Terpilih
-                    Tables\Actions\BulkAction::make('create_lpd_from_selected')
+                    BulkAction::make('create_lpd_from_selected')
                         ->label('📝 Buat Laporan Perjalanan Dinas (LPD)')
                         ->icon('heroicon-m-document-text')
                         ->color('success')
                         ->modalHeading('Buat Laporan Perjalanan Dinas (LPD) dari Kegiatan Terpilih')
                         ->modalDescription('Pilih Survey & Surat Tugas untuk menyatukan kegiatan dan dokumentasi foto terpilih menjadi satu berkas LPD resmi.')
-                        ->modalWidth(\Filament\Support\Enums\MaxWidth::FourExtraLarge)
+                        ->modalWidth(Width::FourExtraLarge)
                         ->modalSubmitActionLabel('Buat LPD Resmi & Lampirkan Foto 🚀')
-                        ->fillForm(function (\Illuminate\Database\Eloquent\Collection $records): array {
+                        ->fillForm(function (Collection $records): array {
                             $user = Auth::user();
                             $firstRecord = $records->sortBy('activity_date')->first();
                             $existingStId = $records->firstWhere('surat_tugas_id', '!=', null)?->surat_tugas_id;
-                            $st = $existingStId ? \App\Models\SuratTugas::find($existingStId) : null;
+                            $st = $existingStId ? SuratTugas::find($existingStId) : null;
 
                             $tanggalKunjungan = $firstRecord?->activity_date
-                                ? \Carbon\Carbon::parse($firstRecord->activity_date)->format('Y-m-d')
+                                ? Carbon::parse($firstRecord->activity_date)->format('Y-m-d')
                                 : now()->format('Y-m-d');
 
                             $narasiAwal = '';
@@ -956,7 +1000,7 @@ class DailyActivityResource extends Resource
                             if ($st && $user) {
                                 try {
                                     $lpdAiService = app(LpdAiService::class);
-                                    $actDate = \Carbon\Carbon::parse($tanggalKunjungan);
+                                    $actDate = Carbon::parse($tanggalKunjungan);
                                     $gen = $lpdAiService->generateChronologicalFromActivities(
                                         $records,
                                         $st,
@@ -966,7 +1010,7 @@ class DailyActivityResource extends Resource
                                     $narasiAwal = $gen['narasi'];
                                     if (!empty($gen['nama_pejabat'])) $namaPejabat = $gen['nama_pejabat'];
                                     if (!empty($gen['desa_pejabat'])) $desaPejabat = $gen['desa_pejabat'];
-                                } catch (\Throwable $e) {
+                                } catch (Throwable $e) {
                                     // fallback jika ai error
                                 }
                             }
@@ -990,18 +1034,18 @@ class DailyActivityResource extends Resource
                             ];
                         })
                         ->form([
-                            Forms\Components\Placeholder::make('selected_summary')
+                            Placeholder::make('selected_summary')
                                 ->hiddenLabel()
-                                ->content(function (\Illuminate\Database\Eloquent\Collection $records) {
+                                ->content(function (Collection $records) {
                                     $count = $records->count();
                                     $totalPhotos = $records->sum(fn($r) => $r->attachments->count());
                                     $dates = $records->sortBy('activity_date')->pluck('activity_date')
-                                        ->map(fn($d) => \Carbon\Carbon::parse($d)->translatedFormat('d F Y'))
+                                        ->map(fn($d) => Carbon::parse($d)->translatedFormat('d F Y'))
                                         ->unique()
                                         ->values()
                                         ->join(', ');
 
-                                    return new \Illuminate\Support\HtmlString("
+                                    return new HtmlString("
                                         <div class='p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/70 dark:bg-emerald-950/20 text-xs space-y-1.5'>
                                             <div class='font-bold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5'>
                                                 <span>📋 Seleksi Baris Kegiatan ({$count} Catatan Bukti Dukung)</span>
@@ -1016,25 +1060,25 @@ class DailyActivityResource extends Resource
                                     ");
                                 }),
 
-                            Forms\Components\Section::make('Penugasan & Identitas Surat Tugas')
+                            Section::make('Penugasan & Identitas Surat Tugas')
                                 ->schema([
-                                    Forms\Components\Grid::make(2)->schema([
-                                        Forms\Components\Select::make('survey_id')
+                                    Grid::make(2)->schema([
+                                        Select::make('survey_id')
                                             ->label('Filter Survei / Kegiatan')
                                             ->placeholder('Semua Kegiatan / Survei')
-                                            ->options(fn () => \App\Models\Survey::orderBy('name')->pluck('name', 'id'))
+                                            ->options(fn () => Survey::orderBy('name')->pluck('name', 'id'))
                                             ->searchable()
                                             ->preload()
                                             ->live()
-                                            ->afterStateUpdated(fn (Forms\Set $set) => $set('surat_tugas_id', null)),
+                                            ->afterStateUpdated(fn (Set $set) => $set('surat_tugas_id', null)),
 
-                                        Forms\Components\Select::make('surat_tugas_id')
+                                        Select::make('surat_tugas_id')
                                             ->label('Pilih Nomor Surat Tugas Terkait')
                                             ->placeholder('Pilih Surat Tugas...')
-                                            ->options(function (Forms\Get $get) {
+                                            ->options(function (Get $get) {
                                                 $surveyId = $get('survey_id');
                                                 $userId = Auth::id();
-                                                $q = \App\Models\SuratTugas::query();
+                                                $q = SuratTugas::query();
                                                 if ($userId && !Auth::user()->hasRole('super_admin')) {
                                                     $q->where('user_id', $userId);
                                                 }
@@ -1051,9 +1095,9 @@ class DailyActivityResource extends Resource
                                             ->searchable()
                                             ->preload()
                                             ->live()
-                                            ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get, \Illuminate\Database\Eloquent\Collection $records) {
+                                            ->afterStateUpdated(function ($state, Set $set, Get $get, Collection $records) {
                                                 if (!$state) return;
-                                                $st = \App\Models\SuratTugas::find($state);
+                                                $st = SuratTugas::find($state);
                                                 if ($st) {
                                                     if ($st->survey_id) $set('survey_id', $st->survey_id);
                                                     $set('tujuan', $st->keperluan ?: $st->tempat_tugas ?: 'Pelaksanaan Penugasan Lapangan');
@@ -1067,55 +1111,55 @@ class DailyActivityResource extends Resource
                                                             $records,
                                                             $st,
                                                             Auth::user(),
-                                                            \Carbon\Carbon::parse($tgl)
+                                                            Carbon::parse($tgl)
                                                         );
                                                         $set('uraian_kegiatan', $gen['narasi']);
                                                         if (!empty($gen['nama_pejabat'])) $set('nama_pejabat', $gen['nama_pejabat']);
                                                         if (!empty($gen['desa_pejabat'])) $set('desa_pejabat', $gen['desa_pejabat']);
-                                                    } catch (\Throwable $e) {}
+                                                    } catch (Throwable $e) {}
                                                 }
                                             }),
                                     ]),
                                 ])
                                 ->compact(),
 
-                            Forms\Components\Section::make('Rincian Kunjungan & Laporan')
+                            Section::make('Rincian Kunjungan & Laporan')
                                 ->schema([
-                                    Forms\Components\Grid::make(3)->schema([
-                                        Forms\Components\DatePicker::make('tanggal_kunjungan')
+                                    Grid::make(3)->schema([
+                                        DatePicker::make('tanggal_kunjungan')
                                             ->label('Tanggal Kunjungan')
                                             ->required()
                                             ->live()
                                             ->columnSpan(1),
 
-                                        Forms\Components\TextInput::make('tujuan')
+                                        TextInput::make('tujuan')
                                             ->label('Tujuan / Keperluan Tugas')
                                             ->required()
                                             ->columnSpan(2),
 
-                                        Forms\Components\TextInput::make('desa_pejabat')
+                                        TextInput::make('desa_pejabat')
                                             ->label('Lokasi / Instansi Tujuan')
                                             ->required()
                                             ->columnSpan(1),
 
-                                        Forms\Components\TextInput::make('nama_pejabat')
+                                        TextInput::make('nama_pejabat')
                                             ->label('Nama Pejabat yang Ditemui')
                                             ->placeholder('Contoh: Bapak Iman Teguh Raharto, S.Si, M.Si (atau - jika umum)')
                                             ->columnSpan(2),
                                     ]),
 
-                                    Forms\Components\RichEditor::make('uraian_kegiatan')
+                                    RichEditor::make('uraian_kegiatan')
                                         ->label('Uraian Narasi Kronologis LPD (Per Jam)')
                                         ->required()
                                         ->helperText('Format standar BPS: Runtut per jam dari keberangkatan pagi, substansi & koordinasi teknis, ISHOMA, hingga kepulangan.')
                                         ->hintAction(
-                                            Forms\Components\Actions\Action::make('regenerate_ai')
+                                            Action::make('regenerate_ai')
                                                 ->label('✨ Susun Ulang Kronologis via AI')
                                                 ->icon('heroicon-m-sparkles')
                                                 ->color('primary')
-                                                ->action(function (Forms\Set $set, Forms\Get $get, \Illuminate\Database\Eloquent\Collection $records) {
+                                                ->action(function (Set $set, Get $get, Collection $records) {
                                                     $stId = $get('surat_tugas_id');
-                                                    $st = $stId ? \App\Models\SuratTugas::find($stId) : null;
+                                                    $st = $stId ? SuratTugas::find($stId) : null;
                                                     if (!$st) {
                                                         Notification::make()->warning()->title('Pilih Surat Tugas Terlebih Dahulu')->send();
                                                         return;
@@ -1123,7 +1167,7 @@ class DailyActivityResource extends Resource
 
                                                     $lpdAiService = app(LpdAiService::class);
                                                     $tgl = $get('tanggal_kunjungan') ?: now();
-                                                    $actDate = \Carbon\Carbon::parse($tgl);
+                                                    $actDate = Carbon::parse($tgl);
                                                     $user = Auth::user();
 
                                                     $gen = $lpdAiService->generateChronologicalFromActivities(
@@ -1143,23 +1187,23 @@ class DailyActivityResource extends Resource
                                 ])
                                 ->compact(),
                         ])
-                        ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
+                        ->action(function (Collection $records, array $data) {
                             $user = Auth::user();
                             if (!$user) return;
 
                             $stId = $data['surat_tugas_id'] ?? null;
-                            $st = $stId ? \App\Models\SuratTugas::find($stId) : null;
+                            $st = $stId ? SuratTugas::find($stId) : null;
                             if (!$st) {
                                 Notification::make()->danger()->title('Surat Tugas Wajib Dipilih')->send();
                                 return;
                             }
 
                             $tglKunjungan = $data['tanggal_kunjungan'];
-                            $actDate = \Carbon\Carbon::parse($tglKunjungan)->startOfDay();
+                            $actDate = Carbon::parse($tglKunjungan)->startOfDay();
 
                             // 1. Validasi Kuota LPD
-                            if (!\App\Models\LaporanPerjalananDinas::canCreateLpd($st)) {
-                                $max = \App\Models\LaporanPerjalananDinas::getMaxLpdCount($st);
+                            if (!LaporanPerjalananDinas::canCreateLpd($st)) {
+                                $max = LaporanPerjalananDinas::getMaxLpdCount($st);
                                 $msg = $max === 1
                                     ? "Surat Tugas ini memiliki durasi 1 hari dan sudah memiliki 1 laporan LPD. Tidak dapat menambah LPD lagi."
                                     : "Surat Tugas ini memiliki durasi {$max} hari dan telah mencapai batas maksimal {$max} laporan LPD.";
@@ -1169,7 +1213,7 @@ class DailyActivityResource extends Resource
                             }
 
                             // 2. Validasi Konflik LPD pada Tanggal yang Sama untuk Pegawai yang Sama
-                            $duplicateLpd = \App\Models\LaporanPerjalananDinas::getDuplicateForUser($user->id, $tglKunjungan);
+                            $duplicateLpd = LaporanPerjalananDinas::getDuplicateForUser($user->id, $tglKunjungan);
                             if ($duplicateLpd) {
                                 Notification::make()
                                     ->danger()
@@ -1180,7 +1224,7 @@ class DailyActivityResource extends Resource
                             }
 
                             // 3. Buat Laporan Perjalanan Dinas
-                            $lpd = \App\Models\LaporanPerjalananDinas::create([
+                            $lpd = LaporanPerjalananDinas::create([
                                 'surat_tugas_id' => $st->id,
                                 'nomor_surat_tugas' => $st->nomor_surat_tugas ?? '',
                                 'tujuan' => $data['tujuan'] ?? ($st->keperluan ?: $st->tempat_tugas ?: 'Pelaksanaan Penugasan Lapangan'),
@@ -1192,12 +1236,12 @@ class DailyActivityResource extends Resource
 
                             // 4. Salin seluruh foto lampiran dari semua baris yang dipilih ke LaporanFoto
                             $allAttachments = $records->flatMap->attachments->sortBy(function ($att) {
-                                return $att->captured_at ? \Carbon\Carbon::parse($att->captured_at)->timestamp : ($att->created_at?->timestamp ?? 0);
+                                return $att->captured_at ? Carbon::parse($att->captured_at)->timestamp : ($att->created_at?->timestamp ?? 0);
                             });
 
                             $fotoOrder = 1;
                             foreach ($allAttachments as $att) {
-                                \App\Models\LaporanFoto::create([
+                                LaporanFoto::create([
                                     'laporan_perjalanan_dinas_id' => $lpd->id,
                                     'file_path' => $att->file_path,
                                     'keterangan' => $att->caption ?: ('Dokumentasi Lapangan ' . $fotoOrder),
@@ -1222,27 +1266,27 @@ class DailyActivityResource extends Resource
                                 ->title('LPD Berhasil Diterbitkan! 🎉')
                                 ->body("Laporan Perjalanan Dinas telah dibuat dari {$records->count()} kegiatan dengan {$totalFoto} foto terlampir otomatis. Anda dapat langsung mengedit atau menambahkan berkas di menu LPD.")
                                 ->actions([
-                                    \Filament\Notifications\Actions\Action::make('buka_lpd')
+                                    Action::make('buka_lpd')
                                         ->label('Buka & Edit LPD 🚀')
                                         ->url(route('filament.admin.resources.laporan-perjalanan-dinas.edit', ['record' => $lpd->id]), shouldOpenInNewTab: false),
                                 ])
                                 ->send();
                         }),
 
-                    Tables\Actions\BulkAction::make('assign_to_shared_report')
+                    BulkAction::make('assign_to_shared_report')
                         ->label('📁 Tautkan ke Wadah KIPAPP')
                         ->icon('heroicon-m-folder-plus')
                         ->color('warning')
                         ->form([
-                            Forms\Components\Select::make('shared_work_report_id')
+                            Select::make('shared_work_report_id')
                                 ->label('Pilih Wadah KIPAPP Tujuan')
-                                ->options(fn () => \App\Models\SharedWorkReport::where('user_id', Auth::id())->where('is_active', true)->latest()->pluck('title', 'id'))
+                                ->options(fn () => SharedWorkReport::where('user_id', Auth::id())->where('is_active', true)->latest()->pluck('title', 'id'))
                                 ->required()
                                 ->searchable()
                                 ->placeholder('Pilih wadah berkas KIPAPP Anda...'),
                         ])
-                        ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
-                            $rep = \App\Models\SharedWorkReport::find($data['shared_work_report_id']);
+                        ->action(function (Collection $records, array $data) {
+                            $rep = SharedWorkReport::find($data['shared_work_report_id']);
                             if (!$rep) return;
 
                             foreach ($records as $rec) {
@@ -1255,14 +1299,14 @@ class DailyActivityResource extends Resource
                                 ->title('Kegiatan Berhasil Ditautkan!')
                                 ->body("Sebanyak {$records->count()} kegiatan telah dimasukkan ke wadah \"{$rep->title}\".")
                                 ->actions([
-                                    \Filament\Notifications\Actions\Action::make('buka_berkas')
+                                    Action::make('buka_berkas')
                                         ->label('Buka Berkas Publik 🌐')
                                         ->url(route('shared-work-report.show', ['uuid' => $rep->uuid]), shouldOpenInNewTab: true),
                                 ])
                                 ->send();
                         }),
 
-                    Tables\Actions\BulkAction::make('create_shared_report')
+                    BulkAction::make('create_shared_report')
                         ->label('🔗 Buat Berkas Publik Multi-Hari (Link E-Kinerja)')
                         ->icon('heroicon-m-link')
                         ->color('success')
@@ -1270,11 +1314,11 @@ class DailyActivityResource extends Resource
                         ->modalDescription('Gabungkan kegiatan-kegiatan terpilih (baik rentang tanggal berurutan maupun melompat) menjadi 1 berkas resmi dengan tautan publik yang dapat dilampirkan ke E-Kinerja BPS.')
                         ->modalSubmitActionLabel('Buat Berkas & Tautan Publik 🚀')
                         ->form([
-                            Forms\Components\TextInput::make('title')
+                            TextInput::make('title')
                                 ->label('Judul Berkas Bukti Dukung')
                                 ->placeholder('Contoh: Pelaksanaan Ground Check SBR Kecamatan Wedung')
                                 ->required()
-                                ->default(function (\Illuminate\Database\Eloquent\Collection $records) {
+                                ->default(function (Collection $records) {
                                     $first = $records->first();
                                     if ($first?->suratTugas?->keperluan) {
                                         return $first->suratTugas->keperluan;
@@ -1282,17 +1326,17 @@ class DailyActivityResource extends Resource
                                     return 'Laporan Pelaksanaan Tugas Kegiatan';
                                 }),
 
-                            Forms\Components\Textarea::make('description')
+                            Textarea::make('description')
                                 ->label('Keterangan / Catatan Tambahan (Opsional)')
                                 ->placeholder('Tuliskan ringkasan atau lingkup pekerjaan multi-hari ini...')
                                 ->rows(2),
 
-                            Forms\Components\Placeholder::make('summary_info')
+                            Placeholder::make('summary_info')
                                 ->label('Ringkasan Kegiatan Terpilih')
-                                ->content(function (\Illuminate\Database\Eloquent\Collection $records) {
+                                ->content(function (Collection $records) {
                                     $count = $records->count();
                                     $dates = $records->sortBy('activity_date')->pluck('activity_date')
-                                        ->map(fn($d) => \Carbon\Carbon::parse($d)->translatedFormat('d M Y'))
+                                        ->map(fn($d) => Carbon::parse($d)->translatedFormat('d M Y'))
                                         ->unique()
                                         ->values()
                                         ->join(', ');
@@ -1300,14 +1344,14 @@ class DailyActivityResource extends Resource
                                     return "{$count} catatan kegiatan ({$totalPhotos} foto bukti) pada tanggal: {$dates}";
                                 }),
                         ])
-                        ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
+                        ->action(function (Collection $records, array $data) {
                             $user = Auth::user();
                             if (!$user) return;
 
                             $sortedIds = $records->sortBy('activity_date')->pluck('id')->values()->toArray();
                             $stId = $records->firstWhere('surat_tugas_id', '!=', null)?->surat_tugas_id;
 
-                            $report = \App\Models\SharedWorkReport::create([
+                            $report = SharedWorkReport::create([
                                 'user_id' => $user->id,
                                 'title' => $data['title'],
                                 'description' => $data['description'] ?? null,
@@ -1331,30 +1375,30 @@ class DailyActivityResource extends Resource
                                 ->title('🎉 Berkas Publik Berhasil Dibuat!')
                                 ->body("Tautan resmi untuk dilampirkan ke E-Kinerja:\n\n{$url}")
                                 ->actions([
-                                    \Filament\Notifications\Actions\Action::make('open_public_link')
+                                    Action::make('open_public_link')
                                         ->label('🌐 Buka Halaman Publik')
                                         ->url($url, shouldOpenInNewTab: true),
                                 ])
                                 ->send();
                         }),
 
-                    Tables\Actions\BulkAction::make('export_selected_docx')
+                    BulkAction::make('export_selected_docx')
                         ->label('Cetak Terpilih (Word .docx)')
                         ->icon('heroicon-m-document-arrow-down')
                         ->color('info')
-                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                        ->action(function (Collection $records) {
                             try {
-                                $generator = app(\App\Services\WorkReportGeneratorService::class);
+                                $generator = app(WorkReportGeneratorService::class);
                                 $firstRecord = $records->first();
                                 $user = $firstRecord?->user ?? Auth::user();
                                 $res = $generator->generateWordReport($user, $records, 'Kegiatan Terpilih');
 
                                 return response()->download($res['path'], $res['name']);
-                            } catch (\Throwable $e) {
+                            } catch (Throwable $e) {
                                 Notification::make()->danger()->title('Gagal Ekspor Terpilih')->body($e->getMessage())->send();
                             }
                         }),
-                    Tables\Actions\DeleteBulkAction::make(),
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -1367,9 +1411,9 @@ class DailyActivityResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListDailyActivities::route('/'),
-            'create' => Pages\CreateDailyActivity::route('/create'),
-            'edit' => Pages\EditDailyActivity::route('/{record}/edit'),
+            'index' => ListDailyActivities::route('/'),
+            'create' => CreateDailyActivity::route('/create'),
+            'edit' => EditDailyActivity::route('/{record}/edit'),
         ];
     }
 }

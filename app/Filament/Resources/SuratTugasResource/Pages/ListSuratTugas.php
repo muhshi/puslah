@@ -2,11 +2,25 @@
 
 namespace App\Filament\Resources\SuratTugasResource\Pages;
 
+use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Actions\Action;
+use Filament\Forms\Components\Select;
+use Filament\Schemas\Components\Utilities\Set;
+use Carbon\Carbon;
+use Filament\Schemas\Components\Group;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\FileUpload;
+use Illuminate\Support\HtmlString;
+use App\Imports\SuratTugasImport;
+use Maatwebsite\Excel\Facades\Excel;
+use Filament\Notifications\Notification;
+use App\Filament\Resources\SuratTugasResource\Widgets\SkippedNumbersInfoWidget;
 use App\Filament\Resources\SuratTugasResource;
 use App\Models\SuratTugas;
 use App\Models\Survey;
 use Filament\Actions;
-use Filament\Resources\Components\Tab;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -32,12 +46,12 @@ class ListSuratTugas extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\Action::make('import_surat_tugas')
+            Action::make('import_surat_tugas')
                 ->label('Import Excel')
                 ->icon('heroicon-o-document-arrow-up')
                 ->color('info')
-                ->form([
-                    \Filament\Forms\Components\Select::make('survey_id')
+                ->schema([
+                    Select::make('survey_id')
                         ->label('Pilih Survey')
                         ->options(function () {
                             return Survey::where('is_active', true)
@@ -47,60 +61,60 @@ class ListSuratTugas extends ListRecords
                         ->searchable()
                         ->preload()
                         ->live()
-                        ->afterStateUpdated(function (\Filament\Forms\Set $set, $state) {
+                        ->afterStateUpdated(function (Set $set, $state) {
                             if ($state) {
                                 $survey = Survey::find($state);
                                 if ($survey) {
                                     $set('keperluan', "{$survey->name}");
                                     if ($survey->start_date) {
-                                        $set('waktu_mulai', \Carbon\Carbon::parse($survey->start_date)->format('Y-m-d'));
+                                        $set('waktu_mulai', Carbon::parse($survey->start_date)->format('Y-m-d'));
                                     }
                                     if ($survey->end_date) {
-                                        $set('waktu_selesai', \Carbon\Carbon::parse($survey->end_date)->format('Y-m-d'));
+                                        $set('waktu_selesai', Carbon::parse($survey->end_date)->format('Y-m-d'));
                                     }
                                 }
                             }
                         })
                         ->required(),
-                    \Filament\Forms\Components\Group::make()->schema([
-                        \Filament\Forms\Components\DatePicker::make('tanggal')
+                    Group::make()->schema([
+                        DatePicker::make('tanggal')
                             ->label('Tanggal Surat')
                             ->default(now()->format('Y-m-d'))
                             ->live()
-                            ->afterStateUpdated(function (\Filament\Forms\Set $set, $state) {
+                            ->afterStateUpdated(function (Set $set, $state) {
                                 if ($state) {
-                                    $year = \Carbon\Carbon::parse($state)->year;
+                                    $year = Carbon::parse($state)->year;
                                     $nextNumber = SuratTugas::getNextNomorUrut($year);
                                     $set('nomor_urut_mulai', $nextNumber);
                                 }
                             })
                             ->required(),
-                        \Filament\Forms\Components\DatePicker::make('waktu_mulai')
+                        DatePicker::make('waktu_mulai')
                             ->label('Mulai')
                             ->default(now()->format('Y-m-d')),
-                        \Filament\Forms\Components\DatePicker::make('waktu_selesai')
+                        DatePicker::make('waktu_selesai')
                             ->label('Selesai')
                             ->default(now()->format('Y-m-d')),
                     ])->columns(3),
-                    \Filament\Forms\Components\Textarea::make('keperluan')
+                    Textarea::make('keperluan')
                         ->label('Keperluan')
                         ->required(),
-                    \Filament\Forms\Components\TextInput::make('nomor_urut_mulai')
+                    TextInput::make('nomor_urut_mulai')
                         ->label('Nomor Urut Mulai')
                         ->numeric()
                         ->required()
                         ->minValue(1)
                         ->default(fn() => SuratTugas::getNextNomorUrut(now()->year)),
-                    \Filament\Forms\Components\FileUpload::make('file_excel')
+                    FileUpload::make('file_excel')
                         ->label('File Excel (.xlsx)')
                         ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv'])
                         ->directory('imports')
                         ->required()
-                        ->helperText(new \Illuminate\Support\HtmlString('Download template: <a href="/templates/surat_tugas_import_template.xlsx" target="_blank" class="text-primary-600 hover:underline">surat_tugas_import_template.xlsx</a>')),
+                        ->helperText(new HtmlString('Download template: <a href="/templates/surat_tugas_import_template.xlsx" target="_blank" class="text-primary-600 hover:underline">surat_tugas_import_template.xlsx</a>')),
                 ])
                 ->action(function (array $data) {
                     $filePath = storage_path('app/public/' . $data['file_excel']);
-                    $import = new \App\Imports\SuratTugasImport(
+                    $import = new SuratTugasImport(
                         $data['survey_id'],
                         $data['tanggal'],
                         $data['waktu_mulai'],
@@ -109,20 +123,20 @@ class ListSuratTugas extends ListRecords
                         'KP.650',
                         $data['nomor_urut_mulai'] ?? null
                     );
-                    \Maatwebsite\Excel\Facades\Excel::import($import, $filePath);
+                    Excel::import($import, $filePath);
 
-                    \Filament\Notifications\Notification::make()
+                    Notification::make()
                         ->title('Import Selesai')
                         ->body("Berhasil: {$import->success}, Dilewati: {$import->skipped}, Gagal: {$import->failed}")
                         ->success()
                         ->send();
                 }),
-            Actions\Action::make('create-bulk')
+            Action::make('create-bulk')
                 ->label('Buat Kolektif')
                 ->icon('heroicon-o-user-group')
                 ->color('success')
                 ->url(fn() => SuratTugasResource::getUrl('create-bulk')),
-            Actions\Action::make('manage-blocked-numbers')
+            Action::make('manage-blocked-numbers')
                 ->label('Block Nomor')
                 ->icon('heroicon-o-lock-closed')
                 ->color('warning')
@@ -133,7 +147,7 @@ class ListSuratTugas extends ListRecords
     protected function getHeaderWidgets(): array
     {
         return [
-            SuratTugasResource\Widgets\SkippedNumbersInfoWidget::class,
+            SkippedNumbersInfoWidget::class,
         ];
     }
 }

@@ -2,6 +2,24 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\Filter;
+use Filament\Forms\Components\DatePicker;
+use Filament\Actions\BulkAction;
+use Throwable;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\Action;
+use App\Models\CertificateTemplate;
+use App\Services\CertificateImageService;
+use App\Filament\Resources\SurveyUserResource\Pages\ListSurveyUsers;
+use App\Filament\Resources\SurveyUserResource\Pages\CreateSurveyUser;
+use App\Filament\Resources\SurveyUserResource\Pages\EditSurveyUser;
 use App\Filament\Resources\SurveyUserResource\Pages;
 use App\Filament\Resources\SurveyUserResource\RelationManagers;
 use App\Models\Certificate;
@@ -12,12 +30,10 @@ use App\Settings\SystemSettings;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Tables\Actions\Action;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Builder;
@@ -30,27 +46,27 @@ class SurveyUserResource extends Resource
 {
     protected static ?string $model = SurveyUser::class;
 
-    protected static ?string $navigationIcon = 'heroicon-m-user-group';
-    protected static ?string $navigationGroup = 'Manajemen Survei';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-m-user-group';
+    protected static string | \UnitEnum | null $navigationGroup = 'Manajemen Survei';
     protected static ?string $navigationLabel = 'Peserta Survei';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Select::make('survey_id')
+        return $schema->components([
+            Select::make('survey_id')
                 ->label('Survei')
                 ->options(fn() => Survey::orderBy('name')->pluck('name', 'id'))->searchable()->required(),
 
-            Forms\Components\Select::make('user_id')
+            Select::make('user_id')
                 ->label('Peserta')
                 ->options(fn() => User::orderBy('name')->pluck('name', 'id'))->searchable()->required(),
 
-            Forms\Components\Select::make('status')
+            Select::make('status')
                 ->options(['registered' => 'registered', 'approved' => 'approved'])
                 ->default('registered')->required(),
 
-            Forms\Components\TextInput::make('score')->numeric()->minValue(0)->maxValue(100)->nullable(),
-            Forms\Components\Textarea::make('notes')->columnSpanFull(),
+            TextInput::make('score')->numeric()->minValue(0)->maxValue(100)->nullable(),
+            Textarea::make('notes')->columnSpanFull(),
         ])->columns(2);
     }
 
@@ -58,22 +74,22 @@ class SurveyUserResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('survey.name')->label('Survei')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('user.name')->label('Peserta')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('status')
+                TextColumn::make('survey.name')->label('Survei')->searchable()->sortable(),
+                TextColumn::make('user.name')->label('Peserta')->searchable()->sortable(),
+                TextColumn::make('status')
                     ->badge()
                     ->color(fn(string $state) => $state === 'approved' ? 'success' : 'warning'),
-                Tables\Columns\TextColumn::make('score')->numeric()->label('Skor')->sortable(),
-                Tables\Columns\TextColumn::make('registered_at')->date()->label('Terdaftar')->sortable(),
+                TextColumn::make('score')->numeric()->label('Skor')->sortable(),
+                TextColumn::make('registered_at')->date()->label('Terdaftar')->sortable(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('survey_id')->label('Survei')
+                SelectFilter::make('survey_id')->label('Survei')
                     ->options(fn() => Survey::orderBy('name')->pluck('name', 'id')),
-                Tables\Filters\SelectFilter::make('status')
+                SelectFilter::make('status')
                     ->options(['registered' => 'registered', 'approved' => 'approved']),
-                Tables\Filters\Filter::make('registered_at')->form([
-                    Forms\Components\DatePicker::make('from'),
-                    Forms\Components\DatePicker::make('until'),
+                Filter::make('registered_at')->form([
+                    DatePicker::make('from'),
+                    DatePicker::make('until'),
                 ])->query(function ($query, array $data) {
                     return $query
                         ->when($data['from'] ?? null, fn($qq, $d) => $qq->whereDate('registered_at', '>=', $d))
@@ -83,15 +99,15 @@ class SurveyUserResource extends Resource
             ->headerActions([
                 // Tables\Actions\CreateAction::make()->label('Tambah Peserta'),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkAction::make('approveSelected')
+            ->toolbarActions([
+                BulkAction::make('approveSelected')
                     ->label('Approve & Terbitkan Sertifikat')
                     ->icon('heroicon-o-check-badge')
                     ->requiresConfirmation()
                     ->deselectRecordsAfterCompletion() // UI rapi setelah selesai
                     ->action(function (Collection $records): void {
                         try {
-                            $records->each(function (\App\Models\SurveyUser $row) {
+                            $records->each(function (SurveyUser $row) {
                                 if ($row->status !== 'approved') {
                                     $row->update(['status' => 'approved']);
                                     // Ideal: dispatch(new IssueCertificateJob($row->id));
@@ -103,7 +119,7 @@ class SurveyUserResource extends Resource
                                 ->title('Approved & sertifikat diterbitkan')
                                 ->success()
                                 ->send();
-                        } catch (\Throwable $e) {
+                        } catch (Throwable $e) {
                             Notification::make()
                                 ->title('Gagal menerbitkan sebagian/semua sertifikat')
                                 ->body($e->getMessage())
@@ -113,7 +129,7 @@ class SurveyUserResource extends Resource
                             Log::error('Bulk approve error', ['e' => $e]);
                         }
                     }),
-                Tables\Actions\BulkAction::make('unapproveSelected')
+                BulkAction::make('unapproveSelected')
                     ->label('Batal Approve (Bulk)')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
@@ -121,7 +137,7 @@ class SurveyUserResource extends Resource
                     ->deselectRecordsAfterCompletion()
                     ->action(function (Collection $records): void {
                         $count = 0;
-                        $records->each(function (\App\Models\SurveyUser $row) use (&$count) {
+                        $records->each(function (SurveyUser $row) use (&$count) {
                             if ($row->status === 'approved') {
                                 $row->update(['status' => 'registered']);
                                 $count++;
@@ -133,10 +149,10 @@ class SurveyUserResource extends Resource
                             ->success()
                             ->send();
                     }),
-                Tables\Actions\DeleteBulkAction::make(),
+                DeleteBulkAction::make(),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
+            ->recordActions([
+                EditAction::make(),
                 Action::make('approve')
                     ->label('Approve + Sertifikat')
                     ->icon('heroicon-o-check-circle')
@@ -158,7 +174,7 @@ class SurveyUserResource extends Resource
                                     ->danger()
                                     ->send();
                             }
-                        } catch (\Throwable $e) {
+                        } catch (Throwable $e) {
                             Notification::make()
                                 ->title('Error saat menerbitkan sertifikat')
                                 ->body($e->getMessage())
@@ -197,15 +213,15 @@ class SurveyUserResource extends Resource
         }
 
         // Get Active Template with detailed logging
-        $template = \App\Models\CertificateTemplate::where('active', 1)->first();
+        $template = CertificateTemplate::where('active', 1)->first();
 
         // Debug logging
         Log::info('Certificate Template Check', [
             'template_found' => $template ? 'YES' : 'NO',
             'template_id' => $template?->id,
             'template_name' => $template?->name,
-            'total_templates' => \App\Models\CertificateTemplate::count(),
-            'active_templates' => \App\Models\CertificateTemplate::where('active', 1)->count(),
+            'total_templates' => CertificateTemplate::count(),
+            'active_templates' => CertificateTemplate::where('active', 1)->count(),
         ]);
 
         if (!$template) {
@@ -215,7 +231,7 @@ class SurveyUserResource extends Resource
         try {
             self::issueCertificate($row);
             return true;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('Certificate creation failed', ['error' => $e, 'survey_user_id' => $row->id]);
             return false;
         }
@@ -228,7 +244,7 @@ class SurveyUserResource extends Resource
             return;
 
         // 1. Get Active Template
-        $template = \App\Models\CertificateTemplate::where('active', 1)->first();
+        $template = CertificateTemplate::where('active', 1)->first();
         if (!$template) {
             Notification::make()->title('Gagal: Tidak ada template sertifikat yang aktif.')->danger()->send();
             return;
@@ -250,8 +266,8 @@ class SurveyUserResource extends Resource
         $no = "{$cfg->cert_number_prefix}/{$y}/{$m}/{$seq6}";
 
         // 3. Prepare Assets (Base64) for PDF
-        $bgBase64 = \App\Services\CertificateImageService::getBase64Image($template->background_path, 'image/jpeg');
-        $signBase64 = \App\Services\CertificateImageService::getBase64Image($template->signer_image_path, 'image/png');
+        $bgBase64 = CertificateImageService::getBase64Image($template->background_path, 'image/jpeg');
+        $signBase64 = CertificateImageService::getBase64Image($template->signer_image_path, 'image/png');
 
         // QRs
         $verifyUrl = route('certificates.verify', ['no' => $no]);
@@ -307,9 +323,9 @@ class SurveyUserResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSurveyUsers::route('/'),
-            'create' => Pages\CreateSurveyUser::route('/create'),
-            'edit' => Pages\EditSurveyUser::route('/{record}/edit'),
+            'index' => ListSurveyUsers::route('/'),
+            'create' => CreateSurveyUser::route('/create'),
+            'edit' => EditSurveyUser::route('/{record}/edit'),
         ];
     }
 }

@@ -2,12 +2,31 @@
 
 namespace App\Filament\Resources\SuratTugasResource\Pages;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Select;
+use App\Models\Survey;
+use Filament\Schemas\Components\Utilities\Set;
+use Carbon\Carbon;
+use App\Models\SurveyUser;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Group;
+use Filament\Forms\Components\ToggleButtons;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Placeholder;
+use Illuminate\Support\HtmlString;
+use App\Models\UserProfile;
+use Exception;
+use App\Services\SuratTugasNumberingService;
 use App\Filament\Resources\SuratTugasResource;
 use App\Models\SuratTugas;
 use App\Models\User;
 use App\Settings\SystemSettings;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -19,7 +38,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
     use InteractsWithForms;
 
     protected static string $resource = SuratTugasResource::class;
-    protected static string $view = 'filament.resources.surat-tugas-resource.pages.create-bulk-surat-tugas';
+    protected string $view = 'filament.resources.surat-tugas-resource.pages.create-bulk-surat-tugas';
     protected static ?string $title = 'Buat Surat Tugas Kolektif';
 
     public ?array $data = [];
@@ -38,17 +57,17 @@ class CreateBulkSuratTugas extends Page implements HasForms
         ]);
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Pilih Survey & Pegawai')
+        return $schema
+            ->components([
+                Section::make('Pilih Survey & Pegawai')
                     ->description('Pilih survey terlebih dahulu, lalu pilih pegawai dari peserta survey tersebut.')
                     ->schema([
-                        Forms\Components\Select::make('survey_id')
+                        Select::make('survey_id')
                             ->label('Survey')
                             ->options(function () {
-                                return \App\Models\Survey::where('is_active', true)
+                                return Survey::where('is_active', true)
                                     ->where(function ($query) {
                                         $query->where('is_multiple', true)
                                             ->orWhereHas('participants', function ($q) {
@@ -64,30 +83,30 @@ class CreateBulkSuratTugas extends Page implements HasForms
                             ->searchable()
                             ->preload()
                             ->live()
-                            ->afterStateUpdated(function ($state, Forms\Set $set) {
+                            ->afterStateUpdated(function ($state, Set $set) {
                                 // Reset user selections when survey changes
                                 $set('mitra_user_ids', []);
                                 $set('pegawai_bps_user_ids', []);
 
                                 // Auto-fill keperluan and dates
                                 if ($state) {
-                                    $survey = \App\Models\Survey::find($state);
+                                    $survey = Survey::find($state);
                                     if ($survey) {
                                         $set('keperluan', "{$survey->name}");
                                         // Auto-fill waktu_mulai/selesai from survey dates
                                         if ($survey->start_date) {
-                                            $set('waktu_mulai', \Carbon\Carbon::parse($survey->start_date)->format('Y-m-d'));
+                                            $set('waktu_mulai', Carbon::parse($survey->start_date)->format('Y-m-d'));
                                         }
                                         if ($survey->end_date) {
-                                            $set('waktu_selesai', \Carbon\Carbon::parse($survey->end_date)->format('Y-m-d'));
+                                            $set('waktu_selesai', Carbon::parse($survey->end_date)->format('Y-m-d'));
                                         }
                                     }
 
                                     // Checker for empty users (those who don't have surat tugas yet)
-                                    $queryMitra = \App\Models\SurveyUser::where('survey_id', $state)
+                                    $queryMitra = SurveyUser::where('survey_id', $state)
                                         ->whereHas('user.roles', fn($q) => $q->where('name', 'Mitra'));
 
-                                    $queryOrganik = \App\Models\SurveyUser::where('survey_id', $state)
+                                    $queryOrganik = SurveyUser::where('survey_id', $state)
                                         ->whereHas('user.roles', fn($q) => $q->where('name', 'Organik'));
 
                                     if (!$survey->is_multiple) {
@@ -105,7 +124,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                     $hasOrganik = $queryOrganik->exists();
 
                                     if (!$hasMitra && !$hasOrganik) {
-                                        \Filament\Notifications\Notification::make()
+                                        Notification::make()
                                             ->title('Semua petugas pada survey ini sudah memiliki Surat Tugas.')
                                             ->warning()
                                             ->send();
@@ -115,18 +134,18 @@ class CreateBulkSuratTugas extends Page implements HasForms
                             ->columnSpan('full')
                             ->required(),
 
-                        Forms\Components\Select::make('mitra_user_ids')
+                        Select::make('mitra_user_ids')
                             ->label('Pegawai Mitra')
                             ->multiple()
                             ->searchable()
                             ->preload()
-                            ->options(function (Forms\Get $get) {
+                            ->options(function (Get $get) {
                                 $surveyId = $get('survey_id');
                                 if (!$surveyId)
                                     return [];
 
-                                $survey = \App\Models\Survey::find($surveyId);
-                                $query = \App\Models\SurveyUser::where('survey_id', $surveyId)
+                                $survey = Survey::find($surveyId);
+                                $query = SurveyUser::where('survey_id', $surveyId)
                                     ->whereHas('user.roles', function ($q) {
                                         $q->where('name', 'Mitra');
                                     });
@@ -145,21 +164,21 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                         return [$su->user_id => "{$su->user->name} ({$jabatan})"];
                                     });
                             })
-                            ->disabled(fn(Forms\Get $get) => !$get('survey_id'))
+                            ->disabled(fn(Get $get) => !$get('survey_id'))
                             ->helperText('Hanya peserta survey dengan role Mitra'),
 
-                        Forms\Components\Select::make('pegawai_bps_user_ids')
+                        Select::make('pegawai_bps_user_ids')
                             ->label('Pegawai Organik')
                             ->multiple()
                             ->searchable()
                             ->preload()
-                            ->options(function (Forms\Get $get) {
+                            ->options(function (Get $get) {
                                 $surveyId = $get('survey_id');
                                 if (!$surveyId)
                                     return [];
 
-                                $survey = \App\Models\Survey::find($surveyId);
-                                $query = \App\Models\SurveyUser::where('survey_id', $surveyId)
+                                $survey = Survey::find($surveyId);
+                                $query = SurveyUser::where('survey_id', $surveyId)
                                     ->whereHas('user.roles', function ($q) {
                                         $q->where('name', 'Organik');
                                     });
@@ -178,14 +197,14 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                         return [$su->user_id => "{$su->user->name} ({$jabatan})"];
                                     });
                             })
-                            ->disabled(fn(Forms\Get $get) => !$get('survey_id'))
+                            ->disabled(fn(Get $get) => !$get('survey_id'))
                             ->helperText('Hanya peserta survey dengan role Organik'),
                     ])->columns(2),
 
-                Forms\Components\Section::make('Data Surat (Berlaku untuk Semua)')
+                Section::make('Data Surat (Berlaku untuk Semua)')
                     ->schema([
-                        Forms\Components\Group::make()->schema([
-                            Forms\Components\ToggleButtons::make('sumber_jabatan')
+                        Group::make()->schema([
+                            ToggleButtons::make('sumber_jabatan')
                                 ->label('Sumber Jabatan Pegawai')
                                 ->options([
                                     'database' => 'Database',
@@ -196,70 +215,70 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                 ->live()
                                 ->required(),
 
-                            Forms\Components\TextInput::make('jabatan')
+                            TextInput::make('jabatan')
                                 ->label('Jabatan (Manual)')
                                 ->helperText('Berlaku sama untuk semua pegawai terpilih.')
-                                ->required(fn(Forms\Get $get) => $get('sumber_jabatan') === 'manual')
-                                ->visible(fn(Forms\Get $get) => $get('sumber_jabatan') === 'manual')
+                                ->required(fn(Get $get) => $get('sumber_jabatan') === 'manual')
+                                ->visible(fn(Get $get) => $get('sumber_jabatan') === 'manual')
                                 ->maxLength(255),
 
-                            Forms\Components\Hidden::make('kode_klasifikasi')
+                            Hidden::make('kode_klasifikasi')
                                 ->default('KP.650'),
                         ])->columns(2),
 
-                        Forms\Components\Textarea::make('keperluan')
+                        Textarea::make('keperluan')
                             ->label('Keperluan')
                             ->required()
                             ->columnSpanFull(),
 
-                        Forms\Components\TextInput::make('tempat_tugas')
+                        TextInput::make('tempat_tugas')
                             ->label('Tempat Tugas')
                             ->maxLength(255)
                             ->columnSpanFull(),
 
-                        Forms\Components\Group::make()->schema([
-                            Forms\Components\DatePicker::make('tanggal')
+                        Group::make()->schema([
+                            DatePicker::make('tanggal')
                                 ->label('Tanggal Surat')
                                 ->required()
                                 ->default(now())
                                 ->live()
-                                ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                ->afterStateUpdated(function ($state, Set $set) {
                                     if ($state) {
-                                        $year = \Carbon\Carbon::parse($state)->year;
+                                        $year = Carbon::parse($state)->year;
                                         $nextNumber = SuratTugas::getNextNomorUrut($year);
                                         $set('nomor_urut_mulai', $nextNumber);
                                     }
                                 }),
-                            Forms\Components\Toggle::make('abaikan_validasi')
+                            Toggle::make('abaikan_validasi')
                                 ->label('Abaikan Validasi Bentrok Tanggal')
                                 ->helperText('Hanya untuk Admin.')
                                 ->default(false)
                                 ->visible(fn() => auth()->user()?->hasAnyRole(['super_admin', 'Kepala', 'Kasubag'])),
-                            Forms\Components\DatePicker::make('waktu_mulai')
+                            DatePicker::make('waktu_mulai')
                                 ->label('Mulai')
                                 ->default(now()),
-                            Forms\Components\DatePicker::make('waktu_selesai')
+                            DatePicker::make('waktu_selesai')
                                 ->label('Selesai')
                                 ->default(now()),
                         ])->columns(3),
 
-                        Forms\Components\Section::make('Penomoran Surat')
+                        Section::make('Penomoran Surat')
                             ->description('Tentukan nomor urut awal untuk surat tugas yang akan dibuat.')
                             ->schema([
-                                Forms\Components\TextInput::make('nomor_urut_mulai')
+                                TextInput::make('nomor_urut_mulai')
                                     ->label('Nomor Urut Mulai (Surat Tugas)')
                                     ->numeric()
                                     ->required()
                                     ->minValue(1)
                                     ->live(debounce: 500)
-                                    ->default(fn(Forms\Get $get) => SuratTugas::getNextNomorUrut($get('tanggal') ? \Carbon\Carbon::parse($get('tanggal'))->year : now()->year))
+                                    ->default(fn(Get $get) => SuratTugas::getNextNomorUrut($get('tanggal') ? Carbon::parse($get('tanggal'))->year : now()->year))
                                     ->helperText('Nomor urut akan di-increment otomatis untuk setiap pegawai.'),
 
 
 
-                                Forms\Components\Placeholder::make('range_info')
+                                Placeholder::make('range_info')
                                     ->label('Preview Range Nomor')
-                                    ->content(function (Forms\Get $get) {
+                                    ->content(function (Get $get) {
                                         $mitraCount = count($get('mitra_user_ids') ?? []);
                                         $pegawaiCount = count($get('pegawai_bps_user_ids') ?? []);
                                         $totalPegawai = $mitraCount + $pegawaiCount;
@@ -267,7 +286,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
 
                                         // Check if starting number already exists
                                         $tanggal = $get('tanggal');
-                                        $year = $tanggal ? \Carbon\Carbon::parse($tanggal)->year : now()->year;
+                                        $year = $tanggal ? Carbon::parse($tanggal)->year : now()->year;
                                         $exists = SuratTugas::whereYear('tanggal', $year)
                                             ->where('nomor_urut', $start)
                                             ->exists();
@@ -291,45 +310,45 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                             }
                                             $first = $assignedNumbers[0];
                                             $last = end($assignedNumbers);
-                                            return new \Illuminate\Support\HtmlString(
+                                            return new HtmlString(
                                                 ($warning ? '<span class="text-warning-600 dark:text-warning-400">' . $warning . '</span><br>' : '')
                                                 . "{$totalPegawai} pegawai terpilih → Nomor #{$first} s/d #{$last} (nomor terpakai otomatis dilewati)"
                                             );
                                         }
                                         if ($warning) {
-                                            return new \Illuminate\Support\HtmlString(
+                                            return new HtmlString(
                                                 '<span class="text-warning-600 dark:text-warning-400">' . $warning . '</span>'
                                             );
                                         }
                                         return 'Pilih pegawai untuk melihat range nomor';
                                     }),
 
-                                Forms\Components\Placeholder::make('skipped_warning')
+                                Placeholder::make('skipped_warning')
                                     ->label('')
-                                    ->content(function (Forms\Get $get) {
+                                    ->content(function (Get $get) {
                                         $tanggal = $get('tanggal');
                                         if (!$tanggal)
                                             return '';
 
-                                        $year = \Carbon\Carbon::parse($tanggal)->year;
+                                        $year = Carbon::parse($tanggal)->year;
                                         $skipped = SuratTugas::getSkippedNumbers($year);
 
                                         if (empty($skipped))
                                             return '';
 
                                         $formatted = SuratTugas::formatSkippedNumbers($skipped);
-                                        return new \Illuminate\Support\HtmlString(
+                                        return new HtmlString(
                                             '<div class="text-warning-600 dark:text-warning-400 text-sm">'
                                             . '<strong>⚠️ Nomor terlewat di tahun ' . $year . ':</strong> ' . $formatted
                                             . '</div>'
                                         );
                                     })
-                                    ->visible(function (Forms\Get $get) {
+                                    ->visible(function (Get $get) {
                                         $tanggal = $get('tanggal');
                                         if (!$tanggal)
                                             return false;
 
-                                        $year = \Carbon\Carbon::parse($tanggal)->year;
+                                        $year = Carbon::parse($tanggal)->year;
                                         return !empty(SuratTugas::getSkippedNumbers($year));
                                     }),
                             ])->columns(1),
@@ -361,7 +380,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
         $prefix = $settings->surat_prefix ?? 'B';
         $office = $settings->office_code ?? '33210';
         $klasifikasi = $data['kode_klasifikasi'];
-        $year = \Carbon\Carbon::parse($data['tanggal'])->year;
+        $year = Carbon::parse($data['tanggal'])->year;
 
         // Use custom starting number from user input
         $currentUrut = (int) $data['nomor_urut_mulai'] - 1;
@@ -374,7 +393,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
 
         // Pre-load users and profiles to prevent N+1 queries inside the loop
         $profiles = ($sumberJabatan === 'database')
-            ? \App\Models\UserProfile::whereIn('user_id', $userIds)->get()->keyBy('user_id')
+            ? UserProfile::whereIn('user_id', $userIds)->get()->keyBy('user_id')
             : collect();
         $users = User::whereIn('id', $userIds)->get()->keyBy('id');
 
@@ -386,7 +405,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
                         $user = $users->get($userId);
                         $userName = $user ? $user->name : 'Pegawai';
                         $overlapMsg = SuratTugas::formatOverlapMessage($userName, $overlap);
-                        throw new \Exception("Overlap: {$overlapMsg}");
+                        throw new Exception("Overlap: {$overlapMsg}");
                     }
 
                     $currentUrut++;
@@ -395,7 +414,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
                         $currentUrut++;
                     }
 
-                    $nomorSurat = \App\Services\SuratTugasNumberingService::formatNomorSurat($currentUrut, $klasifikasi, $year);
+                    $nomorSurat = SuratTugasNumberingService::formatNomorSurat($currentUrut, $klasifikasi, $year);
 
                     $jabatanPegawai = $jabatanManual;
                     if ($sumberJabatan === 'database') {
@@ -434,7 +453,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
                 ->send();
 
             $this->redirect(SuratTugasResource::getUrl('index'));
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $msg = $e->getMessage();
             $body = str_starts_with($msg, 'Overlap:')
                 ? substr($msg, 9)

@@ -12,10 +12,10 @@ class MySurveys extends Page
 {
     use WithPagination;
 
-    protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-check';
-    protected static ?string $navigationGroup = 'Pengaturan Akun';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-clipboard-document-check';
+    protected static string | \UnitEnum | null $navigationGroup = 'Pengaturan Akun';
     protected static ?string $title = 'Survei Saya';
-    protected static string $view = 'filament.pages.my-surveys';
+    protected string $view = 'filament.pages.my-surveys';
 
     public string $search = '';
     public string $sortBy = 'surveys.start_date';

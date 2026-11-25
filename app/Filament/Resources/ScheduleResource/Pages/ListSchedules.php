@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ScheduleResource\Pages;
 
+use Filament\Actions\CreateAction;
 use App\Filament\Resources\ScheduleResource;
 use Filament\Actions;
 use Filament\Actions\Action;
@@ -17,7 +18,7 @@ class ListSchedules extends ListRecords
             Action::make('presensi')
                 ->url(route('presensi'))
                 ->color('warning'),
-            Actions\CreateAction::make(),
+            CreateAction::make(),
         ];
     }
 }

@@ -2,10 +2,9 @@
 
 namespace App\Filament\Pages\Auth;
 
-use Filament\Pages\Auth\Login as BaseLogin;
 use Illuminate\Contracts\Support\Htmlable;
 
-class Login extends BaseLogin
+class Login extends \Filament\Auth\Pages\Login
 {
     protected static string $view = 'filament.pages.auth.login';
 

@@ -2,6 +2,9 @@
 
 namespace App\Filament\Resources\DailyActivityResource\Pages;
 
+use App\Services\DailyActivityAiService;
+use Throwable;
+use App\Models\DailyActivity;
 use App\Filament\Resources\DailyActivityResource;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
@@ -72,14 +75,14 @@ class CreateDailyActivity extends CreateRecord
         if (!empty($raw) && (empty($final) || $final === $raw)) {
             try {
                 $user = Auth::user();
-                $aiService = app(\App\Services\DailyActivityAiService::class);
+                $aiService = app(DailyActivityAiService::class);
                 $formal = $aiService->formalize($raw, [
                     'user_name' => $user?->name ?? 'Pegawai',
                     'tanggal' => $data['activity_date'] ?? now()->format('d F Y'),
                 ]);
                 $data['ai_formal_content'] = $formal;
                 $data['final_content'] = $formal;
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 Log::warning('Auto polish AI on web create: ' . $e->getMessage());
                 if (empty($data['final_content'])) {
                     $data['final_content'] = $raw;
@@ -111,7 +114,7 @@ class CreateDailyActivity extends CreateRecord
 
             DB::transaction(function () use ($sharedReportIds, $attachments) {
                 foreach ($this->batchRemainingDates as $date) {
-                    /** @var \App\Models\DailyActivity $newRecord */
+                    /** @var DailyActivity $newRecord */
                     $newRecord = $this->record->replicate();
                     $newRecord->activity_date = $date->toDateString();
                     $newRecord->save();

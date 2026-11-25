@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\Auth;
 
+use Exception;
+use Illuminate\Support\Str;
+use Filament\Notifications\Notification;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -27,7 +30,7 @@ class SsoController extends Controller
 
         try {
             $ssoUser = Socialite::driver('sipetra')->user();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('SIPETRA SSO Callback error: ' . $e->getMessage(), [
                 'exception' => $e,
             ]);
@@ -55,7 +58,7 @@ class SsoController extends Controller
         if ($user) {
             $user->update($data);
         } else {
-            $data['password'] = bcrypt(\Illuminate\Support\Str::random(24));
+            $data['password'] = bcrypt(Str::random(24));
             $user = User::create($data);
             
             // Assign role default (jika pakai Spatie Permission)
@@ -64,7 +67,7 @@ class SsoController extends Controller
                 // Pastikan role ini ada, atau bisa disesuaikan nanti.
                 try {
                     $user->assignRole('pegawai');
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     // Ignore if role doesn't exist
                 }
             }
@@ -132,7 +135,7 @@ class SsoController extends Controller
                     // Fallback: simpan URL langsung jika respons download bukan 200
                     $updateData['avatar_path'] = $fullAvatarUrl;
                 }
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::warning('Gagal mengunduh avatar SIPETRA: ' . $e->getMessage());
                 // Fallback: simpan URL langsung jika request gagal
                 $updateData['avatar_path'] = $fullAvatarUrl;
@@ -142,7 +145,7 @@ class SsoController extends Controller
         $profile->update($updateData);
 
         Auth::login($user);
-        \Filament\Notifications\Notification::make()
+        Notification::make()
             ->title('Profil Berhasil Disinkronkan dari SIPETRA')
             ->success()
             ->send();

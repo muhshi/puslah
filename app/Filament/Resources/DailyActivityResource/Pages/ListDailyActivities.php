@@ -2,6 +2,12 @@
 
 namespace App\Filament\Resources\DailyActivityResource\Pages;
 
+use App\Filament\Widgets\DailyActivityCalendarWidget;
+use Filament\Actions\Action;
+use SergiX44\Nutgram\Nutgram;
+use Throwable;
+use Filament\Support\Enums\Width;
+use Filament\Actions\CreateAction;
 use App\Filament\Resources\DailyActivityResource;
 use Filament\Actions;
 use Filament\Notifications\Notification;
@@ -21,7 +27,7 @@ class ListDailyActivities extends ListRecords
     protected function getHeaderWidgets(): array
     {
         return [
-            \App\Filament\Widgets\DailyActivityCalendarWidget::class,
+            DailyActivityCalendarWidget::class,
         ];
     }
 
@@ -33,7 +39,7 @@ class ListDailyActivities extends ListRecords
 
         return [
             // 1. Status / Pengaturan Telegram (Ringkas)
-            Actions\Action::make('connect_telegram')
+            Action::make('connect_telegram')
                 ->label(fn () => !empty(Auth::user()?->telegram_chat_id) ? 'Telegram 🟢' : 'Hubungkan Telegram 📱')
                 ->color('gray')
                 ->icon('heroicon-m-chat-bubble-left-right')
@@ -47,7 +53,7 @@ class ListDailyActivities extends ListRecords
                     return "Kirim catatan harian dan foto dokumentasi bukti dukung dengan santai kapan saja melalui Telegram tanpa perlu buka web.";
                 })
                 ->extraModalFooterActions([
-                    Actions\Action::make('ping_bot')
+                    Action::make('ping_bot')
                         ->label('Kirim Pesan Tes 🔔')
                         ->color('info')
                         ->visible(fn () => !empty(Auth::user()?->telegram_chat_id))
@@ -56,7 +62,7 @@ class ListDailyActivities extends ListRecords
                             if (!$currentUser || empty($currentUser->telegram_chat_id)) return;
 
                             try {
-                                $bot = app(\SergiX44\Nutgram\Nutgram::class);
+                                $bot = app(Nutgram::class);
                                 $bot->sendMessage(
                                     text: "🔔 *Tes Koneksi Telegram Puslah Berhasil!*\n\nHalo *{$currentUser->name}*, akun Puslah Anda terhubung aktif dengan bot @{$botUsername}.",
                                     chat_id: (int) $currentUser->telegram_chat_id,
@@ -64,12 +70,12 @@ class ListDailyActivities extends ListRecords
                                 );
 
                                 Notification::make()->success()->title('Pesan Tes Terkirim! 🔔')->send();
-                            } catch (\Throwable $e) {
+                            } catch (Throwable $e) {
                                 Notification::make()->danger()->title('Gagal Kirim Pesan')->body($e->getMessage())->send();
                             }
                         }),
 
-                    Actions\Action::make('disconnect_telegram')
+                    Action::make('disconnect_telegram')
                         ->label('Putus Hubungan Akun')
                         ->color('danger')
                         ->icon('heroicon-m-link-slash')
@@ -85,7 +91,7 @@ class ListDailyActivities extends ListRecords
                             }
                         }),
                 ])
-                ->modalSubmitAction(function (\Filament\Actions\StaticAction $action) {
+                ->modalSubmitAction(function (Action $action) {
                     $currentUser = Auth::user();
                     if (!empty($currentUser?->telegram_chat_id)) {
                         return false;
@@ -110,7 +116,7 @@ class ListDailyActivities extends ListRecords
                         ->title('Tautan Bot Siap!')
                         ->body("Buka bot @{$botUsername} di Telegram Anda dan tekan Mulai/Start.")
                         ->actions([
-                            \Filament\Notifications\Actions\Action::make('buka_telegram')
+                            Action::make('buka_telegram')
                                 ->label('Buka Bot Telegram 🚀')
                                 ->url($telegramUrl, shouldOpenInNewTab: true),
                         ])
@@ -119,19 +125,19 @@ class ListDailyActivities extends ListRecords
                 }),
 
             // 2. Wadah Berkas KIPAPP (Modal Lengkap)
-            Actions\Action::make('my_shared_reports')
+            Action::make('my_shared_reports')
                 ->label('Wadah KIPAPP 📁')
                 ->color('gray')
                 ->icon('heroicon-m-folder')
                 ->modalHeading('Daftar Wadah Berkas KIPAPP (E-Kinerja)')
                 ->modalDescription('Koleksi tautan publik resmi yang pernah Anda buat untuk disematkan sebagai bukti dukung di aplikasi E-Kinerja.')
-                ->modalWidth(\Filament\Support\Enums\MaxWidth::FourExtraLarge)
+                ->modalWidth(Width::FourExtraLarge)
                 ->modalSubmitAction(false)
                 ->modalCancelActionLabel('Tutup')
                 ->modalContent(fn () => view('filament.pages.shared-reports-modal')),
 
             // 3. Tambah Kegiatan (Primary)
-            Actions\CreateAction::make()
+            CreateAction::make()
                 ->label('Tambah Kegiatan')
                 ->icon('heroicon-m-plus'),
         ];

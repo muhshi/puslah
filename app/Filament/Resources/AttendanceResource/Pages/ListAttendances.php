@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\AttendanceResource\Pages;
 
+use Filament\Support\Enums\Width;
 use App\Filament\Resources\AttendanceResource;
 use App\Models\Attendance;
 use App\Models\Leave;
@@ -13,7 +14,6 @@ use Carbon\Carbon;
 use Filament\Actions;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\ListRecords;
-use Filament\Support\Enums\MaxWidth;
 
 class ListAttendances extends ListRecords
 {
@@ -53,7 +53,7 @@ class ListAttendances extends ListRecords
                 })
                 ->modalHeading('Pemantauan Presensi Petugas Kegiatan')
                 ->modalDescription('Pantau presensi datang dan pulang petugas kegiatan setiap hari, dan ingatkan langsung via WhatsApp.')
-                ->modalWidth(MaxWidth::FourExtraLarge)
+                ->modalWidth(Width::FourExtraLarge)
                 ->modalSubmitAction(false)
                 ->modalCancelActionLabel('Tutup')
                 ->modalContent(function () {

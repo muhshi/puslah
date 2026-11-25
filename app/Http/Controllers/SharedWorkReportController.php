@@ -2,6 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Throwable;
+use Illuminate\Support\Facades\Log;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Str;
+use App\Services\DailyActivityAiService;
 use App\Models\SharedWorkReport;
 use App\Services\WorkReportGeneratorService;
 use Illuminate\Http\Request;
@@ -67,13 +73,13 @@ class SharedWorkReportController extends Controller
         $publicUrl = route('shared-work-report.show', ['uuid' => $report->uuid]);
         $qrBase64 = null;
         try {
-            $qrSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(90)->margin(0)->generate($publicUrl);
+            $qrSvg = QrCode::format('svg')->size(90)->margin(0)->generate($publicUrl);
             $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('QR Code generation in PDF error: ' . $e->getMessage());
+        } catch (Throwable $e) {
+            Log::warning('QR Code generation in PDF error: ' . $e->getMessage());
         }
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.shared-work-report-book', [
+        $pdf = Pdf::loadView('pdf.shared-work-report-book', [
             'report' => $report,
             'activities' => $activities,
             'user' => $user,
@@ -81,7 +87,7 @@ class SharedWorkReportController extends Controller
             'publicUrl' => $publicUrl,
         ])->setPaper('a4', 'portrait');
 
-        $safeTitle = \Illuminate\Support\Str::slug($report->title) ?: 'bukti-dukung';
+        $safeTitle = Str::slug($report->title) ?: 'bukti-dukung';
         $fileName = "BUKTI_DUKUNG_{$safeTitle}_" . date('Ymd') . ".pdf";
 
         return $pdf->download($fileName);
@@ -105,7 +111,7 @@ class SharedWorkReportController extends Controller
         }
 
         try {
-            $aiService = app(\App\Services\DailyActivityAiService::class);
+            $aiService = app(DailyActivityAiService::class);
             $summary = $aiService->generateMonthlySummary($activities, $report->title);
 
             return response()->json([
@@ -114,7 +120,7 @@ class SharedWorkReportController extends Controller
                 'summary' => $summary,
                 'total_activities' => $activities->count(),
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal merangkum dengan AI: ' . $e->getMessage()

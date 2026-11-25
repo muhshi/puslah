@@ -2,12 +2,27 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+use Filament\Schemas\Components\Group;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Actions\ViewAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\BulkAction;
+use Spatie\Permission\Models\Role;
+use Illuminate\Database\Eloquent\Collection;
+use Filament\Notifications\Notification;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\UserResource\Pages\ListUsers;
+use App\Filament\Resources\UserResource\Pages\ListUserActivities;
 use App\Filament\Resources\UserResource\Pages;
 use App\Filament\Resources\UserResource\RelationManagers;
 use App\Models\User;
 use Filament\Forms;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -19,49 +34,49 @@ class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-user-group';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-user-group';
 
-    protected static ?string $navigationGroup = 'Manajemen Pengguna';
+    protected static string | \UnitEnum | null $navigationGroup = 'Manajemen Pengguna';
     protected static ?string $navigationLabel = 'User';
     protected static ?int $navigationSort = 99;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Section::make()
                     ->schema([
-                        Forms\Components\TextInput::make('name')
+                        TextInput::make('name')
                             ->required(),
-                        Forms\Components\TextInput::make('email')
+                        TextInput::make('email')
                             ->email()
                             ->required(),
                         // Using Select Component
-                        Forms\Components\Select::make('roles')
+                        Select::make('roles')
                             ->relationship('roles', 'name')
                             ->multiple()
                             ->preload()
                             ->searchable(),
-                        Forms\Components\TextInput::make('password')
+                        TextInput::make('password')
                             ->password()
                             ->revealable()
                             ->dehydrateStateUsing(fn($state) => Hash::make($state))
                             ->dehydrated(fn($state) => filled($state))
                             ->required(fn(string $context): bool => $context === 'create'),
 
-                        Forms\Components\Group::make()
+                        Group::make()
                             ->relationship('profile')
                             ->schema([
-                                Forms\Components\TextInput::make('nip')
+                                TextInput::make('nip')
                                     ->label('NIP')
                                     ->maxLength(50)
                                     ->helperText('Khusus Pegawai BPS'),
 
-                                Forms\Components\TextInput::make('jabatan')
+                                TextInput::make('jabatan')
                                     ->label('Jabatan')
                                     ->maxLength(100),
 
-                                Forms\Components\TextInput::make('pangkat_golongan')
+                                TextInput::make('pangkat_golongan')
                                     ->label('Pangkat/Golongan')
                                     ->placeholder('Contoh: Penata Muda Tingkat 1 / IIIb')
                                     ->maxLength(100)
@@ -75,29 +90,29 @@ class UserResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('profile.nip')
+                TextColumn::make('profile.nip')
                     ->label('NIP')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('profile.jabatan')
+                TextColumn::make('profile.jabatan')
                     ->label('Jabatan')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('email')
+                TextColumn::make('email')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('roles.name')
+                TextColumn::make('roles.name')
                     ->badge()
                     ->separator(',')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('email_verified_at')
+                TextColumn::make('email_verified_at')
                     ->dateTime()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
+                TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -105,28 +120,28 @@ class UserResource extends Resource
             ->filters([
                 //
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('activities')
+            ->recordActions([
+                ViewAction::make(),
+                EditAction::make(),
+                Action::make('activities')
                     ->label('History')
                     ->icon('heroicon-o-clock')
                     ->color('info')
                     ->url(fn ($record) => UserResource::getUrl('activities', ['record' => $record])),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\BulkAction::make('assignRoles')
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    BulkAction::make('assignRoles')
                         ->label('Assign Roles')
                         ->icon('heroicon-o-user-plus')
                         ->form([
-                            Forms\Components\Select::make('roles')
+                            Select::make('roles')
                                 ->label('Pilih Role yang Akan Ditambahkan')
                                 ->multiple()
-                                ->options(\Spatie\Permission\Models\Role::all()->pluck('name', 'name'))
+                                ->options(Role::all()->pluck('name', 'name'))
                                 ->required(),
                         ])
-                        ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
+                        ->action(function (Collection $records, array $data) {
                             foreach ($records as $user) {
                                 $user->syncRoles(array_merge(
                                     $user->roles->pluck('name')->toArray(),
@@ -134,12 +149,12 @@ class UserResource extends Resource
                                 ));
                             }
 
-                            \Filament\Notifications\Notification::make()
+                            Notification::make()
                                 ->title('Berhasil assign role ke ' . $records->count() . ' user')
                                 ->success()
                                 ->send();
                         }),
-                    Tables\Actions\DeleteBulkAction::make(),
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -159,11 +174,11 @@ class UserResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListUsers::route('/'),
+            'index' => ListUsers::route('/'),
             //'create' => Pages\CreateUser::route('/create'),
             //'view' => Pages\ViewUser::route('/{record}'),
             //'edit' => Pages\EditUser::route('/{record}/edit'),
-            'activities' => Pages\ListUserActivities::route('/{record}/activities'),
+            'activities' => ListUserActivities::route('/{record}/activities'),
         ];
     }
 }

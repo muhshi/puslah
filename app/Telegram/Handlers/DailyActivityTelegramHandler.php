@@ -2,6 +2,13 @@
 
 namespace App\Telegram\Handlers;
 
+use Throwable;
+use App\Services\PhotoWatermarkService;
+use SergiX44\Nutgram\Telegram\Properties\ChatAction;
+use App\Settings\SystemSettings;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+use App\Models\SharedWorkReport;
 use App\Models\DailyActivity;
 use App\Models\DailyActivityAttachment;
 use App\Models\SuratTugas;
@@ -357,7 +364,7 @@ class DailyActivityTelegramHandler
                 'user_name' => $user->name,
                 'tanggal' => $activityDate->translatedFormat('d F Y'),
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning('AI Polish direct error: ' . $e->getMessage());
         }
 
@@ -546,7 +553,7 @@ class DailyActivityTelegramHandler
         $downloaded = false;
         try {
             $downloaded = $bot->downloadFile($file, $fullPath);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning("Nutgram downloadFile error: " . $e->getMessage());
         }
 
@@ -584,7 +591,7 @@ class DailyActivityTelegramHandler
             try {
                 $albumLock = Cache::lock("tg_album_{$bot->chatId()}_{$mediaGroupId}", 30);
                 $albumLock->block(15);
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 Log::warning('Album lock warning: ' . $e->getMessage());
             }
         }
@@ -641,7 +648,7 @@ class DailyActivityTelegramHandler
                         ]);
                         $activity->ai_formal_content = $formalContent;
                         $activity->final_content = $formalContent;
-                    } catch (\Throwable $e) {
+                    } catch (Throwable $e) {
                         Log::warning('AI Polish album caption error: ' . $e->getMessage());
                         $activity->ai_formal_content = $caption;
                         $activity->final_content = $caption;
@@ -675,7 +682,7 @@ class DailyActivityTelegramHandler
                             'user_name' => $user->name,
                             'tanggal' => $activityDate->translatedFormat('d F Y'),
                         ]);
-                    } catch (\Throwable $e) {
+                    } catch (Throwable $e) {
                         Log::warning('AI Polish photo caption error: ' . $e->getMessage());
                     }
                 }
@@ -756,7 +763,7 @@ class DailyActivityTelegramHandler
             $watermarkSuccess = false;
             if ($shouldStamp) {
                 try {
-                    $watermarkService = app(\App\Services\PhotoWatermarkService::class);
+                    $watermarkService = app(PhotoWatermarkService::class);
                     $watermarkSuccess = $watermarkService->applyWatermark($fullPath, [
                         'latitude' => $latitude,
                         'longitude' => $longitude,
@@ -769,7 +776,7 @@ class DailyActivityTelegramHandler
                         clearstatcache(true, $fullPath);
                         $fileSize = filesize($fullPath);
                     }
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     Log::warning('Gagal membakar watermark foto telegram: ' . $e->getMessage());
                 }
             }
@@ -861,7 +868,7 @@ class DailyActivityTelegramHandler
                             parse_mode: 'Markdown'
                         );
                         $edited = true;
-                    } catch (\Throwable $e) {
+                    } catch (Throwable $e) {
                         Log::info("Nutgram editMessageText album note: " . $e->getMessage());
                     }
                 }
@@ -896,7 +903,7 @@ class DailyActivityTelegramHandler
             if ($albumLock) {
                 try {
                     $albumLock->release();
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     // Abaikan release exception
                 }
             }
@@ -946,7 +953,7 @@ class DailyActivityTelegramHandler
         $downloaded = false;
         try {
             $downloaded = $bot->downloadFile($file, $fullPath);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning("Nutgram download document error: " . $e->getMessage());
         }
 
@@ -978,7 +985,7 @@ class DailyActivityTelegramHandler
             try {
                 $albumLock = Cache::lock("tg_album_{$bot->chatId()}_{$mediaGroupId}", 30);
                 $albumLock->block(15);
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 Log::warning('Album document lock warning: ' . $e->getMessage());
             }
         }
@@ -1033,7 +1040,7 @@ class DailyActivityTelegramHandler
                         ]);
                         $activity->ai_formal_content = $formalContent;
                         $activity->final_content = $formalContent;
-                    } catch (\Throwable $e) {
+                    } catch (Throwable $e) {
                         Log::warning('AI Polish doc caption error: ' . $e->getMessage());
                         $activity->ai_formal_content = $caption;
                         $activity->final_content = $caption;
@@ -1065,7 +1072,7 @@ class DailyActivityTelegramHandler
                             'user_name' => $user->name,
                             'tanggal' => $activityDate->translatedFormat('d F Y'),
                         ]);
-                    } catch (\Throwable $e) {
+                    } catch (Throwable $e) {
                         Log::warning('AI Polish doc error: ' . $e->getMessage());
                     }
                 }
@@ -1172,7 +1179,7 @@ class DailyActivityTelegramHandler
             if ($albumLock) {
                 try {
                     $albumLock->release();
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     // Abaikan release exception
                 }
             }
@@ -1191,7 +1198,7 @@ class DailyActivityTelegramHandler
         $voice = $msg->voice ?? $msg->audio;
         if (!$voice || empty($voice->file_id)) return;
 
-        $bot->sendChatAction(\SergiX44\Nutgram\Telegram\Properties\ChatAction::RECORD_VOICE);
+        $bot->sendChatAction(ChatAction::RECORD_VOICE);
 
         // Download file suara dari Telegram
         $file = $bot->getFile($voice->file_id);
@@ -1206,7 +1213,7 @@ class DailyActivityTelegramHandler
         $downloaded = false;
         try {
             $downloaded = $bot->downloadFile($file, $tempPath);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning("Voice downloadFile error: " . $e->getMessage());
         }
 
@@ -1284,7 +1291,7 @@ class DailyActivityTelegramHandler
                 chat_id: $bot->chatId(),
                 parse_mode: 'Markdown'
             );
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error("Voice processing error: " . $e->getMessage());
             $bot->sendMessage(
                 text: "⚠️ Terjadi kendala saat memproses rekaman suara dengan AI: " . $e->getMessage() . "\n\nSilakan kirimkan laporan dalam bentuk teks atau coba lagi.",
@@ -1338,7 +1345,7 @@ class DailyActivityTelegramHandler
                 chat_id: $bot->chatId(),
                 parse_mode: 'Markdown'
             );
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('AI Polish Error via Telegram: ' . $e->getMessage());
             $bot->sendMessage(
                 text: "⚠️ Gagal memoles narasi dengan AI: " . $e->getMessage(),
@@ -1406,7 +1413,7 @@ class DailyActivityTelegramHandler
     public function getOfficeCoordinates(): array
     {
         try {
-            $settings = app(\App\Settings\SystemSettings::class);
+            $settings = app(SystemSettings::class);
             if (!empty($settings->default_office_lat) && !empty($settings->default_office_lng) && $settings->default_office_lat != 0) {
                 return [
                     'latitude' => round((float) $settings->default_office_lat, 8),
@@ -1414,7 +1421,7 @@ class DailyActivityTelegramHandler
                     'name' => $settings->default_office_name ?? 'BPS Kabupaten Demak',
                 ];
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // ignore
         }
 
@@ -1428,7 +1435,7 @@ class DailyActivityTelegramHandler
     /**
      * Deteksi dan kaitkan satu atau beberapa wadah KIPAPP berdasarkan semua hashtag (#wilkerstat, #inovasi, dsb).
      */
-    protected function resolveSharedWorkReports(User $user, string $text): \Illuminate\Support\Collection
+    protected function resolveSharedWorkReports(User $user, string $text): Collection
     {
         if (empty($text)) {
             return collect();
@@ -1437,10 +1444,10 @@ class DailyActivityTelegramHandler
         $reports = collect();
         if (preg_match_all('/#([a-zA-Z0-9_\-]+)/', $text, $matches)) {
             foreach ($matches[1] as $tag) {
-                $slug = \Illuminate\Support\Str::slug($tag);
+                $slug = Str::slug($tag);
                 if (empty($slug)) continue;
 
-                $found = \App\Models\SharedWorkReport::where('user_id', $user->id)
+                $found = SharedWorkReport::where('user_id', $user->id)
                     ->where('is_active', true)
                     ->where(function ($q) use ($slug) {
                         $q->where('tag_slug', $slug)
@@ -1461,7 +1468,7 @@ class DailyActivityTelegramHandler
     /**
      * Backward-compatible helper untuk mengambil wadah pertama.
      */
-    protected function resolveSharedWorkReport(User $user, string $text): ?\App\Models\SharedWorkReport
+    protected function resolveSharedWorkReport(User $user, string $text): ?SharedWorkReport
     {
         return $this->resolveSharedWorkReports($user, $text)->first();
     }
@@ -1651,7 +1658,7 @@ class DailyActivityTelegramHandler
                 if ($aiDate instanceof Carbon) {
                     return $aiDate;
                 }
-            } catch (\Throwable $e) {}
+            } catch (Throwable $e) {}
         }
 
         // 7. Fallback EXIF metadata foto jika diambil sebelum hari ini (backdate foto asli)

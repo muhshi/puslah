@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class Sppd extends Model
@@ -79,7 +80,7 @@ class Sppd extends Model
 
         for ($i = 1; $i <= $maxUrut; $i++) {
             if (isset($existingMap[$i])) {
-                $date = \Carbon\Carbon::parse($existingMap[$i])->locale('id');
+                $date = Carbon::parse($existingMap[$i])->locale('id');
                 $currentMonthName = $date->translatedFormat('F');
             } else {
                 $missingByMonth[$currentMonthName][] = $i;
