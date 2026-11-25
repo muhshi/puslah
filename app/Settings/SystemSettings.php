@@ -34,6 +34,19 @@ class SystemSettings extends Settings
     public string $ppk_nip;
     public string $ppk_title;
 
+    // Official User IDs (linked to users table)
+    public ?int $kepala_user_id;
+    public ?int $ppk_user_id;
+    public ?int $bendahara_user_id;
+
+    // Bendahara Settings
+    public string $bendahara_name;
+    public string $bendahara_nip;
+    public string $bendahara_title;
+
+    // Pelatihan Template Override (optional)
+    public ?string $undangan_pelatihan_template_path;
+
     // AI Settings
     public ?string $gemini_api_key;
     public ?string $gemini_model;
@@ -66,6 +79,13 @@ class SystemSettings extends Settings
             'ppk_name' => '-',
             'ppk_nip' => '-',
             'ppk_title' => 'Pejabat Pembuat Komitmen',
+            'kepala_user_id' => null,
+            'ppk_user_id' => null,
+            'bendahara_user_id' => null,
+            'bendahara_name' => '-',
+            'bendahara_nip' => '-',
+            'bendahara_title' => 'Bendahara Pengeluaran',
+            'undangan_pelatihan_template_path' => null,
             'gemini_api_key' => null,
             'gemini_model' => 'gemini-3.5-flash',
         ];

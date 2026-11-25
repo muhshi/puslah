@@ -55,6 +55,11 @@ composer dev
 ## Changelog
 
 ### 2026-11-25
+- **Modernisasi Pengaturan Pejabat, Kompatibilitas Shield v4 & Perbaikan UX:**
+  - **Pengaturan Sistem 4 Tab (`SystemSettingsPage.php`):** Merombak layout pengaturan menjadi 4 tab penuh (`Pejabat & Persuratan`, `Template Dokumen`, `Kantor & Presensi`, `Keamanan & AI`), mengganti input manual Kepala BPS dan PPK menjadi dropdown pegawai internal non-Mitra (`OfficialSettingsSyncService`) serta menambahkan konfigurasi **Bendahara Pengeluaran** dengan sinkronisasi otomatis ke properti lama.
+  - **Perapian Menu & Upload File:** Mengubah label grup dan menu `Survei` → **Kegiatan** (`Manajemen Kegiatan`), menyembunyikan 3 field template/TTD lama yang tidak dipakai dari UI, menambahkan `->disk('public')` + status hint pada upload template, serta mengganti `MapPicker` dengan `MapWithSearch` agar peta Leaflet tampil mulus di dalam tab.
+  - **Sinkronisasi Filament Shield v4:** Mengaktifkan `define_via_gate` untuk `super_admin`, mengecualikan `DailyActivityResource` & `SharedWorkReportResource`, meregenerasi 15 policy ke format PascalCase v4 (`shield:generate`), serta menambahkan migrasi non-destructive translasi permission v3 → v4 untuk seluruh role (`FilamentShieldV4CompatibilityTest`).
+  - **UX Modal Wadah KIPAPP (`DailyActivityResource.php`):** Mengganti multi-select dropdown pada modal *Atur Wadah KIPAPP* menjadi `CheckboxList` dengan pencarian & scroll internal agar tidak menutupi tombol simpan.
 - **Upgrade Stack ke Laravel 13, Filament v5 & Livewire v4 (`PHP 8.4`):**
   - **Framework & Runtime:** Upgrade bertahap `laravel/framework` (`v11` → `v12` → `v13.44.1`), `livewire/livewire` (`v4.4.10`), `pestphp/pest` (`v4.7.8`), `spatie/laravel-backup` (`v10.5.0`), `barryvdh/laravel-dompdf` (`v3.1.2`), `flowframe/laravel-trend` (`v0.5.0`), serta update `Dockerfile` ke `dunglas/frankenphp:php8.4`.
   - **Filament v5 & Plugin:** Upgrade `filament/filament` (`v3` → `v4` → `v5.12.0`), `bezhansalleh/filament-shield` (`v4.3.1`), `saade/filament-fullcalendar` (`v4.0.1`), `pxlrbt/filament-excel` (`v3.6.1`), `pxlrbt/filament-activity-log` (`v2.2.0`), dan `dotswan/filament-map-picker` (`v2.3.3`). Menghapus paket tidak terpakai (`humaidem/filament-map-picker`, `joshembling/image-optimizer`) serta menjaga migrasi Pulse lama tetap no-op.

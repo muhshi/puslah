@@ -24,6 +24,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Support\Enums\Width;
 use App\Filament\Forms\Components\MapWithSearch;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Tables\Grouping\Group;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Infolists\Components\TextEntry;
@@ -913,12 +914,12 @@ class DailyActivityResource extends Resource
                                 ->label('Kegiatan')
                                 ->state(fn (DailyActivity $record) => $record->activity_date->translatedFormat('l, d F Y') . ' — ' . Str::limit($record->final_content, 120)),
 
-                            Select::make('shared_work_reports')
+                            CheckboxList::make('shared_work_reports')
                                 ->label('Pilih Wadah KIPAPP')
-                                ->multiple()
                                 ->searchable()
-                                ->preload()
+                                ->bulkToggleable()
                                 ->live()
+                                ->columns(1)
                                 ->options(function (DailyActivity $record) {
                                     $userId = $record->user_id ?: Auth::id();
                                     return SharedWorkReport::where('user_id', $userId)
@@ -926,8 +927,8 @@ class DailyActivityResource extends Resource
                                         ->latest()
                                         ->pluck('title', 'id');
                                 })
-                                ->placeholder('Pilih satu atau beberapa wadah...')
                                 ->helperText('Pilih wadah yang ingin ditautkan. Anda juga bisa mengosongkan pilihan untuk mengeluarkan kegiatan dari semua wadah.')
+                                ->extraAttributes(['class' => 'max-h-56 overflow-y-auto pr-2'])
                                 ->required(false),
 
                             TextEntry::make('wadah_links_preview')

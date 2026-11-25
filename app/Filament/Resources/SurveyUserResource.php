@@ -47,14 +47,16 @@ class SurveyUserResource extends Resource
     protected static ?string $model = SurveyUser::class;
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-m-user-group';
-    protected static string | \UnitEnum | null $navigationGroup = 'Manajemen Survei';
-    protected static ?string $navigationLabel = 'Peserta Survei';
+    protected static string | \UnitEnum | null $navigationGroup = 'Manajemen Kegiatan';
+    protected static ?string $navigationLabel = 'Peserta Kegiatan';
+    protected static ?string $modelLabel = 'Peserta Kegiatan';
+    protected static ?string $pluralModelLabel = 'Peserta Kegiatan';
 
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
             Select::make('survey_id')
-                ->label('Survei')
+                ->label('Kegiatan')
                 ->options(fn() => Survey::orderBy('name')->pluck('name', 'id'))->searchable()->required(),
 
             Select::make('user_id')
@@ -74,7 +76,7 @@ class SurveyUserResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('survey.name')->label('Survei')->searchable()->sortable(),
+                TextColumn::make('survey.name')->label('Kegiatan')->searchable()->sortable(),
                 TextColumn::make('user.name')->label('Peserta')->searchable()->sortable(),
                 TextColumn::make('status')
                     ->badge()
@@ -83,7 +85,7 @@ class SurveyUserResource extends Resource
                 TextColumn::make('registered_at')->date()->label('Terdaftar')->sortable(),
             ])
             ->filters([
-                SelectFilter::make('survey_id')->label('Survei')
+                SelectFilter::make('survey_id')->label('Kegiatan')
                     ->options(fn() => Survey::orderBy('name')->pluck('name', 'id')),
                 SelectFilter::make('status')
                     ->options(['registered' => 'registered', 'approved' => 'approved']),

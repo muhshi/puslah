@@ -1,108 +1,75 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Policies;
 
-use App\Models\User;
+use Illuminate\Foundation\Auth\User as AuthUser;
 use App\Models\Leave;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class LeavePolicy
 {
     use HandlesAuthorization;
-
-    /**
-     * Determine whether the user can view any models.
-     */
-    public function viewAny(User $user): bool
+    
+    public function viewAny(AuthUser $authUser): bool
     {
-        return $user->can('view_any_leave');
+        return $authUser->can('ViewAny:Leave');
     }
 
-    /**
-     * Determine whether the user can view the model.
-     */
-    public function view(User $user, Leave $leave): bool
+    public function view(AuthUser $authUser, Leave $leave): bool
     {
-        return $user->can('view_leave');
+        return $authUser->can('View:Leave');
     }
 
-    /**
-     * Determine whether the user can create models.
-     */
-    public function create(User $user): bool
+    public function create(AuthUser $authUser): bool
     {
-        return $user->can('create_leave');
+        return $authUser->can('Create:Leave');
     }
 
-    /**
-     * Determine whether the user can update the model.
-     */
-    public function update(User $user, Leave $leave): bool
+    public function update(AuthUser $authUser, Leave $leave): bool
     {
-        return $user->can('update_leave');
+        return $authUser->can('Update:Leave');
     }
 
-    /**
-     * Determine whether the user can delete the model.
-     */
-    public function delete(User $user, Leave $leave): bool
+    public function delete(AuthUser $authUser, Leave $leave): bool
     {
-        return $user->can('delete_leave');
+        return $authUser->can('Delete:Leave');
     }
 
-    /**
-     * Determine whether the user can bulk delete.
-     */
-    public function deleteAny(User $user): bool
+    public function deleteAny(AuthUser $authUser): bool
     {
-        return $user->can('delete_any_leave');
+        return $authUser->can('DeleteAny:Leave');
     }
 
-    /**
-     * Determine whether the user can permanently delete.
-     */
-    public function forceDelete(User $user, Leave $leave): bool
+    public function restore(AuthUser $authUser, Leave $leave): bool
     {
-        return $user->can('{{ ForceDelete }}');
+        return $authUser->can('Restore:Leave');
     }
 
-    /**
-     * Determine whether the user can permanently bulk delete.
-     */
-    public function forceDeleteAny(User $user): bool
+    public function forceDelete(AuthUser $authUser, Leave $leave): bool
     {
-        return $user->can('{{ ForceDeleteAny }}');
+        return $authUser->can('ForceDelete:Leave');
     }
 
-    /**
-     * Determine whether the user can restore.
-     */
-    public function restore(User $user, Leave $leave): bool
+    public function forceDeleteAny(AuthUser $authUser): bool
     {
-        return $user->can('restore_leave');
+        return $authUser->can('ForceDeleteAny:Leave');
     }
 
-    /**
-     * Determine whether the user can bulk restore.
-     */
-    public function restoreAny(User $user): bool
+    public function restoreAny(AuthUser $authUser): bool
     {
-        return $user->can('restore_any_leave');
+        return $authUser->can('RestoreAny:Leave');
     }
 
-    /**
-     * Determine whether the user can replicate.
-     */
-    public function replicate(User $user, Leave $leave): bool
+    public function replicate(AuthUser $authUser, Leave $leave): bool
     {
-        return $user->can('{{ Replicate }}');
+        return $authUser->can('Replicate:Leave');
     }
 
-    /**
-     * Determine whether the user can reorder.
-     */
-    public function reorder(User $user): bool
+    public function reorder(AuthUser $authUser): bool
     {
-        return $user->can('{{ Reorder }}');
+        return $authUser->can('Reorder:Leave');
     }
+
 }

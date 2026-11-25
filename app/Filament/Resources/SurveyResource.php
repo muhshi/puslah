@@ -41,15 +41,17 @@ class SurveyResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-m-clipboard-document-check';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Manajemen Survei';
-    protected static ?string $navigationLabel = 'Survei';
+    protected static string | \UnitEnum | null $navigationGroup = 'Manajemen Kegiatan';
+    protected static ?string $navigationLabel = 'Kegiatan';
+    protected static ?string $modelLabel = 'Kegiatan';
+    protected static ?string $pluralModelLabel = 'Kegiatan';
 
     public static function form(Schema $schema): Schema
     {
         return $schema
             ->components([
                 TextInput::make('name')
-                    ->label('Nama Survei')
+                    ->label('Nama Kegiatan')
                     ->required()
                     ->maxLength(255),
                 Textarea::make('description')
@@ -114,11 +116,11 @@ class SurveyResource extends Resource
                     ->label('Copy')
                     ->icon('heroicon-o-document-duplicate')
                     ->color('info')
-                    ->modalHeading('Copy Survey')
-                    ->modalDescription('Ubah data survey sebelum menyimpan. Petugas yang sudah di-assign akan ter-copy.')
+                    ->modalHeading('Copy Kegiatan')
+                    ->modalDescription('Ubah data kegiatan sebelum menyimpan. Petugas yang sudah di-assign akan ter-copy.')
                     ->schema([
                         TextInput::make('name')
-                            ->label('Nama Survei')
+                            ->label('Nama Kegiatan')
                             ->required()
                             ->maxLength(255)
                             ->default(fn(Survey $record) => 'Copy of ' . $record->name),
