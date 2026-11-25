@@ -2,35 +2,31 @@
 
 namespace App\Filament\Resources;
 
-use Filament\Schemas\Schema;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Toggle;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Filters\TrashedFilter;
-use Filament\Actions\Action;
-use Filament\Notifications\Notification;
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\ForceDeleteAction;
-use Filament\Actions\RestoreAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\ForceDeleteBulkAction;
-use Filament\Actions\RestoreBulkAction;
-use App\Filament\Resources\SurveyResource\Pages\ListSurveys;
 use App\Filament\Resources\SurveyResource\Pages\CreateSurvey;
 use App\Filament\Resources\SurveyResource\Pages\EditSurvey;
 use App\Filament\Resources\SurveyResource\Pages\ListSurveyActivities;
-use App\Filament\Resources\SurveyResource\Pages;
-use App\Filament\Resources\SurveyResource\RelationManagers;
+use App\Filament\Resources\SurveyResource\Pages\ListSurveys;
 use App\Filament\Resources\SurveyResource\RelationManagers\ParticipantsRelationManager;
 use App\Models\Survey;
-use Filament\Forms;
+use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
-use Filament\Tables;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -39,11 +35,14 @@ class SurveyResource extends Resource
 {
     protected static ?string $model = Survey::class;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-m-clipboard-document-check';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-m-clipboard-document-check';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Manajemen Kegiatan';
+    protected static string|\UnitEnum|null $navigationGroup = 'Manajemen Kegiatan';
+
     protected static ?string $navigationLabel = 'Kegiatan';
+
     protected static ?string $modelLabel = 'Kegiatan';
+
     protected static ?string $pluralModelLabel = 'Kegiatan';
 
     public static function form(Schema $schema): Schema
@@ -106,7 +105,7 @@ class SurveyResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('deleted_at')
                     ->dateTime()
-                    ->sortable()
+                    ->sortable(),
             ])
             ->filters([
                 TrashedFilter::make(),
@@ -123,28 +122,28 @@ class SurveyResource extends Resource
                             ->label('Nama Kegiatan')
                             ->required()
                             ->maxLength(255)
-                            ->default(fn(Survey $record) => 'Copy of ' . $record->name),
+                            ->default(fn (Survey $record) => 'Copy of '.$record->name),
                         Textarea::make('description')
                             ->label('Deskripsi')
-                            ->default(fn(Survey $record) => $record->description)
+                            ->default(fn (Survey $record) => $record->description)
                             ->columnSpanFull(),
                         Textarea::make('dasar_surat')
                             ->label('Dasar Surat')
                             ->required()
-                            ->default(fn(Survey $record) => $record->dasar_surat)
+                            ->default(fn (Survey $record) => $record->dasar_surat)
                             ->columnSpanFull(),
                         DatePicker::make('start_date')
                             ->label('Mulai')
-                            ->default(fn(Survey $record) => $record->start_date),
+                            ->default(fn (Survey $record) => $record->start_date),
                         DatePicker::make('end_date')
                             ->label('Selesai')
-                            ->default(fn(Survey $record) => $record->end_date),
+                            ->default(fn (Survey $record) => $record->end_date),
                         Toggle::make('is_active')
                             ->label('Aktif')
-                            ->default(fn(Survey $record) => $record->is_active),
+                            ->default(fn (Survey $record) => $record->is_active),
                         Toggle::make('is_multiple')
                             ->label('Multiple Surat Tugas')
-                            ->default(fn(Survey $record) => $record->is_multiple),
+                            ->default(fn (Survey $record) => $record->is_multiple),
                         Toggle::make('copy_participants')
                             ->label('Copy Petugas/Peserta')
                             ->helperText('Centang untuk meng-copy semua petugas yang sudah di-assign ke survey asli')
@@ -173,7 +172,7 @@ class SurveyResource extends Resource
                         Notification::make()
                             ->title('Survey berhasil di-copy!')
                             ->body($copyParticipants
-                                ? 'Survey baru dibuat dengan ' . $participants->count() . ' petugas.'
+                                ? 'Survey baru dibuat dengan '.$participants->count().' petugas.'
                                 : 'Survey baru dibuat tanpa petugas.')
                             ->success()
                             ->send();
@@ -189,7 +188,7 @@ class SurveyResource extends Resource
                 RestoreAction::make(),
             ])
             ->defaultSort('created_at', 'desc')
-            ->modifyQueryUsing(fn(Builder $query) => $query->orderBy('is_active', 'desc')->orderBy('created_at', 'desc'))
+            ->modifyQueryUsing(fn (Builder $query) => $query->orderBy('is_active', 'desc')->orderBy('created_at', 'desc'))
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
@@ -202,6 +201,7 @@ class SurveyResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
+            ->where('is_pelatihan', false)
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);

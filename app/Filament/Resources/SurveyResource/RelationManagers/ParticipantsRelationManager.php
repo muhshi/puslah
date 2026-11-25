@@ -2,46 +2,48 @@
 
 namespace App\Filament\Resources\SurveyResource\RelationManagers;
 
-
-use Filament\Schemas\Components\Tabs\Tab;
-use Filament\Schemas\Schema;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Textarea;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\IconColumn;
-use Filament\Actions\CreateAction;
-use Filament\Actions\Action;
-use Filament\Schemas\Components\Section;
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\BulkAction;
-use Throwable;
-use Filament\Actions\DeleteBulkAction;
+use App\Exports\PelatihanKelasTemplateExport;
+use App\Imports\PelatihanKelasImport;
+use App\Models\Certificate;
 use App\Models\CertificateTemplate;
 use App\Models\Survey;
-use App\Models\Certificate;
 use App\Models\SurveyUser;
 use App\Models\User;
-use App\Settings\SystemSettings;
-use Barryvdh\DomPDF\Facade\Pdf;
-use Filament\Forms;
+use App\Services\CertificateIssuanceService;
+use App\Services\SipetraUserDataService;
+use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
+use Filament\Actions\CreateAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Tables;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\SelectColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\TextInputColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
-use App\Services\CertificateIssuanceService;
+use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
+use Throwable;
 
 class ParticipantsRelationManager extends RelationManager
 {
     protected static string $relationship = 'surveyUsers';
+
     protected static ?string $title = 'Peserta';
 
     public function getTabs(): array
@@ -49,26 +51,73 @@ class ParticipantsRelationManager extends RelationManager
         return [
             'semua' => Tab::make('Semua'),
             'mitra' => Tab::make('Mitra')
-                ->modifyQueryUsing(fn(Builder $query) => $query->whereHas('user.roles', fn($q) => $q->where('name', 'Mitra'))),
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereHas('user.roles', fn ($q) => $q->where('name', 'Mitra'))),
             'organik' => Tab::make('Pegawai')
-                ->modifyQueryUsing(fn(Builder $query) => $query->whereHas('user.roles', fn($q) => $q->where('name', 'Organik'))),
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereHas('user.roles', fn ($q) => $q->where('name', 'Organik'))),
         ];
     }
 
     public function form(Schema $schema): Schema
     {
+        $isPelatihan = fn ($livewire) => (bool) ($livewire?->getOwnerRecord()?->is_pelatihan ?? false);
+
         return $schema->components([
             Select::make('user_id')
                 ->label('User')
-                ->options(User::orderBy('name')
-                    ->pluck('name', 'id'))
+                ->options(User::orderBy('name')->pluck('name', 'id'))
                 ->searchable()
-                ->preload()->required(),
+                ->preload()
+                ->required(),
             Select::make('status')
                 ->options(['registered' => 'registered', 'approved' => 'approved'])
-                ->default('registered')->required(),
+                ->default('registered')
+                ->required(),
             TextInput::make('score')
-                ->numeric()->minValue(0)->maxValue(100)->nullable(),
+                ->numeric()
+                ->minValue(0)
+                ->maxValue(100)
+                ->nullable(),
+            Select::make('role_pelatihan')
+                ->label('Role Pelatihan')
+                ->options([
+                    'PPL' => 'PPL',
+                    'PML' => 'PML',
+                    'Inda' => 'Inda',
+                    'Panitia' => 'Panitia',
+                ])
+                ->default('PPL')
+                ->visible($isPelatihan),
+            Select::make('kelas')
+                ->label('Kelas')
+                ->options([
+                    'Kelas A' => 'Kelas A',
+                    'Kelas B' => 'Kelas B',
+                    'Kelas C' => 'Kelas C',
+                    'Kelas D' => 'Kelas D',
+                ])
+                ->default('Kelas A')
+                ->visible($isPelatihan),
+            TextInput::make('asal')
+                ->label('Asal')
+                ->placeholder('Contoh: Demak')
+                ->visible($isPelatihan),
+            TextInput::make('tujuan')
+                ->label('Tujuan')
+                ->placeholder('Contoh: Semarang')
+                ->default(fn ($livewire) => $livewire?->getOwnerRecord()?->kota_kegiatan ?? 'Semarang')
+                ->visible($isPelatihan),
+            TextInput::make('transport_override')
+                ->label('Override Transport (Rp)')
+                ->numeric()
+                ->prefix('Rp')
+                ->nullable()
+                ->visible($isPelatihan),
+            TextInput::make('uang_harian_override')
+                ->label('Override Uang Harian (Rp)')
+                ->numeric()
+                ->prefix('Rp')
+                ->nullable()
+                ->visible($isPelatihan),
             Textarea::make('notes')
                 ->columnSpanFull(),
         ])->columns(2);
@@ -76,20 +125,76 @@ class ParticipantsRelationManager extends RelationManager
 
     public function table(Table $table): Table
     {
+        $isPelatihan = fn ($livewire) => (bool) ($livewire?->getOwnerRecord()?->is_pelatihan ?? false);
+
         return $table
             ->recordTitleAttribute('id')
             ->columns([
-                TextColumn::make('user.name')->label('Nama')->searchable(),
-                TextColumn::make('status')->badge()->colors([
-                    'warning' => 'registered',
-                    'success' => 'approved',
-                ]),
-                TextColumn::make('score')->label('Skor')->numeric(),
-                TextColumn::make('registered_at')->since()->label('Terdaftar'),
+                TextColumn::make('user.name')
+                    ->label('Nama')
+                    ->searchable(),
+                SelectColumn::make('role_pelatihan')
+                    ->label('Role')
+                    ->options([
+                        'PPL' => 'PPL',
+                        'PML' => 'PML',
+                        'Inda' => 'Inda',
+                        'Panitia' => 'Panitia',
+                    ])
+                    ->sortable()
+                    ->visible($isPelatihan),
+                SelectColumn::make('kelas')
+                    ->label('Kelas')
+                    ->options([
+                        'Kelas A' => 'Kelas A',
+                        'Kelas B' => 'Kelas B',
+                        'Kelas C' => 'Kelas C',
+                        'Kelas D' => 'Kelas D',
+                    ])
+                    ->sortable()
+                    ->visible($isPelatihan),
+                TextInputColumn::make('asal')
+                    ->label('Asal')
+                    ->visible($isPelatihan),
+                TextInputColumn::make('tujuan')
+                    ->label('Tujuan')
+                    ->visible($isPelatihan),
+                TextColumn::make('status')
+                    ->badge()
+                    ->colors([
+                        'warning' => 'registered',
+                        'success' => 'approved',
+                    ]),
+                TextColumn::make('score')
+                    ->label('Skor')
+                    ->numeric(),
+                TextColumn::make('registered_at')
+                    ->since()
+                    ->label('Terdaftar'),
                 IconColumn::make('certificate_exists')
                     ->label('Sertifikat')
-                    ->state(fn(SurveyUser $r) => Certificate::where('survey_id', $r->survey_id)->where('user_id', $r->user_id)->exists())
+                    ->state(fn (SurveyUser $r) => Certificate::where('survey_id', $r->survey_id)->where('user_id', $r->user_id)->exists())
                     ->boolean(),
+            ])
+            ->filters([
+                SelectFilter::make('kelas')
+                    ->label('Kelas')
+                    ->options([
+                        'Kelas A' => 'Kelas A',
+                        'Kelas B' => 'Kelas B',
+                        'Kelas C' => 'Kelas C',
+                        'Kelas D' => 'Kelas D',
+                    ])
+                    ->visible($isPelatihan),
+                SelectFilter::make('role_pelatihan')
+                    ->label('Role Pelatihan')
+                    ->options([
+                        'PPL' => 'PPL',
+                        'PML' => 'PML',
+                        'Inda' => 'Inda',
+                        'Panitia' => 'Panitia',
+                    ])
+                    ->visible($isPelatihan),
             ])
             ->headerActions([
                 CreateAction::make()->label('Tambah Peserta'),
@@ -112,6 +217,7 @@ class ParticipantsRelationManager extends RelationManager
                                         ->get()
                                         ->mapWithKeys(function ($user) {
                                             $jabatan = $user->profile->jabatan ?? '-';
+
                                             return [$user->id => "{$user->name} ({$jabatan})"];
                                         });
                                 })
@@ -130,6 +236,7 @@ class ParticipantsRelationManager extends RelationManager
                                         ->get()
                                         ->mapWithKeys(function ($user) {
                                             $jabatan = $user->profile->jabatan ?? '-';
+
                                             return [$user->id => "{$user->name} ({$jabatan})"];
                                         });
                                 })
@@ -140,10 +247,9 @@ class ParticipantsRelationManager extends RelationManager
                     ])
                     ->action(function (array $data, $livewire) {
                         /** @var Survey $survey */
-                        $survey = $livewire->getOwnerRecord(); // record parent (Survey)
+                        $survey = $livewire->getOwnerRecord();
                         $now = now();
 
-                        // Merge users from both role categories
                         $mitraUsers = $data['mitra_users'] ?? [];
                         $pegawaiUsers = $data['pegawai_bps_users'] ?? [];
                         $allUsers = array_merge($mitraUsers, $pegawaiUsers);
@@ -153,53 +259,223 @@ class ParticipantsRelationManager extends RelationManager
                                 ->title('Pilih minimal 1 peserta')
                                 ->danger()
                                 ->send();
+
                             return;
                         }
 
-                        foreach ($allUsers as $userId) {
-                            SurveyUser::firstOrCreate(
-                                ['survey_id' => $survey->id, 'user_id' => $userId],
-                                [
-                                    'status' => 'registered',
-                                    'registered_at' => $now,
-                                    'notes' => $data['notes'] ?? null,
-                                ]
-                            );
+                        if ($survey->is_pelatihan) {
+                            $users = User::with('profile')->whereIn('id', $allUsers)->get()->keyBy('id');
+                            $sipetraService = app(SipetraUserDataService::class);
+                            $tujuanDefault = $survey->kota_kegiatan ?: 'Semarang';
+
+                            foreach ($allUsers as $userId) {
+                                $user = $users->get($userId);
+                                $isMitra = in_array($userId, $mitraUsers);
+                                $rolePelatihan = $isMitra ? 'PPL' : 'PML';
+                                $asal = $sipetraService->extractAsal(null, $user, 'Demak');
+
+                                SurveyUser::firstOrCreate(
+                                    ['survey_id' => $survey->id, 'user_id' => $userId],
+                                    [
+                                        'status' => 'registered',
+                                        'registered_at' => $now,
+                                        'notes' => $data['notes'] ?? null,
+                                        'role_pelatihan' => $rolePelatihan,
+                                        'kelas' => 'Kelas A',
+                                        'asal' => $asal,
+                                        'tujuan' => $tujuanDefault,
+                                    ]
+                                );
+                            }
+                        } else {
+                            foreach ($allUsers as $userId) {
+                                SurveyUser::firstOrCreate(
+                                    ['survey_id' => $survey->id, 'user_id' => $userId],
+                                    [
+                                        'status' => 'registered',
+                                        'registered_at' => $now,
+                                        'notes' => $data['notes'] ?? null,
+                                    ]
+                                );
+                            }
                         }
 
                         Notification::make()
-                            ->title('Peserta ditambahkan: ' . count($allUsers) . ' orang')
+                            ->title('Peserta ditambahkan: '.count($allUsers).' orang')
+                            ->success()
+                            ->send();
+                    }),
+
+                Action::make('exportKelasTemplate')
+                    ->label('Export Format Kelas')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->visible($isPelatihan)
+                    ->action(function ($livewire) {
+                        /** @var Survey $survey */
+                        $survey = $livewire->getOwnerRecord();
+                        $filename = 'Format_Kelas_'.Str::slug($survey->name ?: 'Pelatihan').'.xlsx';
+
+                        return Excel::download(
+                            new PelatihanKelasTemplateExport($survey),
+                            $filename
+                        );
+                    }),
+
+                Action::make('importKelas')
+                    ->label('Import Pembagian Kelas')
+                    ->icon('heroicon-o-arrow-up-tray')
+                    ->color('primary')
+                    ->visible($isPelatihan)
+                    ->schema([
+                        FileUpload::make('file')
+                            ->label('File Excel Format Kelas')
+                            ->acceptedFileTypes([
+                                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                                'application/vnd.ms-excel',
+                                'text/csv',
+                            ])
+                            ->disk('local')
+                            ->directory('temp-imports')
+                            ->required(),
+                    ])
+                    ->action(function (array $data, $livewire): void {
+                        /** @var Survey $survey */
+                        $survey = $livewire->getOwnerRecord();
+                        $filePath = Storage::disk('local')->path($data['file']);
+
+                        $import = new PelatihanKelasImport($survey);
+                        Excel::import($import, $filePath);
+
+                        // Cleanup temporary uploaded file
+                        Storage::disk('local')->delete($data['file']);
+
+                        Notification::make()
+                            ->title('Import Pembagian Kelas Selesai')
+                            ->body("Berhasil: {$import->success}, Dilewati: {$import->skipped}, Gagal: {$import->failed}")
                             ->success()
                             ->send();
                     }),
             ])
             ->recordActions([
-
                 EditAction::make(),
                 Action::make('approve')
                     ->label('Approve + Sertifikat')
                     ->icon('heroicon-o-check-circle')
                     ->requiresConfirmation()
-                    ->visible(fn(SurveyUser $r) => $r->status !== 'approved')
-                    ->action(fn(SurveyUser $r) => $this->approveOne($r)),
+                    ->visible(fn (SurveyUser $r) => $r->status !== 'approved')
+                    ->action(fn (SurveyUser $r) => $this->approveOne($r)),
                 Action::make('unapprove')
                     ->label('Batal Approve')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->visible(fn(SurveyUser $r) => $r->status === 'approved')
-                    ->action(fn(SurveyUser $r) => $this->unapproveOne($r)),
+                    ->visible(fn (SurveyUser $r) => $r->status === 'approved')
+                    ->action(fn (SurveyUser $r) => $this->unapproveOne($r)),
                 Action::make('downloadCert')
                     ->label('Unduh Sertifikat')
                     ->url(function (SurveyUser $r) {
                         $cert = Certificate::where('survey_id', $r->survey_id)->where('user_id', $r->user_id)->first();
+
                         return $cert ? route('certificates.download', $cert) : null;
                     })
                     ->openUrlInNewTab()
-                    ->visible(fn(SurveyUser $r) => Certificate::where('survey_id', $r->survey_id)->where('user_id', $r->user_id)->exists()),
+                    ->visible(fn (SurveyUser $r) => Certificate::where('survey_id', $r->survey_id)->where('user_id', $r->user_id)->exists()),
                 DeleteAction::make(),
             ])
             ->toolbarActions([
+                BulkAction::make('setKelas')
+                    ->label('Set Kelas')
+                    ->icon('heroicon-o-academic-cap')
+                    ->visible($isPelatihan)
+                    ->schema([
+                        Select::make('kelas')
+                            ->label('Pilih Kelas')
+                            ->options([
+                                'Kelas A' => 'Kelas A',
+                                'Kelas B' => 'Kelas B',
+                                'Kelas C' => 'Kelas C',
+                                'Kelas D' => 'Kelas D',
+                            ])
+                            ->required(),
+                    ])
+                    ->action(function (Collection $records, array $data): void {
+                        $count = 0;
+                        foreach ($records as $record) {
+                            $record->update(['kelas' => $data['kelas']]);
+                            $count++;
+                        }
+                        Notification::make()
+                            ->title("Berhasil mengatur kelas untuk {$count} peserta")
+                            ->success()
+                            ->send();
+                    })
+                    ->deselectRecordsAfterCompletion(),
+
+                BulkAction::make('setRolePelatihan')
+                    ->label('Set Role')
+                    ->icon('heroicon-o-user-group')
+                    ->visible($isPelatihan)
+                    ->schema([
+                        Select::make('role_pelatihan')
+                            ->label('Pilih Role Pelatihan')
+                            ->options([
+                                'PPL' => 'PPL',
+                                'PML' => 'PML',
+                                'Inda' => 'Inda',
+                                'Panitia' => 'Panitia',
+                            ])
+                            ->required(),
+                    ])
+                    ->action(function (Collection $records, array $data): void {
+                        $count = 0;
+                        foreach ($records as $record) {
+                            $record->update(['role_pelatihan' => $data['role_pelatihan']]);
+                            $count++;
+                        }
+                        Notification::make()
+                            ->title("Berhasil mengatur role untuk {$count} peserta")
+                            ->success()
+                            ->send();
+                    })
+                    ->deselectRecordsAfterCompletion(),
+
+                BulkAction::make('setAsalTujuan')
+                    ->label('Set Asal / Tujuan')
+                    ->icon('heroicon-o-map-pin')
+                    ->visible($isPelatihan)
+                    ->schema([
+                        TextInput::make('asal')
+                            ->label('Asal (Kosongkan jika tidak diubah)')
+                            ->placeholder('Contoh: Demak'),
+                        TextInput::make('tujuan')
+                            ->label('Tujuan (Kosongkan jika tidak diubah)')
+                            ->placeholder('Contoh: Semarang'),
+                    ])
+                    ->action(function (Collection $records, array $data): void {
+                        $updates = [];
+                        if (! empty($data['asal'])) {
+                            $updates['asal'] = $data['asal'];
+                        }
+                        if (! empty($data['tujuan'])) {
+                            $updates['tujuan'] = $data['tujuan'];
+                        }
+                        if (empty($updates)) {
+                            return;
+                        }
+
+                        $count = 0;
+                        foreach ($records as $record) {
+                            $record->update($updates);
+                            $count++;
+                        }
+                        Notification::make()
+                            ->title("Berhasil memperbarui asal/tujuan {$count} peserta")
+                            ->success()
+                            ->send();
+                    })
+                    ->deselectRecordsAfterCompletion(),
+
                 BulkAction::make('approveSelected')
                     ->label('Approve & Terbitkan Sertifikat')
                     ->icon('heroicon-o-check-badge')
@@ -207,11 +483,10 @@ class ParticipantsRelationManager extends RelationManager
                     ->deselectRecordsAfterCompletion()
                     ->action(function (Collection $records): void {
                         try {
-                            foreach ($records as $row) { // $row adalah SurveyUser
+                            foreach ($records as $row) {
                                 if ($row->status !== 'approved') {
                                     $row->update(['status' => 'approved']);
-                                    $this->issueCertificate($row); // pakai helper milik RelationManager-mu
-                                    // atau dispatch(Job) di sini
+                                    $this->issueCertificate($row);
                                 }
                             }
                             Notification::make()->title('Approved & sertifikat diterbitkan')->success()->send();
@@ -220,6 +495,7 @@ class ParticipantsRelationManager extends RelationManager
                             Log::error('RM bulk approve error', ['e' => $e]);
                         }
                     }),
+
                 BulkAction::make('unapproveSelected')
                     ->label('Batal Approve (Bulk)')
                     ->icon('heroicon-o-x-circle')
@@ -240,6 +516,7 @@ class ParticipantsRelationManager extends RelationManager
                             ->success()
                             ->send();
                     }),
+
                 DeleteBulkAction::make(),
             ])
             ->defaultSort('survey_users.id', 'desc');
@@ -248,25 +525,23 @@ class ParticipantsRelationManager extends RelationManager
     protected function approveOne(SurveyUser $r): void
     {
         try {
-            // Check if certificate already exists or can be created
             if (Certificate::where('survey_id', $r->survey_id)->where('user_id', $r->user_id)->exists()) {
-                // Certificate exists, just update status
                 $r->update(['status' => 'approved']);
                 Notification::make()->title('Approved & sertifikat sudah ada')->success()->send();
+
                 return;
             }
 
-            // Check if template exists
             $template = CertificateTemplate::where('active', 1)->first();
-            if (!$template) {
+            if (! $template) {
                 Notification::make()
                     ->title('Gagal: Tidak ada template sertifikat yang aktif')
                     ->danger()
                     ->send();
+
                 return;
             }
 
-            // Try to create certificate
             $this->issueCertificate($r);
             $r->update(['status' => 'approved']);
             Notification::make()->title('Approved & sertifikat terbit')->success()->send();
@@ -284,8 +559,6 @@ class ParticipantsRelationManager extends RelationManager
     protected function unapproveOne(SurveyUser $r): void
     {
         $r->update(['status' => 'registered']);
-        // Optional: Delete certificate?
-        // For now, just change status. Certificate remains record but status reverts.
         Notification::make()->title('Approval dibatalkan')->success()->send();
     }
 
