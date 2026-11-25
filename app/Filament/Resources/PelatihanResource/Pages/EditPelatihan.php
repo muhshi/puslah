@@ -4,6 +4,7 @@ namespace App\Filament\Resources\PelatihanResource\Pages;
 
 use App\Exports\PelatihanSpjExport;
 use App\Filament\Resources\PelatihanResource;
+use App\Filament\Resources\SuratTugasResource;
 use App\Services\PelatihanUndanganService;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -48,6 +49,13 @@ class EditPelatihan extends EditRecord
                 ->icon('heroicon-m-arrow-down-tray')
                 ->color('primary')
                 ->button(),
+
+            Action::make('buatSuratTugasHeader')
+                ->label('Buat Surat Tugas')
+                ->icon('heroicon-o-document-plus')
+                ->color('success')
+                ->visible(fn (): bool => SuratTugasResource::canCreate())
+                ->url(fn (): string => SuratTugasResource::getUrl('create-bulk', ['survey_id' => $this->record->id])),
 
             DeleteAction::make(),
             ForceDeleteAction::make(),

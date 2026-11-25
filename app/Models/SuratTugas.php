@@ -302,13 +302,14 @@ class SuratTugas extends Model
      */
     public static function formatOverlapMessage(string $userName, self $overlap): string
     {
-        $surveyName = $overlap->survey?->name ?? 'Survei';
+        $jenis = $overlap->survey?->is_pelatihan ? 'pelatihan' : 'survei';
+        $surveyName = $overlap->survey?->name ?? 'Kegiatan';
         $tglMulai = $overlap->waktu_mulai ? Carbon::parse($overlap->waktu_mulai)->translatedFormat('d F Y') : '-';
         $tglSelesai = $overlap->waktu_selesai ? Carbon::parse($overlap->waktu_selesai)->translatedFormat('d F Y') : '-';
         $rentang = ($tglMulai === $tglSelesai) ? $tglMulai : "{$tglMulai} s/d {$tglSelesai}";
         $nomor = $overlap->nomor_surat ? " ({$overlap->nomor_surat})" : '';
 
-        return "Pegawai {$userName} sudah memiliki Surat Tugas{$nomor} untuk survei '{$surveyName}' di rentang tanggal {$rentang}.";
+        return "Pegawai {$userName} sudah memiliki Surat Tugas{$nomor} untuk {$jenis} '{$surveyName}' di rentang tanggal {$rentang}.";
     }
 }
 

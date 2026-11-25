@@ -23,6 +23,7 @@ use App\Models\UserProfile;
 use Exception;
 use App\Services\SuratTugasNumberingService;
 use App\Filament\Resources\SuratTugasResource;
+use App\Filament\Resources\SuratTugasResource\Support\SuratTugasFormFactory;
 use App\Models\SuratTugas;
 use App\Models\User;
 use App\Settings\SystemSettings;
@@ -47,38 +48,46 @@ class CreateBulkSuratTugas extends Page implements HasForms
         $year = now()->year;
         $nextNumber = SuratTugas::getNextNomorUrut($year);
 
-        $this->form->fill([
+        $fillData = [
             'tanggal' => now(),
             'waktu_mulai' => now()->format('Y-m-d'),
             'waktu_selesai' => now()->format('Y-m-d'),
+            'sumber_jabatan' => 'database',
             'kode_klasifikasi' => 'KP.650',
             'nomor_urut_mulai' => $nextNumber,
-        ]);
+        ];
+
+        $preselectedSurveyId = request()->integer('survey_id');
+        if ($preselectedSurveyId > 0 && ($survey = Survey::find($preselectedSurveyId))) {
+            $fillData['survey_id'] = $survey->id;
+            $fillData['keperluan'] = $survey->name;
+            if ($survey->start_date) {
+                $fillData['waktu_mulai'] = Carbon::parse($survey->start_date)->format('Y-m-d');
+            }
+            if ($survey->end_date) {
+                $fillData['waktu_selesai'] = Carbon::parse($survey->end_date)->format('Y-m-d');
+            }
+            if (filled($survey->lokasi)) {
+                $fillData['tempat_tugas'] = $survey->lokasi;
+            }
+        }
+
+        $this->form->fill($fillData);
     }
 
     public function form(Schema $schema): Schema
     {
         return $schema
             ->components([
-                Section::make('Pilih Survey & Pegawai')
-                    ->description('Pilih survey terlebih dahulu, lalu pilih pegawai dari peserta survey tersebut.')
+                Section::make('Pilih Kegiatan / Pelatihan & Pegawai')
+                    ->description('Pilih kegiatan atau pelatihan terlebih dahulu, lalu pilih pegawai dari peserta terdaftar.')
                     ->schema([
                         Select::make('survey_id')
-                            ->label('Survey')
-                            ->options(function () {
-                                return Survey::where('is_active', true)
-                                    ->where(function ($query) {
-                                        $query->where('is_multiple', true)
-                                            ->orWhereHas('participants', function ($q) {
-                                                // Hanya survey yang punya user tanpa surat tugas untuk survey tersebut
-                                                $q->whereDoesntHave('suratTugas', function ($q_st) {
-                                                    $q_st->whereColumn('surat_tugas.survey_id', 'surveys.id');
-                                                });
-                                            });
-                                    })
-                                    ->orderByDesc('created_at')
-                                    ->pluck('name', 'id');
-                            })
+                            ->label('Kegiatan / Pelatihan')
+                            ->options(fn () => SuratTugasFormFactory::getActiveSurveyOptions(
+                                request()->integer('survey_id') ?: null,
+                                onlyWithRemainingParticipants: true,
+                            ))
                             ->searchable()
                             ->preload()
                             ->live()
@@ -87,18 +96,11 @@ class CreateBulkSuratTugas extends Page implements HasForms
                                 $set('mitra_user_ids', []);
                                 $set('pegawai_bps_user_ids', []);
 
-                                // Auto-fill keperluan and dates
+                                // Auto-fill keperluan, dates, and location
                                 if ($state) {
-                                    $survey = Survey::find($state);
-                                    if ($survey) {
-                                        $set('keperluan', "{$survey->name}");
-                                        // Auto-fill waktu_mulai/selesai from survey dates
-                                        if ($survey->start_date) {
-                                            $set('waktu_mulai', Carbon::parse($survey->start_date)->format('Y-m-d'));
-                                        }
-                                        if ($survey->end_date) {
-                                            $set('waktu_selesai', Carbon::parse($survey->end_date)->format('Y-m-d'));
-                                        }
+                                    $survey = SuratTugasFormFactory::applySurveyDefaultsToForm($set, $state);
+                                    if (! $survey) {
+                                        return;
                                     }
 
                                     // Checker for empty users (those who don't have surat tugas yet)
@@ -124,7 +126,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
 
                                     if (!$hasMitra && !$hasOrganik) {
                                         Notification::make()
-                                            ->title('Semua petugas pada survey ini sudah memiliki Surat Tugas.')
+                                            ->title('Semua petugas pada kegiatan/pelatihan ini sudah memiliki Surat Tugas.')
                                             ->warning()
                                             ->send();
                                     }
@@ -140,31 +142,14 @@ class CreateBulkSuratTugas extends Page implements HasForms
                             ->preload()
                             ->options(function (Get $get) {
                                 $surveyId = $get('survey_id');
-                                if (!$surveyId)
+                                if (! $surveyId) {
                                     return [];
-
-                                $survey = Survey::find($surveyId);
-                                $query = SurveyUser::where('survey_id', $surveyId)
-                                    ->whereHas('user.roles', function ($q) {
-                                        $q->where('name', 'Mitra');
-                                    });
-
-                                if ($survey && !$survey->is_multiple) {
-                                    $query->where(function ($q) use ($surveyId) {
-                                        $q->whereHas('user', fn($uq) => $uq->where('name', 'like', '%Terlampir%'))
-                                          ->orWhereDoesntHave('user.suratTugas', fn($sq) => $sq->where('survey_id', $surveyId));
-                                    });
                                 }
 
-                                return $query->with('user.profile')
-                                    ->get()
-                                    ->mapWithKeys(function ($su) {
-                                        $jabatan = $su->user->profile->jabatan ?? '-';
-                                        return [$su->user_id => "{$su->user->name} ({$jabatan})"];
-                                    });
+                                return SuratTugasFormFactory::getSurveyParticipantOptions((int) $surveyId, 'Mitra');
                             })
                             ->disabled(fn(Get $get) => !$get('survey_id'))
-                            ->helperText('Hanya peserta survey dengan role Mitra'),
+                            ->helperText('Hanya peserta terdaftar dengan role Mitra'),
 
                         Select::make('pegawai_bps_user_ids')
                             ->label('Pegawai Organik')
@@ -173,31 +158,14 @@ class CreateBulkSuratTugas extends Page implements HasForms
                             ->preload()
                             ->options(function (Get $get) {
                                 $surveyId = $get('survey_id');
-                                if (!$surveyId)
+                                if (! $surveyId) {
                                     return [];
-
-                                $survey = Survey::find($surveyId);
-                                $query = SurveyUser::where('survey_id', $surveyId)
-                                    ->whereHas('user.roles', function ($q) {
-                                        $q->where('name', 'Organik');
-                                    });
-
-                                if ($survey && !$survey->is_multiple) {
-                                    $query->where(function ($q) use ($surveyId) {
-                                        $q->whereHas('user', fn($uq) => $uq->where('name', 'like', '%Terlampir%'))
-                                          ->orWhereDoesntHave('user.suratTugas', fn($sq) => $sq->where('survey_id', $surveyId));
-                                    });
                                 }
 
-                                return $query->with('user.profile')
-                                    ->get()
-                                    ->mapWithKeys(function ($su) {
-                                        $jabatan = $su->user->profile->jabatan ?? '-';
-                                        return [$su->user_id => "{$su->user->name} ({$jabatan})"];
-                                    });
+                                return SuratTugasFormFactory::getSurveyParticipantOptions((int) $surveyId, 'Organik');
                             })
                             ->disabled(fn(Get $get) => !$get('survey_id'))
-                            ->helperText('Hanya peserta survey dengan role Organik'),
+                            ->helperText('Hanya peserta terdaftar dengan role Organik'),
                     ])->columns(2),
 
                 Section::make('Data Surat (Berlaku untuk Semua)')

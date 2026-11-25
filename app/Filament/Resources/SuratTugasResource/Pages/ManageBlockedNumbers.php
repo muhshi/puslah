@@ -281,31 +281,19 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                         ->modalDescription('Pastikan jumlah pegawai yang dipilih tidak melebihi jumlah nomor yang Anda block. Sisa nomor block yang tidak terpakai akan tetap diblock.')
                         ->modalSubmitActionLabel('Buat Surat Tugas')
                         ->schema([
-                            Section::make('Pilih Survey & Pegawai')
-                                ->description('Pilih survey terlebih dahulu, lalu pilih pegawai dari peserta survey tersebut.')
+                            Section::make('Pilih Kegiatan / Pelatihan & Pegawai')
+                                ->description('Pilih kegiatan atau pelatihan terlebih dahulu, lalu pilih pegawai dari peserta terdaftar.')
                                 ->schema([
                                     Select::make('survey_id')
-                                        ->label('Survey')
-                                        ->options(Survey::where('is_active', true)->pluck('name', 'id'))
+                                        ->label('Kegiatan / Pelatihan')
+                                        ->options(fn () => SuratTugasFormFactory::getActiveSurveyOptions())
                                         ->searchable()
                                         ->preload()
                                         ->live()
                                         ->afterStateUpdated(function ($state, Set $set) {
                                             $set('mitra_user_ids', []);
                                             $set('pegawai_bps_user_ids', []);
-
-                                            if ($state) {
-                                                $survey = Survey::find($state);
-                                                if ($survey) {
-                                                    $set('keperluan', $survey->name);
-                                                    if ($survey->start_date) {
-                                                        $set('waktu_mulai', Carbon::parse($survey->start_date)->format('Y-m-d'));
-                                                    }
-                                                    if ($survey->end_date) {
-                                                        $set('waktu_selesai', Carbon::parse($survey->end_date)->format('Y-m-d'));
-                                                    }
-                                                }
-                                            }
+                                            SuratTugasFormFactory::applySurveyDefaultsToForm($set, $state);
                                         })
                                         ->columnSpan('full')
                                         ->required(),
@@ -317,30 +305,14 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                                         ->preload()
                                         ->options(function (Get $get) {
                                             $surveyId = $get('survey_id');
-                                            if (!$surveyId)
+                                            if (! $surveyId) {
                                                 return [];
-
-                                            $survey = Survey::find($surveyId);
-                                            $query = SurveyUser::where('survey_id', $surveyId)
-                                                ->whereHas('user.roles', function ($q) {
-                                                    $q->where('name', 'Mitra');
-                                                });
-
-                                            if ($survey && !$survey->is_multiple) {
-                                                $query->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
-                                                    $q->where('survey_id', $surveyId);
-                                                });
                                             }
 
-                                            return $query->with('user.profile')
-                                                ->get()
-                                                ->mapWithKeys(function ($su) {
-                                                    $jabatan = $su->user->profile->jabatan ?? '-';
-                                                    return [$su->user_id => "{$su->user->name} ({$jabatan})"];
-                                                });
+                                            return SuratTugasFormFactory::getSurveyParticipantOptions((int) $surveyId, 'Mitra', includeTerlampir: false);
                                         })
                                         ->disabled(fn(Get $get) => !$get('survey_id'))
-                                        ->helperText('Hanya peserta survey dengan role Mitra'),
+                                        ->helperText('Hanya peserta terdaftar dengan role Mitra'),
 
                                     Select::make('pegawai_bps_user_ids')
                                         ->label('Pegawai Organik')
@@ -349,30 +321,14 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                                         ->preload()
                                         ->options(function (Get $get) {
                                             $surveyId = $get('survey_id');
-                                            if (!$surveyId)
+                                            if (! $surveyId) {
                                                 return [];
-
-                                            $survey = Survey::find($surveyId);
-                                            $query = SurveyUser::where('survey_id', $surveyId)
-                                                ->whereHas('user.roles', function ($q) {
-                                                    $q->where('name', 'Organik');
-                                                });
-
-                                            if ($survey && !$survey->is_multiple) {
-                                                $query->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
-                                                    $q->where('survey_id', $surveyId);
-                                                });
                                             }
 
-                                            return $query->with('user.profile')
-                                                ->get()
-                                                ->mapWithKeys(function ($su) {
-                                                    $jabatan = $su->user->profile->jabatan ?? '-';
-                                                    return [$su->user_id => "{$su->user->name} ({$jabatan})"];
-                                                });
+                                            return SuratTugasFormFactory::getSurveyParticipantOptions((int) $surveyId, 'Organik', includeTerlampir: false);
                                         })
                                         ->disabled(fn(Get $get) => !$get('survey_id'))
-                                        ->helperText('Hanya peserta survey dengan role Organik'),
+                                        ->helperText('Hanya peserta terdaftar dengan role Organik'),
                                 ])->columns(2),
 
                             Section::make('Data Surat (Berlaku untuk Semua)')

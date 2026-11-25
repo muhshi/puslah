@@ -276,6 +276,13 @@ class PelatihanResource extends Resource
                     ->icon('heroicon-m-arrow-down-tray')
                     ->color('primary'),
 
+                Action::make('buatSuratTugas')
+                    ->label('Buat Surat Tugas')
+                    ->icon('heroicon-o-document-plus')
+                    ->color('success')
+                    ->visible(fn (): bool => SuratTugasResource::canCreate())
+                    ->url(fn (Survey $record): string => SuratTugasResource::getUrl('create-bulk', ['survey_id' => $record->id])),
+
                 Action::make('copy')
                     ->label('Copy')
                     ->icon('heroicon-o-document-duplicate')

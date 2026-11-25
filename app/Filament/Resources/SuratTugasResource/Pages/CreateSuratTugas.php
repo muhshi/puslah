@@ -2,13 +2,14 @@
 
 namespace App\Filament\Resources\SuratTugasResource\Pages;
 
-use App\Models\SuratTugas;
-use App\Models\User;
-use Illuminate\Validation\ValidationException;
-use App\Settings\SystemSettings;
 use App\Filament\Resources\SuratTugasResource;
-use Filament\Actions;
+use App\Models\SuratTugas;
+use App\Models\Survey;
+use App\Models\User;
+use App\Settings\SystemSettings;
+use Carbon\Carbon;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Validation\ValidationException;
 
 class CreateSuratTugas extends CreateRecord
 {
@@ -16,6 +17,28 @@ class CreateSuratTugas extends CreateRecord
 
     public $is_sppd = false;
     public $sppdData = [];
+
+    public function mount(): void
+    {
+        parent::mount();
+
+        $surveyId = request()->integer('survey_id');
+        if ($surveyId > 0 && ($survey = Survey::find($surveyId))) {
+            $state = $this->form->getRawState();
+            $state['survey_id'] = $survey->id;
+            $state['keperluan'] = $survey->name;
+            if ($survey->start_date) {
+                $state['waktu_mulai'] = Carbon::parse($survey->start_date)->format('Y-m-d');
+            }
+            if ($survey->end_date) {
+                $state['waktu_selesai'] = Carbon::parse($survey->end_date)->format('Y-m-d');
+            }
+            if (filled($survey->lokasi)) {
+                $state['tempat_tugas'] = $survey->lokasi;
+            }
+            $this->form->fill($state);
+        }
+    }
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {

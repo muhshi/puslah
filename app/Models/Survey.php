@@ -120,6 +120,16 @@ class Survey extends Model
     }
 
     /**
+     * Label tampil pada dropdown agar Pelatihan dan Kegiatan mudah dibedakan.
+     */
+    public function getSelectorLabelAttribute(): string
+    {
+        $prefix = $this->is_pelatihan ? '[Pelatihan]' : '[Kegiatan]';
+
+        return "{$prefix} {$this->name}";
+    }
+
+    /**
      * Scope untuk survei yang memiliki aktivitas presensi dari anggotanya
      */
     public function scopeWithAttendanceActivity(Builder $query): Builder

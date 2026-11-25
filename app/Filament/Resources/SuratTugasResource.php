@@ -40,6 +40,7 @@ use App\Filament\Resources\SuratTugasResource\Pages\EditSuratTugas;
 use App\Filament\Resources\SuratTugasResource\Pages\ListSuratTugasActivities;
 use App\Filament\Resources\SuratTugasResource\Pages;
 use App\Filament\Resources\SuratTugasResource\RelationManagers;
+use App\Filament\Resources\SuratTugasResource\Support\SuratTugasFormFactory;
 use App\Models\SuratTugas;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -72,31 +73,29 @@ class SuratTugasResource extends Resource
                 Section::make('Informasi Tugas')->schema([
                     Group::make()->schema([
                         Select::make('survey_id')
-                            ->label('Survey (Opsional)')
-                            ->relationship('survey', 'name')
+                            ->label('Kegiatan / Pelatihan (Opsional)')
+                            ->relationship(
+                                'survey',
+                                'name',
+                                fn (Builder $query) => $query->orderByDesc('is_active')->orderByDesc('created_at')
+                            )
+                            ->getOptionLabelFromRecordUsing(fn (Survey $record) => $record->selector_label)
                             ->searchable()
                             ->preload()
                             ->live()
                             ->afterStateUpdated(function (Set $set, $state) {
                                 // Reset user_id when survey changes
                                 $set('user_id', null);
-                                // Auto-fill keperluan and dates if survey selected
+                                // Auto-fill keperluan, dates, and location if survey/pelatihan selected
                                 if ($state) {
-                                    $survey = Survey::find($state);
-                                    if ($survey) {
-                                        $set('keperluan', "{$survey->name}");
-                                        // Auto-fill waktu_mulai/selesai from survey dates
-                                        if ($survey->start_date) {
-                                            $set('waktu_mulai', Carbon::parse($survey->start_date)->format('Y-m-d'));
-                                        }
-                                        if ($survey->end_date) {
-                                            $set('waktu_selesai', Carbon::parse($survey->end_date)->format('Y-m-d'));
-                                        }
+                                    $survey = SuratTugasFormFactory::applySurveyDefaultsToForm($set, $state);
+                                    if (! $survey) {
+                                        return;
                                     }
 
                                     // Checker for empty users
                                     $query = SurveyUser::where('survey_id', $state);
-                                    if (!$survey->is_multiple) {
+                                    if (! $survey->is_multiple) {
                                         $query->where(function ($q) use ($state) {
                                             $q->whereHas('user', function ($uq) {
                                                 $uq->where('name', 'like', '%Terlampir%');
@@ -107,9 +106,9 @@ class SuratTugasResource extends Resource
                                     }
                                     $hasParticipants = $query->exists();
 
-                                    if (!$hasParticipants) {
+                                    if (! $hasParticipants) {
                                         Notification::make()
-                                            ->title('Semua petugas pada survey ini sudah memiliki Surat Tugas.')
+                                            ->title('Semua petugas pada kegiatan/pelatihan ini sudah memiliki Surat Tugas.')
                                             ->warning()
                                             ->send();
                                     }
@@ -122,36 +121,19 @@ class SuratTugasResource extends Resource
                             ->options(function (Get $get) {
                                 $surveyId = $get('survey_id');
 
-                                // If survey selected, filter by survey participants only
+                                // If survey/pelatihan selected, filter by participants only
                                 if ($surveyId) {
-                                    $survey = Survey::find($surveyId);
-                                    $query = SurveyUser::where('survey_id', $surveyId);
-
-                                    if ($survey && !$survey->is_multiple) {
-                                        $query->where(function ($q) use ($surveyId) {
-                                            $q->whereHas('user', function ($uq) {
-                                                $uq->where('name', 'like', '%Terlampir%');
-                                            })->orWhereDoesntHave('user.suratTugas', function ($sq) use ($surveyId) {
-                                                $sq->where('survey_id', $surveyId);
-                                            });
-                                        });
-                                    }
-
-                                    return $query->with('user.profile')
-                                        ->get()
-                                        ->mapWithKeys(function ($su) {
-                                            $jabatan = $su->user->profile->jabatan ?? '-';
-                                            return [$su->user_id => "{$su->user->name} ({$jabatan})"];
-                                        });
+                                    return SuratTugasFormFactory::getSurveyParticipantOptions((int) $surveyId);
                                 }
 
                                 // If no survey, show all users
                                 return User::with('profile')
                                     ->get()
                                     ->mapWithKeys(function ($user) {
-                                    $jabatan = $user->profile->jabatan ?? '-';
-                                    return [$user->id => "{$user->name} ({$jabatan})"];
-                                });
+                                        $jabatan = $user->profile->jabatan ?? '-';
+
+                                        return [$user->id => "{$user->name} ({$jabatan})"];
+                                    });
                             })
                             ->searchable()
                             ->preload()
@@ -425,8 +407,9 @@ class SuratTugasResource extends Resource
             ])
             ->filters([
                 SelectFilter::make('survey_id')
-                    ->label('Filter berdasarkan Survey')
+                    ->label('Filter Kegiatan / Pelatihan')
                     ->relationship('survey', 'name')
+                    ->getOptionLabelFromRecordUsing(fn (Survey $record) => $record->selector_label)
                     ->searchable()
                     ->preload(),
                 SelectFilter::make('status')

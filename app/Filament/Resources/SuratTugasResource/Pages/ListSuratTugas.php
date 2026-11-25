@@ -18,6 +18,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use Filament\Notifications\Notification;
 use App\Filament\Resources\SuratTugasResource\Widgets\SkippedNumbersInfoWidget;
 use App\Filament\Resources\SuratTugasResource;
+use App\Filament\Resources\SuratTugasResource\Support\SuratTugasFormFactory;
 use App\Models\SuratTugas;
 use App\Models\Survey;
 use Filament\Actions;
@@ -53,28 +54,13 @@ class ListSuratTugas extends ListRecords
                 ->color('info')
                 ->schema([
                     Select::make('survey_id')
-                        ->label('Pilih Survey')
-                        ->options(function () {
-                            return Survey::where('is_active', true)
-                                ->orderByDesc('created_at')
-                                ->pluck('name', 'id');
-                        })
+                        ->label('Pilih Kegiatan / Pelatihan')
+                        ->options(fn () => SuratTugasFormFactory::getActiveSurveyOptions())
                         ->searchable()
                         ->preload()
                         ->live()
                         ->afterStateUpdated(function (Set $set, $state) {
-                            if ($state) {
-                                $survey = Survey::find($state);
-                                if ($survey) {
-                                    $set('keperluan', "{$survey->name}");
-                                    if ($survey->start_date) {
-                                        $set('waktu_mulai', Carbon::parse($survey->start_date)->format('Y-m-d'));
-                                    }
-                                    if ($survey->end_date) {
-                                        $set('waktu_selesai', Carbon::parse($survey->end_date)->format('Y-m-d'));
-                                    }
-                                }
-                            }
+                            SuratTugasFormFactory::applySurveyDefaultsToForm($set, $state, includeTempatTugas: false);
                         })
                         ->required(),
                     Group::make()->schema([

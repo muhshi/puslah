@@ -55,6 +55,9 @@ composer dev
 ## Changelog
 
 ### 2026-11-25
+- **Integrasi Pelatihan ke Surat Tugas (`SuratTugasResource`, `SuratTugasFormFactory`, `PelatihanResource`):**
+  - Menyatukan pemanggilan **Kegiatan & Pelatihan** di form pembuatan/edit Surat Tugas satuan, kolektif (`CreateBulkSuratTugas`), nomor terblokir (`ManageBlockedNumbers` & `SuratTugasFormFactory`), import Excel (`ListSuratTugas`), serta filter tabel dengan label prefix `[Pelatihan]` / `[Kegiatan]` (`Survey::$selector_label`).
+  - Menambahkan auto-fill `tempat_tugas` dari lokasi pelatihan, tampilan informasi peran & kelas pelatihan pada dropdown peserta, pesan bentrok tanggal yang kontekstual (`pelatihan` vs `survei`), serta tombol pintasan **"Buat Surat Tugas"** di tabel dan halaman edit `PelatihanResource` dengan pre-fill parameter `?survey_id=`.
 - **Modul Manajemen Pelatihan & Paket Dokumen SPJ:**
   - **Menu Terpisah `Kegiatan` & `Pelatihan` (`PelatihanResource.php`, `SurveyResource.php`):** Menambahkan resource **Pelatihan** di bawah grup *Manajemen Kegiatan* yang berbagi tabel `surveys` via flag `is_pelatihan`, lengkap dengan manajemen kelas dinamis (`pelatihan_classes`), opsi ATK (`pelatihan_has_atk`), serta metadata surat & waktu pelaksanaan.
   - **Peserta, Role & Kelas (`ParticipantsRelationManager.php`):** Menambahkan kolom `role` (*Peserta*, *Panitia*, *Pengajar*, *Narasumber*) dan `class` di `survey_users` dengan smart default saat mass-assign peserta, bulk action ubah kelas & ubah role, serta fitur **Download Template Excel (`PelatihanKelasTemplateExport`) & Import Kelas/Role (`PelatihanKelasImport`)**.

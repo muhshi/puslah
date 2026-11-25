@@ -7,10 +7,15 @@ use App\Filament\Resources\PelatihanResource;
 use App\Filament\Resources\PelatihanResource\Pages\CreatePelatihan;
 use App\Filament\Resources\PelatihanResource\Pages\EditPelatihan;
 use App\Filament\Resources\PelatihanResource\Pages\ListPelatihans;
+use App\Filament\Resources\SuratTugasResource;
+use App\Filament\Resources\SuratTugasResource\Pages\CreateBulkSuratTugas;
+use App\Filament\Resources\SuratTugasResource\Pages\CreateSuratTugas;
+use App\Filament\Resources\SuratTugasResource\Support\SuratTugasFormFactory;
 use App\Filament\Resources\SurveyResource;
 use App\Filament\Resources\SurveyResource\Pages\ListSurveys;
 use App\Filament\Resources\SurveyResource\RelationManagers\ParticipantsRelationManager;
 use App\Imports\PelatihanKelasImport;
+use App\Models\SuratTugas;
 use App\Models\Survey;
 use App\Models\SurveyUser;
 use App\Models\User;
@@ -346,5 +351,130 @@ class PelatihanUiTest extends TestCase
         $suOther->refresh();
         $this->assertSame('PPL', $suOther->role_pelatihan);
         $this->assertSame('Kelas A', $suOther->kelas);
+    }
+
+    public function test_pelatihan_can_be_selected_and_prefilled_in_surat_tugas(): void
+    {
+        $kegiatan = Survey::create([
+            'name' => 'Pendataan Susenas 2026',
+            'dasar_surat' => 'DIPA 2026',
+            'is_pelatihan' => false,
+            'is_active' => true,
+        ]);
+
+        $pelatihan = Survey::create([
+            'name' => 'Pelatihan Petugas Susenas 2026',
+            'dasar_surat' => 'DIPA 2026',
+            'is_pelatihan' => true,
+            'lokasi' => 'Hotel Grasia Semarang',
+            'kota_kegiatan' => 'Semarang',
+            'start_date' => '2026-06-10',
+            'end_date' => '2026-06-12',
+            'is_active' => true,
+        ]);
+
+        $mitra = User::factory()->create(['name' => 'Mitra Pelatihan']);
+        $mitra->assignRole('Mitra');
+        $mitra->profile()->updateOrCreate(['user_id' => $mitra->id], [
+            'full_name' => 'Mitra Pelatihan',
+            'jabatan' => 'Mitra Statistik',
+        ]);
+
+        $organik = User::factory()->create(['name' => 'Pegawai Pelatihan']);
+        $organik->assignRole('Organik');
+        $organik->profile()->updateOrCreate(['user_id' => $organik->id], [
+            'full_name' => 'Pegawai Pelatihan',
+            'jabatan' => 'Statistisi Ahli Pertama',
+        ]);
+
+        SurveyUser::create([
+            'survey_id' => $kegiatan->id,
+            'user_id' => $mitra->id,
+            'status' => 'registered',
+        ]);
+
+        SurveyUser::create([
+            'survey_id' => $pelatihan->id,
+            'user_id' => $mitra->id,
+            'status' => 'registered',
+            'role_pelatihan' => 'PPL',
+            'kelas' => 'Kelas A',
+        ]);
+
+        SurveyUser::create([
+            'survey_id' => $pelatihan->id,
+            'user_id' => $organik->id,
+            'status' => 'registered',
+            'role_pelatihan' => 'Panitia',
+            'kelas' => 'Kelas A',
+        ]);
+
+        // 1. Both Kegiatan and Pelatihan appear in SuratTugas dropdowns with distinct prefixes
+        $options = SuratTugasFormFactory::getActiveSurveyOptions(onlyWithRemainingParticipants: true);
+        $this->assertSame('[Kegiatan] Pendataan Susenas 2026', $options[$kegiatan->id] ?? null);
+        $this->assertSame('[Pelatihan] Pelatihan Petugas Susenas 2026', $options[$pelatihan->id] ?? null);
+
+        // 2. Participant labels for Pelatihan include role_pelatihan and kelas
+        $mitraOptions = SuratTugasFormFactory::getSurveyParticipantOptions($pelatihan->id, 'Mitra');
+        $organikOptions = SuratTugasFormFactory::getSurveyParticipantOptions($pelatihan->id, 'Organik');
+        $this->assertSame('Mitra Pelatihan (Mitra Statistik) — PPL · Kelas A', $mitraOptions[$mitra->id] ?? null);
+        $this->assertSame('Pegawai Pelatihan (Statistisi Ahli Pertama) — Panitia · Kelas A', $organikOptions[$organik->id] ?? null);
+
+        // 3. CreateBulkSuratTugas pre-fills Pelatihan details via ?survey_id= and creates SuratTugas
+        Livewire::withQueryParams(['survey_id' => $pelatihan->id])
+            ->test(CreateBulkSuratTugas::class)
+            ->assertSet('data.survey_id', $pelatihan->id)
+            ->assertSet('data.keperluan', 'Pelatihan Petugas Susenas 2026')
+            ->assertSet('data.tempat_tugas', 'Hotel Grasia Semarang')
+            ->assertSet('data.waktu_mulai', '2026-06-10')
+            ->assertSet('data.waktu_selesai', '2026-06-12')
+            ->fillForm([
+                'mitra_user_ids' => [$mitra->id],
+                'pegawai_bps_user_ids' => [$organik->id],
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('surat_tugas', [
+            'survey_id' => $pelatihan->id,
+            'user_id' => $mitra->id,
+            'tempat_tugas' => 'Hotel Grasia Semarang',
+            'keperluan' => 'Pelatihan Petugas Susenas 2026',
+        ]);
+        $this->assertDatabaseHas('surat_tugas', [
+            'survey_id' => $pelatihan->id,
+            'user_id' => $organik->id,
+            'tempat_tugas' => 'Hotel Grasia Semarang',
+        ]);
+
+        // 4. Overlap error message refers to 'pelatihan'
+        $st = SuratTugas::where('survey_id', $pelatihan->id)->where('user_id', $mitra->id)->firstOrFail();
+        $this->assertStringContainsString("untuk pelatihan 'Pelatihan Petugas Susenas 2026'", SuratTugas::formatOverlapMessage('Mitra Pelatihan', $st));
+
+        // 5. CreateSuratTugas single page also pre-fills Pelatihan via ?survey_id=
+        Livewire::withQueryParams(['survey_id' => $pelatihan->id])
+            ->test(CreateSuratTugas::class)
+            ->assertSet('data.survey_id', $pelatihan->id)
+            ->assertSet('data.keperluan', 'Pelatihan Petugas Susenas 2026')
+            ->assertSet('data.tempat_tugas', 'Hotel Grasia Semarang')
+            ->assertSet('data.waktu_mulai', '2026-06-10')
+            ->assertSet('data.waktu_selesai', '2026-06-12');
+
+        // 6. PelatihanResource table exposes Buat Surat Tugas action pointing to CreateBulkSuratTugas
+        Livewire::test(ListPelatihans::class)
+            ->assertTableActionExists('buatSuratTugas', record: $pelatihan)
+            ->assertTableActionHasUrl(
+                'buatSuratTugas',
+                SuratTugasResource::getUrl('create-bulk', ['survey_id' => $pelatihan->id]),
+                record: $pelatihan
+            );
+
+        // 7. EditPelatihan header exposes Buat Surat Tugas action
+        Livewire::test(EditPelatihan::class, ['record' => $pelatihan->getRouteKey()])
+            ->assertActionExists('buatSuratTugasHeader')
+            ->assertActionHasUrl(
+                'buatSuratTugasHeader',
+                SuratTugasResource::getUrl('create-bulk', ['survey_id' => $pelatihan->id])
+            );
     }
 }
