@@ -33,6 +33,7 @@ class OfficeResource extends Resource
     protected static string | \UnitEnum | null $navigationGroup = 'Manajemen Kantor Cabang';
     protected static ?string $navigationLabel = 'Kantor';
     protected static ?int $navigationSort = 80;
+    protected static bool $shouldRegisterNavigation = false;
 
 
     public static function form(Schema $schema): Schema

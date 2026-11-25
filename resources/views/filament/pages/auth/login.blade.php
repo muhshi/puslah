@@ -27,6 +27,7 @@
     <div class="flex flex-col items-center gap-4 py-2">
         <a href="{{ route('sipetra.login') }}"
            id="sipetra-sso-btn"
+           data-navigate-ignore
            onclick="if(this.getAttribute('data-submitting')) return false; this.setAttribute('data-submitting', '1'); this.style.pointerEvents='none'; this.style.opacity='0.85'; document.getElementById('sso-spinner').style.display='inline-block'; document.getElementById('sso-icon-badge').style.display='none'; document.getElementById('sso-btn-text').innerText='Menghubungkan ke SIPETRA...';"
            class="w-full flex items-center justify-center gap-3.5 px-4 py-3 text-base font-semibold text-white rounded-xl shadow-md transition-all duration-200 hover:shadow-lg hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-offset-2"
            style="background-color: #005596;">

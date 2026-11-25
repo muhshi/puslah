@@ -16,8 +16,18 @@ use Laravel\Socialite\Facades\Socialite;
 
 class SsoController extends Controller
 {
-    public function redirect()
+    public function redirect(Request $request)
     {
+        // Samakan host dengan APP_URL di local agar session state cocok dengan SIPETRA_REDIRECT_URI (mis. localhost vs 127.0.0.1)
+        if (app()->environment('local')) {
+            $appUrl = rtrim((string) config('app.url'), '/');
+            $targetHost = parse_url($appUrl, PHP_URL_HOST);
+
+            if ($targetHost && $request->getHost() !== $targetHost) {
+                return redirect()->away($appUrl . $request->getRequestUri());
+            }
+        }
+
         return Socialite::driver('sipetra')->redirect();
     }
 

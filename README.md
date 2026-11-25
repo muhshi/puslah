@@ -4,9 +4,9 @@ Aplikasi internal **BPS Kabupaten Demak** berbasis Laravel + FilamentPHP untuk m
 
 ## Tech Stack
 
-- **Backend:** Laravel 11, PHP 8.2+
-- **Admin Panel:** FilamentPHP v3
-- **Database:** PostgreSQL
+- **Backend:** Laravel 13, PHP 8.4+
+- **Admin Panel:** FilamentPHP v5 (Livewire v4, Tailwind CSS v4)
+- **Database:** MySQL / PostgreSQL
 - **PDF:** barryvdh/laravel-dompdf, SimpleSoftwareIO/QrCode
 - **Settings:** spatie/laravel-settings
 - **Auth & RBAC:** filament-shield (Spatie Permission)
@@ -53,6 +53,13 @@ composer dev
 ```
 
 ## Changelog
+
+### 2026-11-25
+- **Upgrade Stack ke Laravel 13, Filament v5 & Livewire v4 (`PHP 8.4`):**
+  - **Framework & Runtime:** Upgrade bertahap `laravel/framework` (`v11` → `v12` → `v13.44.1`), `livewire/livewire` (`v4.4.10`), `pestphp/pest` (`v4.7.8`), `spatie/laravel-backup` (`v10.5.0`), `barryvdh/laravel-dompdf` (`v3.1.2`), `flowframe/laravel-trend` (`v0.5.0`), serta update `Dockerfile` ke `dunglas/frankenphp:php8.4`.
+  - **Filament v5 & Plugin:** Upgrade `filament/filament` (`v3` → `v4` → `v5.12.0`), `bezhansalleh/filament-shield` (`v4.3.1`), `saade/filament-fullcalendar` (`v4.0.1`), `pxlrbt/filament-excel` (`v3.6.1`), `pxlrbt/filament-activity-log` (`v2.2.0`), dan `dotswan/filament-map-picker` (`v2.3.3`). Menghapus paket tidak terpakai (`humaidem/filament-map-picker`, `joshembling/image-optimizer`) serta menjaga migrasi Pulse lama tetap no-op.
+  - **Custom Theme Tailwind v4 & Perbaikan Kompatibilitas:** Menambahkan `resources/css/filament/admin/theme.css` (`->viteTheme(...)`) agar seluruh halaman custom (`/admin/login`, `Survey Saya`, widget `Monitor Nomor Surat`, komponen Livewire) ter-styling penuh termasuk hasil build `public/build/` untuk deploy tanpa Node di container. Memperbaiki kalkulasi tanggal Carbon 3 (`diffIn*`), middleware `PreventRequestForgery`, normalisasi host `APP_URL` di `SsoController::redirect()` untuk SSO SIPETRA lokal, serta menyembunyikan menu `Manajemen Kantor Cabang` (`OfficeResource`, `ScheduleResource`, `ShiftResource`) dari sidebar tanpa menghapus model/fitur presensi & dokumen.
+  - **Automated Smoke Tests:** Menambahkan `tests/Feature/FilamentUpgradeSmokeTest.php` untuk memverifikasi route panel, halaman, resource, dan widget Livewire/Filament.
 
 ### 2026-11-24
 - **Redesain Landing Page Publik DINAMIT (`welcome.blade.php`)**:

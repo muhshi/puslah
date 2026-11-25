@@ -1,10 +1,10 @@
 # Ignore build assets
 /public/css/
+/public/fonts/
 /public/js/
 /public/vendor/livewire/
 /.phpunit.cache
 /node_modules
-/public/build
 /public/hot
 /public/storage
 /storage/*.key

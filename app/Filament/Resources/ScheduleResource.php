@@ -30,6 +30,7 @@ class ScheduleResource extends Resource
     protected static string | \UnitEnum | null $navigationGroup = 'Manajemen Kantor Cabang';
     protected static ?string $navigationLabel = 'Jadwal';
     protected static ?int $navigationSort = 81;
+    protected static bool $shouldRegisterNavigation = false;
 
     public static function form(Schema $schema): Schema
     {

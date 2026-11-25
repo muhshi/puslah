@@ -31,6 +31,7 @@ class ShiftResource extends Resource
     protected static string | \UnitEnum | null $navigationGroup = 'Manajemen Kantor Cabang';
     protected static ?string $navigationLabel = 'Shift';
     protected static ?int $navigationSort = 82;
+    protected static bool $shouldRegisterNavigation = false;
 
     public static function form(Schema $schema): Schema
     {
