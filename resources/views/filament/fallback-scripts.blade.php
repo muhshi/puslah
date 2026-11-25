@@ -1,8 +1,8 @@
 {{-- JANGAN panggil @filamentScripts di sini. Panel sudah manggil itu. --}}
-<script type="module" src="{{ asset('js/filament/forms/components/file-upload.js') }}" data-navigate-track></script>
-<script type="module" src="{{ asset('js/filament/forms/components/date-time-picker.js') }}" data-navigate-track></script>
-<script type="module" src="{{ asset('js/filament/forms/components/textarea.js') }}" data-navigate-track></script>
-<script type="module" src="{{ asset('js/filament/widgets/components/chart.js') }}" data-navigate-track></script>
+<script type="module" src="{{ \Filament\Support\Facades\FilamentAsset::getAlpineComponentSrc('file-upload', 'filament/forms') }}" data-navigate-track></script>
+<script type="module" src="{{ \Filament\Support\Facades\FilamentAsset::getAlpineComponentSrc('date-time-picker', 'filament/forms') }}" data-navigate-track></script>
+<script type="module" src="{{ \Filament\Support\Facades\FilamentAsset::getAlpineComponentSrc('textarea', 'filament/forms') }}" data-navigate-track></script>
+<script type="module" src="{{ \Filament\Support\Facades\FilamentAsset::getAlpineComponentSrc('chart', 'filament/widgets') }}" data-navigate-track></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
     if (typeof window.mapWithSearchPicker === 'undefined') {

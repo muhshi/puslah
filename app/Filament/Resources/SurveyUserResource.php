@@ -87,7 +87,7 @@ class SurveyUserResource extends Resource
                     ->options(fn() => Survey::orderBy('name')->pluck('name', 'id')),
                 SelectFilter::make('status')
                     ->options(['registered' => 'registered', 'approved' => 'approved']),
-                Filter::make('registered_at')->form([
+                Filter::make('registered_at')->schema([
                     DatePicker::make('from'),
                     DatePicker::make('until'),
                 ])->query(function ($query, array $data) {

@@ -80,7 +80,7 @@ class ParticipantsRelationManager extends RelationManager
             ->recordTitleAttribute('id')
             ->columns([
                 TextColumn::make('user.name')->label('Nama')->searchable(),
-                TextColumn::make('status')->colors([
+                TextColumn::make('status')->badge()->colors([
                     'warning' => 'registered',
                     'success' => 'approved',
                 ]),

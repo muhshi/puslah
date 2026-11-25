@@ -45,6 +45,7 @@ class ListUsers extends ListRecords
                         ->label('File Excel (.xlsx)')
                         ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv'])
                         ->disk('public')
+                        ->visibility('public')
                         ->directory('imports')
                         ->required(),
                 ])
@@ -76,6 +77,7 @@ class ListUsers extends ListRecords
                         ->label('File Excel (.xlsx)')
                         ->acceptedFileTypes(['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv'])
                         ->disk('public')
+                        ->visibility('public')
                         ->directory('imports')
                         ->required(),
                 ])

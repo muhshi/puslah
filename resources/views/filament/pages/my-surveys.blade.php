@@ -90,7 +90,7 @@
                     @endphp
 
                     {{-- Card Design based on user feedback (Classic White) --}}
-                    <div class="group flex flex-col bg-white dark:bg-gray-900 rounded-3xl p-6 transition-all hover:shadow-lg h-full relative overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-sky-400 dark:hover:border-sky-400">
+                    <div wire:key="my-survey-{{ $r->id }}" class="group flex flex-col bg-white dark:bg-gray-900 rounded-3xl p-6 transition-all hover:shadow-lg h-full relative overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-sky-400 dark:hover:border-sky-400">
                         {{-- Decorative Background Circle (Subtle Touch) --}}
                         <div class="absolute -top-10 -right-10 w-32 h-32 bg-sky-50 dark:bg-gray-800 rounded-full opacity-50 blur-2xl group-hover:scale-150 transition-transform duration-700"></div>
 

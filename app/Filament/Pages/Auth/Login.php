@@ -6,7 +6,7 @@ use Illuminate\Contracts\Support\Htmlable;
 
 class Login extends \Filament\Auth\Pages\Login
 {
-    protected static string $view = 'filament.pages.auth.login';
+    protected string $view = 'filament.pages.auth.login';
 
     public bool $showFallback = false;
 

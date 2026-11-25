@@ -11,7 +11,6 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\IconColumn;
 use App\Filament\Resources\CertificateTemplateResource\Pages\ListCertificateTemplates;
 use App\Filament\Resources\CertificateTemplateResource\Pages\CreateCertificateTemplate;
@@ -61,6 +60,7 @@ class CertificateTemplateResource extends Resource
                     ->imageResizeTargetHeight(null) // biar proporsional
                     ->directory('cert_templates')
                     ->disk('public')
+                    ->visibility('public')
                     ->preserveFilenames()
                     ->required()
                     ->imageEditor()
@@ -97,6 +97,7 @@ class CertificateTemplateResource extends Resource
                     ->acceptedFileTypes(['image/png', 'image/jpeg'])
                     ->directory('cert_templates/signs')
                     ->disk('public')
+                    ->visibility('public')
                     ->preserveFilenames()
                     ->downloadable()
                     ->openable(),
@@ -111,7 +112,7 @@ class CertificateTemplateResource extends Resource
                 ImageColumn::make('background_path')->disk('public')->label('Background')->square(),
                 TextColumn::make('name')->searchable()->sortable(),
                 TextColumn::make('code')->searchable()->sortable(),
-                BadgeColumn::make('orientation')->colors(['primary']),
+                TextColumn::make('orientation')->badge()->color('primary'),
                 IconColumn::make('active')->boolean()->label('Aktif'),
                 TextColumn::make('updated_at')->since()->label('Diubah'),
             ])

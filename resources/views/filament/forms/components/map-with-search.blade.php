@@ -1,11 +1,6 @@
-<x-filament-forms::field-wrapper
-    :id="$getId()"
-    :label="$getLabel()"
-    :label-sr-only="$isLabelHidden()"
-    :helper-text="$getHelperText()"
-    :hint="$getHint()"
-    :required="$isRequired()"
-    :state-path="$getStatePath()"
+<x-dynamic-component
+    :component="$getFieldWrapperView()"
+    :field="$field"
 >
     <div
         x-data="mapWithSearchPicker({
@@ -395,4 +390,4 @@
             }
         </script>
     @endonce
-</x-filament-forms::field-wrapper>
+</x-dynamic-component>

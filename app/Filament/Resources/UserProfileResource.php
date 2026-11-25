@@ -100,8 +100,8 @@ class UserProfileResource extends Resource
                 ImageColumn::make('avatar_path')
                     ->label('Foto')
                     ->disk('public')       // pastikan sama dengan FileUpload
-                    ->height(48)
-                    ->width(48)
+                    ->imageHeight(48)
+                    ->imageWidth(48)
                     ->circular(),
 
                 TextColumn::make('full_name')

@@ -8,7 +8,7 @@
                 </div>
                 <h3 class="font-bold text-gray-900 dark:text-white">Filter Periode</h3>
             </div>
-            <form wire:submit.prevent="updateData">
+            <form wire:submit="updateData">
                 {{ $this->form }}
             </form>
         </x-filament::section>

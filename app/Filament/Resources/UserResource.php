@@ -134,7 +134,7 @@ class UserResource extends Resource
                     BulkAction::make('assignRoles')
                         ->label('Assign Roles')
                         ->icon('heroicon-o-user-plus')
-                        ->form([
+                        ->schema([
                             Select::make('roles')
                                 ->label('Pilih Role yang Akan Ditambahkan')
                                 ->multiple()

@@ -22,7 +22,7 @@ use App\Filament\Resources\AttendanceResource\Pages\ViewAttendance;
 use App\Filament\Resources\AttendanceResource\Pages;
 use App\Filament\Resources\AttendanceResource\RelationManagers;
 use App\Models\Attendance;
-use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
+use pxlrbt\FilamentExcel\Actions\ExportAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -160,7 +160,7 @@ class AttendanceResource extends Resource
                     ->searchable(),
 
                 Filter::make('created_at')
-                    ->form([
+                    ->schema([
                         DatePicker::make('from')->label('Dari'),
                         DatePicker::make('until')->label('Sampai'),
                     ])
