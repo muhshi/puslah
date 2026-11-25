@@ -8,17 +8,17 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.2",
+        "php": "^8.4",
         "barryvdh/laravel-dompdf": "^3.1",
         "bezhansalleh/filament-shield": "^4.0",
         "dotswan/filament-map-picker": "^2.0",
         "filament/filament": "^4.0",
         "flowframe/laravel-trend": "^0.5.0",
-        "laravel/framework": "^12.0",
+        "laravel/framework": "^13.0",
         "laravel/passport": "^13.4",
         "laravel/sanctum": "^4.0",
         "laravel/socialite": "^5.24",
-        "laravel/tinker": "^2.9",
+        "laravel/tinker": "^3.0",
         "maatwebsite/excel": "^3.1",
         "nutgram/laravel": "*",
         "nutgram/nutgram": "*",
@@ -28,7 +28,7 @@
         "saade/filament-fullcalendar": "^4.0",
         "simplesoftwareio/simple-qrcode": "^4.2",
         "spatie/laravel-activitylog": "^4.12",
-        "spatie/laravel-backup": "^9.3",
+        "spatie/laravel-backup": "^10.0",
         "spatie/laravel-settings": "^3.4",
         "wireui/heroicons": "^2.9"
     },
@@ -38,8 +38,8 @@
         "laravel/sail": "^1.26",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.1",
-        "pestphp/pest": "^3.0",
-        "pestphp/pest-plugin-laravel": "^3.0"
+        "pestphp/pest": "^4.0",
+        "pestphp/pest-plugin-laravel": "^4.0"
     },
     "autoload": {
         "psr-4": {
@@ -86,7 +86,7 @@
     },
     "config": {
         "platform": {
-            "php": "8.3.36"
+            "php": "8.4.19"
         },
         "optimize-autoloader": true,
         "preferred-install": "dist",
