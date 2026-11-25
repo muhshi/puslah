@@ -8,9 +8,7 @@ use App\Filament\Resources\PelatihanResource\Pages\EditPelatihan;
 use App\Filament\Resources\PelatihanResource\Pages\ListPelatihans;
 use App\Filament\Resources\SurveyResource\RelationManagers\ParticipantsRelationManager;
 use App\Models\Survey;
-use App\Services\OfficialSettingsSyncService;
 use App\Services\PelatihanUndanganService;
-use App\Settings\SystemSettings;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
@@ -22,7 +20,6 @@ use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -165,31 +162,12 @@ class PelatihanResource extends Resource
                             ->default(130000)
                             ->required(),
                     ])
-                    ->columns(2),
+                    ->columns(2)
+                    ->columnSpanFull(),
 
-                Section::make('Pejabat & Perlengkapan ATK')
-                    ->description('Pejabat penanggung jawab/penandatangan dan opsi tanda terima ATK')
+                Section::make('Perlengkapan ATK (Opsional)')
+                    ->description('Pengaturan tanda terima perlengkapan peserta. Data PPK, Bendahara, dan Penanggung Jawab (Kasubag Umum) otomatis diambil dari menu Pengaturan Sistem.')
                     ->schema([
-                        Select::make('penyelenggara_user_id')
-                            ->label('Penanggung Jawab / Penyelenggara')
-                            ->options(fn () => OfficialSettingsSyncService::getEmployeeOptions())
-                            ->searchable()
-                            ->preload()
-                            ->nullable(),
-                        Select::make('ppk_user_id')
-                            ->label('Pejabat Pembuat Komitmen (PPK)')
-                            ->options(fn () => OfficialSettingsSyncService::getEmployeeOptions())
-                            ->searchable()
-                            ->preload()
-                            ->default(fn () => app(SystemSettings::class)->ppk_user_id)
-                            ->nullable(),
-                        Select::make('bendahara_user_id')
-                            ->label('Bendahara Pengeluaran')
-                            ->options(fn () => OfficialSettingsSyncService::getEmployeeOptions())
-                            ->searchable()
-                            ->preload()
-                            ->default(fn () => app(SystemSettings::class)->bendahara_user_id)
-                            ->nullable(),
                         Toggle::make('include_atk')
                             ->label('Sertakan Tanda Terima ATK pada Paket SPJ')
                             ->default(false)
@@ -201,7 +179,8 @@ class PelatihanResource extends Resource
                             ->visible(fn ($get) => (bool) $get('include_atk'))
                             ->columnSpanFull(),
                     ])
-                    ->columns(2),
+                    ->columns(2)
+                    ->columnSpanFull(),
             ]);
     }
 
@@ -340,9 +319,6 @@ class PelatihanResource extends Resource
                         $data['mak'] = $record->mak;
                         $data['biaya_transport'] = $record->biaya_transport;
                         $data['biaya_uang_harian'] = $record->biaya_uang_harian;
-                        $data['penyelenggara_user_id'] = $record->penyelenggara_user_id;
-                        $data['ppk_user_id'] = $record->ppk_user_id;
-                        $data['bendahara_user_id'] = $record->bendahara_user_id;
                         $data['include_atk'] = $record->include_atk;
                         $data['atk_items'] = $record->atk_items;
 

@@ -426,4 +426,47 @@ class PelatihanDocumentsTest extends TestCase
 
         Storage::disk('local')->delete($fileName);
     }
+
+    public function test_pelatihan_spj_data_builder_resolves_officials_from_system_settings(): void
+    {
+        $settings = app(SystemSettings::class);
+        $settings->fill([
+            'ppk_name' => 'Drs. PPK Pengaturan',
+            'ppk_nip' => '197001011995011001',
+            'ppk_title' => 'Pejabat Pembuat Komitmen',
+            'bendahara_name' => 'Sri Bendahara Pengaturan',
+            'bendahara_nip' => '198002022005012002',
+            'bendahara_title' => 'Bendahara Pengeluaran',
+            'kasubag_umum_name' => 'Hadi Kasubag Pengaturan',
+            'kasubag_umum_nip' => '197903032004011003',
+            'kasubag_umum_title' => 'Kepala Subbagian Umum',
+        ])->save();
+
+        $survey = Survey::create([
+            'name' => 'Pelatihan Menggunakan Pengaturan Sistem',
+            'is_pelatihan' => true,
+            'start_date' => '2026-11-24',
+            'end_date' => '2026-11-25',
+            'lokasi' => 'Aula BPS Kabupaten Demak',
+            'kota_kegiatan' => 'Demak',
+        ]);
+
+        $this->mock(SipetraUserDataService::class, function ($mock) {
+            $mock->shouldReceive('fetchForUsers')->andReturn([]);
+        });
+
+        $data = app(PelatihanSpjDataBuilder::class)->build($survey);
+
+        $this->assertSame('Drs. PPK Pengaturan', $data['ppk']['name']);
+        $this->assertSame('197001011995011001', $data['ppk']['nip']);
+        $this->assertSame('Pejabat Pembuat Komitmen', $data['ppk']['title']);
+
+        $this->assertSame('Sri Bendahara Pengaturan', $data['bendahara']['name']);
+        $this->assertSame('198002022005012002', $data['bendahara']['nip']);
+        $this->assertSame('Bendahara Pengeluaran', $data['bendahara']['title']);
+
+        $this->assertSame('Hadi Kasubag Pengaturan', $data['penyelenggara']['name']);
+        $this->assertSame('197903032004011003', $data['penyelenggara']['nip']);
+        $this->assertSame('Kepala Subbagian Umum', $data['penyelenggara']['title']);
+    }
 }

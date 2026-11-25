@@ -15,37 +15,54 @@ class OfficialSettingsSyncService
      */
     public function buildSyncedAttributes(array $state): array
     {
-        $userIds = array_values(array_filter([
-            $state['kepala_user_id'] ?? null,
-            $state['ppk_user_id'] ?? null,
-            $state['bendahara_user_id'] ?? null,
-        ]));
+        $officialMap = [
+            'kepala_user_id' => [
+                'name' => 'cert_signer_name',
+                'nip' => 'cert_signer_nip',
+                'title' => 'cert_signer_title',
+                'default_title' => fn (User $user): string => $user->profile?->jabatan ?: 'Kepala Badan Pusat Statistik Kabupaten Demak',
+            ],
+            'ppk_user_id' => [
+                'name' => 'ppk_name',
+                'nip' => 'ppk_nip',
+                'title' => 'ppk_title',
+                'default_title' => 'Pejabat Pembuat Komitmen',
+            ],
+            'bendahara_user_id' => [
+                'name' => 'bendahara_name',
+                'nip' => 'bendahara_nip',
+                'title' => 'bendahara_title',
+                'default_title' => 'Bendahara Pengeluaran',
+            ],
+            'kasubag_umum_user_id' => [
+                'name' => 'kasubag_umum_name',
+                'nip' => 'kasubag_umum_nip',
+                'title' => 'kasubag_umum_title',
+                'default_title' => 'Kepala Subbagian Umum',
+            ],
+        ];
+
+        $userIds = array_values(array_filter(array_map(
+            fn (string $key) => $state[$key] ?? null,
+            array_keys($officialMap)
+        )));
 
         $users = empty($userIds)
             ? collect()
             : User::with('profile')->whereIn('id', $userIds)->get()->keyBy('id');
 
-        if (! empty($state['kepala_user_id']) && ($kepala = $users->get((int) $state['kepala_user_id']))) {
-            $state['cert_signer_name'] = $kepala->profile?->full_name ?: $kepala->name;
-            $state['cert_signer_nip'] = $kepala->profile?->nip ?: '-';
-            if (empty($state['cert_signer_title'])) {
-                $state['cert_signer_title'] = $kepala->profile?->jabatan ?: 'Kepala Badan Pusat Statistik Kabupaten Demak';
+        foreach ($officialMap as $userField => $target) {
+            $userId = $state[$userField] ?? null;
+            if (empty($userId) || ! ($user = $users->get((int) $userId))) {
+                continue;
             }
-        }
 
-        if (! empty($state['ppk_user_id']) && ($ppk = $users->get((int) $state['ppk_user_id']))) {
-            $state['ppk_name'] = $ppk->profile?->full_name ?: $ppk->name;
-            $state['ppk_nip'] = $ppk->profile?->nip ?: '-';
-            if (empty($state['ppk_title'])) {
-                $state['ppk_title'] = 'Pejabat Pembuat Komitmen';
-            }
-        }
+            $state[$target['name']] = $user->profile?->full_name ?: $user->name;
+            $state[$target['nip']] = $user->profile?->nip ?: '-';
 
-        if (! empty($state['bendahara_user_id']) && ($bendahara = $users->get((int) $state['bendahara_user_id']))) {
-            $state['bendahara_name'] = $bendahara->profile?->full_name ?: $bendahara->name;
-            $state['bendahara_nip'] = $bendahara->profile?->nip ?: '-';
-            if (empty($state['bendahara_title'])) {
-                $state['bendahara_title'] = 'Bendahara Pengeluaran';
+            if (empty($state[$target['title']])) {
+                $defaultTitle = $target['default_title'];
+                $state[$target['title']] = is_callable($defaultTitle) ? $defaultTitle($user) : $defaultTitle;
             }
         }
 

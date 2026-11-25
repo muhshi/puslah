@@ -55,6 +55,9 @@ composer dev
 ## Changelog
 
 ### 2026-11-25
+- **Sentralisasi Pejabat Pelatihan (Kasubag Umum, PPK, Bendahara) & Full-Span DIPA:**
+  - **Penambahan Kasubag Umum / Penanggung Jawab di Pengaturan Sistem (`SystemSettings`, `SystemSettingsPage`, `OfficialSettingsSyncService`):** Menambahkan dropdown & sinkronisasi profil pegawai untuk **Kasubag Umum / Penanggung Jawab** (`kasubag_umum_user_id`, `kasubag_umum_name`, `kasubag_umum_nip`, `kasubag_umum_title`) di tab *Pejabat & Persuratan*.
+  - **Penyederhanaan Form Pelatihan (`PelatihanResource`, `PelatihanSpjDataBuilder`):** Menghapus input manual PPK, Bendahara, dan Penanggung Jawab dari form Pelatihan karena seluruh pejabat SPJ kini diambil langsung dari *Pengaturan Sistem*, sekaligus mengubah section **Anggaran DIPA & Translok** dan **Perlengkapan ATK (Opsional)** menjadi `columnSpanFull()`.
 - **Integrasi Pelatihan ke Surat Tugas (`SuratTugasResource`, `SuratTugasFormFactory`, `PelatihanResource`):**
   - Menyatukan pemanggilan **Kegiatan & Pelatihan** di form pembuatan/edit Surat Tugas satuan, kolektif (`CreateBulkSuratTugas`), nomor terblokir (`ManageBlockedNumbers` & `SuratTugasFormFactory`), import Excel (`ListSuratTugas`), serta filter tabel dengan label prefix `[Pelatihan]` / `[Kegiatan]` (`Survey::$selector_label`).
   - Menambahkan auto-fill `tempat_tugas` dari lokasi pelatihan, tampilan informasi peran & kelas pelatihan pada dropdown peserta, pesan bentrok tanggal yang kontekstual (`pelatihan` vs `survei`), serta tombol pintasan **"Buat Surat Tugas"** di tabel dan halaman edit `PelatihanResource` dengan pre-fill parameter `?survey_id=`.

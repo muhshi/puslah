@@ -97,6 +97,9 @@ class PelatihanUiTest extends TestCase
     public function test_create_pelatihan_page_mutates_and_sets_is_pelatihan_true(): void
     {
         Livewire::test(CreatePelatihan::class)
+            ->assertFormFieldDoesNotExist('ppk_user_id')
+            ->assertFormFieldDoesNotExist('bendahara_user_id')
+            ->assertFormFieldDoesNotExist('penyelenggara_user_id')
             ->fillForm([
                 'name' => 'Pelatihan Susenas Maret 2026',
                 'description' => 'Pelatihan calon petugas Susenas',

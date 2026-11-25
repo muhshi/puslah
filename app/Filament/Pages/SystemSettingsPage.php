@@ -70,6 +70,10 @@ class SystemSettingsPage extends Page implements HasForms
             'bendahara_name' => $s->bendahara_name ?? '-',
             'bendahara_nip' => $s->bendahara_nip ?? '-',
             'bendahara_title' => $s->bendahara_title ?? 'Bendahara Pengeluaran',
+            'kasubag_umum_user_id' => $s->kasubag_umum_user_id,
+            'kasubag_umum_name' => $s->kasubag_umum_name ?? '-',
+            'kasubag_umum_nip' => $s->kasubag_umum_nip ?? '-',
+            'kasubag_umum_title' => $s->kasubag_umum_title ?? 'Kepala Subbagian Umum',
             'office_code' => $s->office_code ?? '33210',
             'surat_prefix' => $s->surat_prefix ?? 'B',
             'laporan_lembur_template_path' => $s->laporan_lembur_template_path,
@@ -159,6 +163,19 @@ class SystemSettingsPage extends Page implements HasForms
                                 titleField: 'bendahara_title',
                                 titleLabel: 'Jabatan Bendahara',
                                 helperText: 'Digunakan untuk Kuitansi / Bukti Penerimaan Uang.'
+                            ),
+
+                            $this->makeOfficialFieldset(
+                                title: 'Kasubag Umum / Penanggung Jawab',
+                                userField: 'kasubag_umum_user_id',
+                                userLabel: 'Pilih Pegawai (Kasubag Umum)',
+                                nameField: 'kasubag_umum_name',
+                                nameLabel: 'Nama Kasubag Umum',
+                                nipField: 'kasubag_umum_nip',
+                                nipLabel: 'NIP Kasubag Umum',
+                                titleField: 'kasubag_umum_title',
+                                titleLabel: 'Jabatan Penanggung Jawab',
+                                helperText: 'Digunakan sebagai Penanggung Jawab / Penyelenggara pada Dokumen SPJ Pelatihan.'
                             ),
                         ]),
 

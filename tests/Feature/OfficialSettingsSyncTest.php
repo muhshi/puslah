@@ -53,10 +53,21 @@ it('resolves user profile details for kepala, ppk, and bendahara while keeping l
         ]
     );
 
+    $kasubag = User::factory()->create(['name' => 'Ahmad Kasubag']);
+    $kasubag->profile()->updateOrCreate(
+        ['user_id' => $kasubag->id],
+        [
+            'full_name' => 'Ahmad Fauzi, S.Tr.Stat',
+            'nip' => '199001012012011002',
+            'jabatan' => 'Kepala Subbagian Umum',
+        ]
+    );
+
     $payload = app(OfficialSettingsSyncService::class)->buildSyncedAttributes([
         'kepala_user_id' => $kepala->id,
         'ppk_user_id' => $ppk->id,
         'bendahara_user_id' => $bendahara->id,
+        'kasubag_umum_user_id' => $kasubag->id,
     ]);
 
     expect($payload['cert_signer_name'])->toBe('Khomarudin, S.ST')
@@ -67,7 +78,10 @@ it('resolves user profile details for kepala, ppk, and bendahara while keeping l
         ->and($payload['ppk_title'])->toBe('Pejabat Pembuat Komitmen')
         ->and($payload['bendahara_name'])->toBe('Khusnul Khotimah, S.Stat')
         ->and($payload['bendahara_nip'])->toBe('198610252009022009')
-        ->and($payload['bendahara_title'])->toBe('Bendahara Pengeluaran');
+        ->and($payload['bendahara_title'])->toBe('Bendahara Pengeluaran')
+        ->and($payload['kasubag_umum_name'])->toBe('Ahmad Fauzi, S.Tr.Stat')
+        ->and($payload['kasubag_umum_nip'])->toBe('199001012012011002')
+        ->and($payload['kasubag_umum_title'])->toBe('Kepala Subbagian Umum');
 });
 
 it('excludes mitra users from official employee dropdown options', function () {
@@ -154,6 +168,10 @@ it('renders and saves SystemSettingsPage with official user dropdowns via Livewi
     $bendahara->syncRoles(['Organik']);
     $bendahara->profile()->update(['full_name' => 'Khusnul Khotimah, S.Stat', 'nip' => '198610252009022009']);
 
+    $kasubag = User::factory()->create(['name' => 'Ahmad']);
+    $kasubag->syncRoles(['Organik']);
+    $kasubag->profile()->update(['full_name' => 'Ahmad Fauzi, S.Tr.Stat', 'nip' => '199001012012011002']);
+
     $this->actingAs($admin);
 
     Livewire::test(SystemSettingsPage::class)
@@ -162,6 +180,7 @@ it('renders and saves SystemSettingsPage with official user dropdowns via Livewi
             'kepala_user_id' => $kepala->id,
             'ppk_user_id' => $ppk->id,
             'bendahara_user_id' => $bendahara->id,
+            'kasubag_umum_user_id' => $kasubag->id,
         ])
         ->call('save')
         ->assertHasNoFormErrors();
@@ -173,5 +192,8 @@ it('renders and saves SystemSettingsPage with official user dropdowns via Livewi
         ->and($settings->ppk_user_id)->toBe($ppk->id)
         ->and($settings->ppk_name)->toBe('Sulaeman, S.Stat')
         ->and($settings->bendahara_user_id)->toBe($bendahara->id)
-        ->and($settings->bendahara_name)->toBe('Khusnul Khotimah, S.Stat');
+        ->and($settings->bendahara_name)->toBe('Khusnul Khotimah, S.Stat')
+        ->and($settings->kasubag_umum_user_id)->toBe($kasubag->id)
+        ->and($settings->kasubag_umum_name)->toBe('Ahmad Fauzi, S.Tr.Stat')
+        ->and($settings->kasubag_umum_nip)->toBe('199001012012011002');
 });

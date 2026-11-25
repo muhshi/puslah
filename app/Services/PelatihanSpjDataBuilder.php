@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Survey;
 use App\Models\SurveyUser;
+use App\Models\User;
 use App\Settings\SystemSettings;
 use Carbon\Carbon;
 
@@ -65,46 +66,37 @@ class PelatihanSpjDataBuilder
 
         $sipetraData = $this->sipetraService->fetchForUsers($users);
 
-        // 4. Officials Resolution
+        // 4. Officials Resolution (SystemSettings as primary SSOT, with legacy per-survey fallback)
         $kepalaName = $this->settings->cert_signer_name ?: 'Khomarudin, S.ST';
         $kepalaNip = $this->settings->cert_signer_nip ?: '197512091999011001';
         $kepalaTitle = $this->settings->cert_signer_title ?: 'Kepala Badan Pusat Statistik Kabupaten Demak';
 
-        // PPK (Survey override or SystemSettings)
-        if ($survey->ppk) {
-            $ppkUser = $survey->ppk;
-            $ppkName = $ppkUser->profile?->full_name ?: $ppkUser->name;
-            $ppkNip = $ppkUser->profile?->nip ?: '-';
-            $ppkTitle = 'Pejabat Pembuat Komitmen';
-        } else {
-            $ppkName = $this->settings->ppk_name ?: '-';
-            $ppkNip = $this->settings->ppk_nip ?: '-';
-            $ppkTitle = $this->settings->ppk_title ?: 'Pejabat Pembuat Komitmen';
-        }
+        [$ppkName, $ppkNip, $ppkTitle] = $this->resolveOfficial(
+            settingName: $this->settings->ppk_name ?? null,
+            settingNip: $this->settings->ppk_nip ?? null,
+            settingTitle: $this->settings->ppk_title ?? null,
+            fallbackUser: $survey->ppk,
+            fallbackTitle: 'Pejabat Pembuat Komitmen',
+            defaultTitle: 'Pejabat Pembuat Komitmen',
+        );
 
-        // Bendahara (Survey override or SystemSettings)
-        if ($survey->bendahara) {
-            $benUser = $survey->bendahara;
-            $bendaharaName = $benUser->profile?->full_name ?: $benUser->name;
-            $bendaharaNip = $benUser->profile?->nip ?: '-';
-            $bendaharaTitle = 'Bendahara Pengeluaran';
-        } else {
-            $bendaharaName = $this->settings->bendahara_name ?: '-';
-            $bendaharaNip = $this->settings->bendahara_nip ?: '-';
-            $bendaharaTitle = $this->settings->bendahara_title ?: 'Bendahara Pengeluaran';
-        }
+        [$bendaharaName, $bendaharaNip, $bendaharaTitle] = $this->resolveOfficial(
+            settingName: $this->settings->bendahara_name ?? null,
+            settingNip: $this->settings->bendahara_nip ?? null,
+            settingTitle: $this->settings->bendahara_title ?? null,
+            fallbackUser: $survey->bendahara,
+            fallbackTitle: 'Bendahara Pengeluaran',
+            defaultTitle: 'Bendahara Pengeluaran',
+        );
 
-        // Penyelenggara
-        if ($survey->penyelenggara) {
-            $penyUser = $survey->penyelenggara;
-            $penyelenggaraName = $penyUser->profile?->full_name ?: $penyUser->name;
-            $penyelenggaraNip = $penyUser->profile?->nip ?: '-';
-            $penyelenggaraTitle = $penyUser->profile?->jabatan ?: 'Ketua Panitia Pelatihan';
-        } else {
-            $penyelenggaraName = '-';
-            $penyelenggaraNip = '-';
-            $penyelenggaraTitle = 'Ketua Panitia Pelatihan';
-        }
+        [$penyelenggaraName, $penyelenggaraNip, $penyelenggaraTitle] = $this->resolveOfficial(
+            settingName: $this->settings->kasubag_umum_name ?? null,
+            settingNip: $this->settings->kasubag_umum_nip ?? null,
+            settingTitle: $this->settings->kasubag_umum_title ?? null,
+            fallbackUser: $survey->penyelenggara,
+            fallbackTitle: $survey->penyelenggara?->profile?->jabatan ?: 'Kepala Subbagian Umum',
+            defaultTitle: 'Kepala Subbagian Umum',
+        );
 
         // 5. Participants processing
         $allClassesRaw = [];
@@ -271,6 +263,43 @@ class PelatihanSpjDataBuilder
             ],
             'atk_items' => $survey->atk_items ?: ['Totebag', 'Pulpen', 'Pensil 2B', 'Penghapus 2 buah', 'Rautan 1 buah', 'Blocknote'],
             'include_atk' => (bool) $survey->include_atk,
+        ];
+    }
+
+    /**
+     * Resolve official name, NIP, and title from SystemSettings when configured,
+     * falling back to legacy per-survey User relation if settings are unset.
+     *
+     * @return array{0: string, 1: string, 2: string}
+     */
+    private function resolveOfficial(
+        ?string $settingName,
+        ?string $settingNip,
+        ?string $settingTitle,
+        ?User $fallbackUser,
+        string $fallbackTitle,
+        string $defaultTitle,
+    ): array {
+        if (filled($settingName) && trim($settingName) !== '-') {
+            return [
+                $settingName,
+                filled($settingNip) ? $settingNip : '-',
+                filled($settingTitle) ? $settingTitle : $defaultTitle,
+            ];
+        }
+
+        if ($fallbackUser) {
+            return [
+                $fallbackUser->profile?->full_name ?: $fallbackUser->name,
+                $fallbackUser->profile?->nip ?: '-',
+                $fallbackTitle,
+            ];
+        }
+
+        return [
+            '-',
+            '-',
+            filled($settingTitle) ? $settingTitle : $defaultTitle,
         ];
     }
 }
