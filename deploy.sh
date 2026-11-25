@@ -45,17 +45,26 @@ echo "   ✅ Kode terbaru berhasil ditarik."
 
 NEW_COMMIT=$(git rev-parse HEAD)
 
-# Deteksi apakah perlu rebuild Docker image
+# Deteksi apakah perlu rebuild Docker image (pakai hash di .git/ agar tahan gagal ulang)
+DOCKER_HASH_FILE=".git/deploy-docker.hash"
+VENDOR_HASH_FILE=".git/deploy-vendor.hash"
+CURRENT_DOCKER_HASH=$(cat Dockerfile docker-compose.yml Caddyfile 2>/dev/null | sha256sum 2>/dev/null | awk '{print $1}')
+SAVED_DOCKER_HASH=$(cat "$DOCKER_HASH_FILE" 2>/dev/null || echo "")
+
 NEED_BUILD=$FORCE_BUILD
+CHANGED_FILES=""
+if [ -n "$OLD_COMMIT" ] && [ "$OLD_COMMIT" != "$NEW_COMMIT" ]; then
+    CHANGED_FILES=$(git diff --name-only "$OLD_COMMIT" "$NEW_COMMIT")
+fi
 
 if [ "$FORCE_BUILD" = true ]; then
     echo "   ℹ️  Rebuild dipicu secara manual (flag --build)."
-elif [ -n "$OLD_COMMIT" ] && [ "$OLD_COMMIT" != "$NEW_COMMIT" ]; then
-    CHANGED_FILES=$(git diff --name-only "$OLD_COMMIT" "$NEW_COMMIT")
-    if echo "$CHANGED_FILES" | grep -qE "^(Dockerfile|docker-compose\.yml|Caddyfile|docker/)"; then
-        echo "   ℹ️  Terdeteksi perubahan pada konfigurasi Docker/Caddy. Rebuild diperlukan."
-        NEED_BUILD=true
-    fi
+elif [ -z "$SAVED_DOCKER_HASH" ] || [ "$SAVED_DOCKER_HASH" != "$CURRENT_DOCKER_HASH" ]; then
+    echo "   ℹ️  Terdeteksi perubahan Dockerfile/Compose/Caddy (atau deploy baru). Rebuild diperlukan."
+    NEED_BUILD=true
+elif echo "$CHANGED_FILES" | grep -qE "^(Dockerfile|docker-compose\.yml|Caddyfile|docker/)"; then
+    echo "   ℹ️  Terdeteksi perubahan pada konfigurasi Docker/Caddy. Rebuild diperlukan."
+    NEED_BUILD=true
 fi
 
 # Cek apakah image Docker untuk layanan utama sudah ada
@@ -68,6 +77,14 @@ if [ "$NEED_BUILD" = false ]; then
     fi
 fi
 
+# Pastikan versi PHP di container yang sedang berjalan sesuai kebutuhan Dockerfile (>= 8.4)
+if [ "$NEED_BUILD" = false ]; then
+    if ! docker exec "$CONTAINER_NAME" php -r "exit(version_compare(PHP_VERSION, '8.4.0', '<') ? 1 : 0);" >/dev/null 2>&1; then
+        echo "   ℹ️  Versi PHP di container masih < 8.4. Rebuild image PHP 8.4 diperlukan."
+        NEED_BUILD=true
+    fi
+fi
+
 # 3. Build & Restart Container jika diperlukan
 echo ""
 if [ "$NEED_BUILD" = true ]; then
@@ -75,21 +92,25 @@ if [ "$NEED_BUILD" = true ]; then
     docker compose build
     docker compose down
     docker compose up -d --build
+    echo "$CURRENT_DOCKER_HASH" > "$DOCKER_HASH_FILE"
     echo "   ✅ Image berhasil di-build & container dinyalakan ulang."
 else
-    echo "⚡ [2/6] Lewati build Docker (image sudah tersedia & tidak ada perubahan Docker/Caddy)..."
+    echo "⚡ [2/6] Lewati build Docker (image sudah sesuai & PHP 8.4 aktif)..."
     docker compose up -d --no-build
     echo "   ✅ Container aktif."
 fi
 
-# 4. Update dependencies jika composer.lock berubah
-if [ -n "$OLD_COMMIT" ] && [ "$OLD_COMMIT" != "$NEW_COMMIT" ]; then
-    if echo "$CHANGED_FILES" | grep -q "composer.lock"; then
-        echo ""
-        echo "📦 Terdeteksi perubahan composer.lock, menjalankan composer install..."
-        docker exec "$CONTAINER_NAME" composer install --no-dev --optimize-autoloader
-        echo "   ✅ Dependencies berhasil diupdate."
-    fi
+# 4. Update dependencies jika composer.lock berubah atau vendor belum sinkron
+CURRENT_VENDOR_HASH=$(sha256sum composer.lock 2>/dev/null | awk '{print $1}')
+SAVED_VENDOR_HASH=$(cat "$VENDOR_HASH_FILE" 2>/dev/null || echo "")
+
+if [ "$NEED_BUILD" = true ] || [ ! -d "vendor" ] || [ -z "$SAVED_VENDOR_HASH" ] || [ "$SAVED_VENDOR_HASH" != "$CURRENT_VENDOR_HASH" ] || echo "$CHANGED_FILES" | grep -q "composer.lock"; then
+    echo ""
+    echo "📦 Menyinkronkan dependencies (composer install)..."
+    rm -f bootstrap/cache/*.php
+    docker exec "$CONTAINER_NAME" composer install --no-dev --optimize-autoloader --no-interaction
+    echo "$CURRENT_VENDOR_HASH" > "$VENDOR_HASH_FILE"
+    echo "   ✅ Dependencies berhasil diupdate."
 fi
 
 # 5. Jalankan migrasi (tanpa --fresh, hanya yang baru)
