@@ -16,6 +16,8 @@ use App\Filament\Resources\LaporanPerjalananDinasResource\Pages\CreateLaporanPer
 use App\Filament\Resources\LaporanPerjalananDinasResource\Pages\ListLaporanPerjalananDinas;
 use App\Filament\Resources\OfficeResource\Pages\CreateOffice;
 use App\Filament\Resources\OfficeResource\Pages\ListOffices;
+use App\Filament\Resources\PelatihanResource\Pages\CreatePelatihan;
+use App\Filament\Resources\PelatihanResource\Pages\ListPelatihans;
 use App\Filament\Resources\Shield\RoleResource\Pages\ListRoles;
 use App\Filament\Resources\SuratTugasResource\Pages\CreateBulkSuratTugas;
 use App\Filament\Resources\SuratTugasResource\Pages\CreateSuratTugas;
@@ -94,6 +96,8 @@ class FilamentUpgradeSmokeTest extends TestCase
             '/admin/my-surveys',
             '/admin/offices',
             '/admin/offices/create',
+            '/admin/pelatihans',
+            '/admin/pelatihans/create',
             '/admin/schedules',
             '/admin/shared-work-reports',
             '/admin/shield/roles',
@@ -140,6 +144,8 @@ class FilamentUpgradeSmokeTest extends TestCase
             CreateSuratTugas::class,
             ListOffices::class,
             CreateOffice::class,
+            ListPelatihans::class,
+            CreatePelatihan::class,
             ListLaporanPerjalananDinas::class,
             CreateLaporanPerjalananDinas::class,
             ListLaporanLemburs::class,
