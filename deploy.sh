@@ -4,6 +4,7 @@
 #  Penggunaan: 
 #    bash deploy.sh          (Deploy cepat tanpa rebuild)
 #    bash deploy.sh --build  (Paksa rebuild image Docker)
+#    bash deploy.sh --backup (Backup database sebelum deploy)
 # ==========================================================
 
 set -e  # Berhenti jika ada error
@@ -15,11 +16,14 @@ SCHEDULER_NAME=puslah-scheduler
 BOT_NAME=puslah-telegram-bot
 BRANCH=main
 FORCE_BUILD=false
+DO_BACKUP=false
 
-# Cek argumen --build atau -b
+# Cek argumen --build, -b, atau --backup
 for arg in "$@"; do
     if [ "$arg" == "--build" ] || [ "$arg" == "-b" ]; then
         FORCE_BUILD=true
+    elif [ "$arg" == "--backup" ]; then
+        DO_BACKUP=true
     fi
 done
 
@@ -35,6 +39,22 @@ echo "📂 Direktori: $(pwd)"
 
 # Simpan commit lama sebelum pull untuk deteksi perubahan file
 OLD_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "")
+
+# 1b. Backup database sebelum deploy jika argumen --backup diberikan
+if [ "$DO_BACKUP" = true ]; then
+    echo ""
+    echo "💾 [0/6] Membuat backup database sebelum deploy..."
+    mkdir -p storage/app/backups-predeploy
+    BACKUP_TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+    echo "${OLD_COMMIT}" > "storage/app/backups-predeploy/predeploy_${BACKUP_TIMESTAMP}.commit"
+    if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+        docker exec "$CONTAINER_NAME" php artisan backup:run --only-db --disable-notifications
+        echo "   ✅ Backup database selesai (commit sebelum deploy: ${OLD_COMMIT:-unknown})."
+    else
+        echo "   ❌ Container ${CONTAINER_NAME} sedang tidak berjalan. Deploy dibatalkan agar aman."
+        exit 1
+    fi
+fi
 
 # 2. Fetch & Pull dari GitHub
 echo ""
