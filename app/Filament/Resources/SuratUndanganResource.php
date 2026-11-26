@@ -156,7 +156,7 @@ class SuratUndanganResource extends Resource
                             ->label('Pilihan Format Isi Undangan')
                             ->options([
                                 'opsi_1' => 'Opsi 1: Format Agenda / Rapat (Hari, Tanggal, Waktu, Tempat, Acara, Pakaian, Ket.)',
-                                'opsi_2' => 'Opsi 2: Format Poin Pembekalan / Arahan (seperti contoh SPKRT)',
+                                'opsi_2' => 'Opsi 2: Format Poin Pembekalan / Arahan',
                                 'custom' => 'Custom Bebas (Edit manual langsung di editor)',
                             ])
                             ->default('opsi_1')
