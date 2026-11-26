@@ -320,6 +320,11 @@ class SurveyResource extends Resource
                             ->success()
                             ->send();
                     }),
+                Tables\Actions\Action::make('buat_undangan')
+                    ->label('Undangan')
+                    ->icon('heroicon-o-envelope')
+                    ->color('success')
+                    ->url(fn (Survey $record) => \App\Filament\Resources\SuratUndanganResource::getUrl('create', ['survey_id' => $record->id])),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\Action::make('activities')
                     ->label('History')

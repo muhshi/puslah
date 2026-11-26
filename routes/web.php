@@ -127,6 +127,28 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/bukti-dukung/wadah/{id}/update', [\App\Http\Controllers\SharedWorkReportController::class, 'update'])->name('shared-work-report.update');
     Route::post('/bukti-dukung/wadah/{id}/delete', [\App\Http\Controllers\SharedWorkReportController::class, 'destroy'])->name('shared-work-report.destroy');
     Route::post('/bukti-dukung/wadah/{id}/ai-summary', [\App\Http\Controllers\SharedWorkReportController::class, 'generateAiSummary'])->name('shared-work-report.ai-summary');
+
+    // Surat Undangan Preview & Download (PDF & DOCX)
+    Route::get('/surat-undangan/{suratUndangan}/preview-pdf', function (\App\Models\SuratUndangan $suratUndangan) {
+        $pdf = app(\App\Services\SuratUndanganPdfService::class)->generate($suratUndangan);
+        $filename = 'Surat_Undangan_' . str_replace(['/', '\\', ' '], '_', $suratUndangan->nomor_surat) . '.pdf';
+        return $pdf->stream($filename);
+    })->name('surat-undangan.preview-pdf');
+
+    Route::get('/surat-undangan/{suratUndangan}/download-pdf', function (\App\Models\SuratUndangan $suratUndangan) {
+        $pdf = app(\App\Services\SuratUndanganPdfService::class)->generate($suratUndangan);
+        $filename = 'Surat_Undangan_' . str_replace(['/', '\\', ' '], '_', $suratUndangan->nomor_surat) . '.pdf';
+        return $pdf->download($filename);
+    })->name('surat-undangan.download-pdf');
+
+    Route::get('/surat-undangan/{suratUndangan}/download-docx', function (\App\Models\SuratUndangan $suratUndangan) {
+        $phpWord = app(\App\Services\SuratUndanganDocxService::class)->generate($suratUndangan);
+        $filename = 'Surat_Undangan_' . str_replace(['/', '\\', ' '], '_', $suratUndangan->nomor_surat) . '.docx';
+        $tempPath = storage_path('app/temp_' . uniqid() . '_' . $filename);
+        $writer = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'Word2007');
+        $writer->save($tempPath);
+        return response()->download($tempPath, $filename)->deleteFileAfterSend(true);
+    })->name('surat-undangan.download-docx');
 });
 
 // Berkas Publik Bukti Dukung Multi-Hari (Akses Pemeriksa E-Kinerja Tanpa Login)

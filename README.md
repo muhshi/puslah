@@ -54,6 +54,22 @@ composer dev
 
 ## Changelog
 
+### 2026-11-26
+- **Modul Generator Surat Undangan Kegiatan & Kop Surat Dinamis (`SuratUndanganResource`, `KopSuratResource`)**:
+  - **Manajemen Kop Surat Dinamis (`KopSuratResource`, `KopSuratSeeder`):** Menyediakan 2 kop bawaan resmi (**Kop BerAKHLAK (Default)** dan **Kop SE2026**) dengan logo asli yang diekstrak dari dokumen Word, serta fitur CRUD untuk upload kop baru, edit, dan toggle aktif/nonaktif.
+  - **Generator Surat Undangan (`SuratUndanganResource`, `SurveyResource`):**
+    - Tombol aksi cepat **Undangan** langsung dari baris kegiatan di `SurveyResource` untuk pre-fill data kegiatan, tujuan (`Yth. Peserta [Nama Kegiatan] \n BPS Kabupaten Demak \n di tempat`), paragraf pembuka (`Menindaklanjuti [dasar surat]...`), dan daftar peserta.
+    - Input manual nomor surat undangan, sifat surat, lampiran default `1 (satu) set`, perihal, dan tanggal surat.
+    - Generator isi surat 2 opsi (Opsi 1 Format Agenda/Rapat dan Opsi 2 Format Poin Pembekalan SPKRT) yang terhubung ke **RichEditor** (word processor sederhana dengan bold, italic, underline, list, undo/redo) agar tetap bisa disunting bebas.
+    - Blok tanda tangan Kepala BPS Kabupaten Demak otomatis mengambil user ber-role `Kepala` (fallback ke `SystemSettings` / `Khomarudin`), tanpa catatan kaki verifikasi BSrE untuk pengajuan ETTD terpisah.
+  - **Multi-Lampiran Otomatis (Lampiran 1 & Lampiran 2):**
+    - Pojok kanan atas setiap lampiran mencantumkan rujukan resmi `Lampiran [1/2] Surat Kepala BPS Kabupaten Demak`, `Nomor`, dan `Tanggal` tanpa blok tanda tangan ganda di lembar lampiran.
+    - **Lampiran 1 (Daftar Peserta):** Dikelompokkan per kelas jika kegiatan multi-kelas, dengan kolom wajib (`No`, `Nama Peserta`, `Bertugas Sebagai / Jabatan`) dan kolom opsional (`NIP`, `Asal Kecamatan`, `Sobat ID`, `Email`, `No HP`).
+    - **Lampiran 2 (Jadwal Kegiatan):** Mendukung **Schedule Builder** interaktif (hari, tanggal, waktu mulai/selesai dengan kalkulasi durasi otomatis `0:30`, materi, JP, metode/keterangan) dan **Upload Gambar Jadwal** (JPG/PNG proporsional).
+  - **Preview & Ekspor Ganda (PDF & DOCX):**
+    - Menambahkan `SuratUndanganPdfService`, `SuratUndanganDocxService` (PhpWord), serta preview modal PDF langsung di tabel dan download `.pdf` maupun `.docx`.
+    - Menghasilkan berkas sampel verifikasi (`dummy_undangan_kasus_1.pdf/.docx` dan `dummy_undangan_kasus_2.pdf/.docx`) di `storage/app/public/`.
+
 ### 2026-11-23
 - **Fitur Multi-Kelas (Multiclass), Pembagian Kelas Peserta & Surat Tugas Kolektif Terlampir**:
   - **Toggle Multi-Kelas pada Kegiatan (`SurveyResource`):** Menambahkan toggle `is_multiclass` (*Kegiatan Multi-Kelas*) pada form kegiatan dan kolom toggle interaktif langsung di tabel daftar kegiatan. Mendukung duplikasi kegiatan multi-kelas secara utuh beserta kelas-kelasnya pada modal copy.
