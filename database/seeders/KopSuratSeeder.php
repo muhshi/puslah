@@ -24,6 +24,9 @@ class KopSuratSeeder extends Seeder
             );
         }
 
+        // Hapus entri lama yang belum memakai template_docx_path jika ada
+        KopSurat::where('name', 'Kop Sensus Ekonomi 2026 (SE2026)')->delete();
+
         // 1. Kop BerAKHLAK (Default)
         KopSurat::updateOrCreate(
             ['name' => 'Kop BerAKHLAK (Default)'],

@@ -134,30 +134,24 @@ class SuratUndanganPdfService
     }
 
     /**
-     * Ubah file gambar lokal / storage menjadi base64 string untuk DomPDF.
+     * Dapatkan path absolut gambar lokal / storage untuk DomPDF 3.x.
      */
     protected function getImageBase64(string $path): ?string
     {
-        // 1. Cek di public_path
-        $fullPath = public_path($path);
-        if (file_exists($fullPath)) {
-            $type = pathinfo($fullPath, PATHINFO_EXTENSION);
-            $data = file_get_contents($fullPath);
-            return 'data:image/' . $type . ';base64,' . base64_encode($data);
+        // 1. Cek di storage disk public
+        if (Storage::disk('public')->exists($path)) {
+            return Storage::disk('public')->path($path);
         }
 
-        // 2. Cek di storage disk public
-        if (Storage::disk('public')->exists($path)) {
-            $data = Storage::disk('public')->get($path);
-            $mime = Storage::disk('public')->mimeType($path);
-            return 'data:' . $mime . ';base64,' . base64_encode($data);
+        // 2. Cek di public_path
+        $fullPath = public_path($path);
+        if (file_exists($fullPath)) {
+            return $fullPath;
         }
 
         // 3. Cek direct file_exists
         if (file_exists($path)) {
-            $type = pathinfo($path, PATHINFO_EXTENSION);
-            $data = file_get_contents($path);
-            return 'data:image/' . $type . ';base64,' . base64_encode($data);
+            return $path;
         }
 
         return null;

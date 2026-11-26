@@ -31,21 +31,19 @@
             padding: 0;
         }
         .kop-left {
-            width: 75%;
+            width: 72%;
             text-align: left;
         }
         .kop-left img {
-            max-width: 100%;
-            max-height: 75px;
+            width: 380px;
             height: auto;
         }
         .kop-right {
-            width: 25%;
+            width: 28%;
             text-align: right;
         }
         .kop-right img {
-            max-width: 125px;
-            max-height: 55px;
+            width: 118px;
             height: auto;
         }
         .kop-line {
