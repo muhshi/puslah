@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Exports\PelatihanKelasTemplateExport;
-use App\Exports\PelatihanKelasWorkbookExport;
 use App\Filament\Resources\PelatihanResource;
 use App\Filament\Resources\PelatihanResource\Pages\CreatePelatihan;
 use App\Filament\Resources\PelatihanResource\Pages\EditPelatihan;
@@ -594,17 +593,11 @@ class PelatihanUiTest extends TestCase
             ->assertTableActionExists('exportKelasTemplate')
             ->assertTableActionExists('importKelas');
 
-        // Verify exact option label format via mounted action options
-        $workbook = new PelatihanKelasWorkbookExport($pelatihan);
-        $sheets = $workbook->sheets();
-        $this->assertCount(2, $sheets);
-        $this->assertSame('Pembagian Kelas', $sheets[0]->title());
-        $this->assertSame('Referensi Mitra & Pegawai', $sheets[1]->title());
-        $refEmails = $sheets[1]->collection()->pluck('email')->all();
-        $this->assertContains('fauzi.sayung@mitra.test', $refEmails);
-        $this->assertContains('fauzi.mranggen@mitra.test', $refEmails);
-        $this->assertContains('inda@bps.test', $refEmails);
-        $this->assertNotEmpty(Excel::raw($workbook, \Maatwebsite\Excel\Excel::XLSX));
+        // Verify single-sheet template export does NOT bundle all unrelated users/credentials
+        $templateExport = new PelatihanKelasTemplateExport($pelatihan);
+        $this->assertSame('Pembagian Kelas', $templateExport->title());
+        $this->assertCount(0, $templateExport->collection());
+        $this->assertNotEmpty(Excel::raw($templateExport, \Maatwebsite\Excel\Excel::XLSX));
 
         // 2. Direct Excel template import (without selecting participants beforehand & using visual 'No')
         // Pre-enroll $alreadyAdded via web UI, then include them in Excel too -> must update cleanly with zero duplicates!

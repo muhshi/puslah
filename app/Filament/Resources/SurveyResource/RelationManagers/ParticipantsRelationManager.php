@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\SurveyResource\RelationManagers;
 
-use App\Exports\PelatihanKelasWorkbookExport;
+use App\Exports\PelatihanKelasTemplateExport;
 use App\Imports\PelatihanKelasImport;
 use App\Models\Certificate;
 use App\Models\CertificateTemplate;
@@ -290,14 +290,14 @@ class ParticipantsRelationManager extends RelationManager
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
                     ->visible($isPelatihan)
-                    ->action(fn ($livewire) => static::downloadKelasWorkbook($livewire->getOwnerRecord())),
+                    ->action(fn ($livewire) => static::downloadKelasTemplate($livewire->getOwnerRecord())),
 
                 Action::make('importKelas')
                     ->label('Import Pembagian Kelas')
                     ->icon('heroicon-o-arrow-up-tray')
                     ->color('primary')
                     ->visible($isPelatihan)
-                    ->modalDescription('Tidak perlu memilih peserta satu per satu & tidak perlu hafal ID. Download template Excel (kolom No cukup diisi angka urut, lalu isi/copy Email dari sheet Referensi Mitra & Pegawai beserta Role & Kelas). Jika peserta sudah pernah ditambahkan via web, datanya otomatis diperbarui tanpa duplikat.')
+                    ->modalDescription('Tidak perlu memilih peserta satu per satu & tidak perlu hafal ID. Download template Excel, isi Nama/Email beserta Role & Kelas, lalu upload kembali di sini. Khusus untuk nama petugas yang kembar, isi kolom Email agar tidak tertukar. Jika peserta sudah pernah ditambahkan via web, datanya otomatis diperbarui tanpa duplikat.')
                     ->schema([
                         FileUpload::make('file')
                             ->label('File Excel Format Kelas')
@@ -305,7 +305,7 @@ class ParticipantsRelationManager extends RelationManager
                                 Action::make('downloadTemplateInModal')
                                     ->label('Download Template (.xlsx)')
                                     ->icon('heroicon-o-arrow-down-tray')
-                                    ->action(fn ($livewire) => static::downloadKelasWorkbook($livewire->getOwnerRecord()))
+                                    ->action(fn ($livewire) => static::downloadKelasTemplate($livewire->getOwnerRecord()))
                             )
                             ->acceptedFileTypes([
                                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -595,12 +595,12 @@ class ParticipantsRelationManager extends RelationManager
         });
     }
 
-    protected static function downloadKelasWorkbook(Survey $survey): mixed
+    protected static function downloadKelasTemplate(Survey $survey): mixed
     {
         $filename = 'Template_Kelas_'.Str::slug($survey->name ?: 'Pelatihan').'.xlsx';
 
         return Excel::download(
-            new PelatihanKelasWorkbookExport($survey),
+            new PelatihanKelasTemplateExport($survey),
             $filename
         );
     }
