@@ -285,7 +285,7 @@
                 <div>Kepala Badan Pusat Statistik</div>
                 <div>Kabupaten Demak,</div>
                 <div style="height: 65px;"></div>
-                <div style="font-weight: bold; text-decoration: underline;">{{ $suratUndangan->signer_name ?: 'Kepala BPS Demak' }}</div>
+                <div>{{ $suratUndangan->signer_name ?: 'Kepala BPS Demak' }}</div>
             </td>
         </tr>
     </table>
