@@ -324,18 +324,28 @@ class PelatihanDocumentsTest extends TestCase
         $this->assertStringStartsWith('%PDF-', $tidakKendaraanPdf);
         $this->assertGreaterThan(500, strlen($tidakKendaraanPdf));
 
-        // Verify HTML view renders clean official names without academic titles
+        // Verify HTML renders individual pages per participant without "Terlampir"
         $data = app(PelatihanSpjDataBuilder::class)->build($survey);
         $riilHtml = view('pdf.pernyataan_riil_pelatihan', ['survey' => $survey, 'data' => $data])->render();
         $this->assertStringContainsString('PERNYATAAN PENGELUARAN RIIL', $riilHtml);
         $this->assertStringContainsString('Sulaeman', $riilHtml);
         $this->assertStringContainsString('Khomarudin', $riilHtml);
+        $this->assertStringContainsString('Budi Santoso', $riilHtml);
+        $this->assertStringContainsString('Siti Aminah', $riilHtml);
+        $this->assertStringContainsString('Joko Widodo', $riilHtml);
+        $this->assertSame(3, substr_count($riilHtml, 'PERNYATAAN PENGELUARAN RIIL'));
+        $this->assertStringNotContainsString('Terlampir', $riilHtml);
         $this->assertStringNotContainsString('Sulaeman, S.Stat', $riilHtml);
         $this->assertStringNotContainsString('Khomarudin, S.ST', $riilHtml);
 
         $tdkHtml = view('pdf.pernyataan_tidak_kendaraan_pelatihan', ['survey' => $survey, 'data' => $data])->render();
         $this->assertStringContainsString('SURAT PERNYATAAN', $tdkHtml);
         $this->assertStringContainsString('tidak menggunakan kendaraan dinas', $tdkHtml);
+        $this->assertStringContainsString('Budi Santoso', $tdkHtml);
+        $this->assertStringContainsString('Siti Aminah', $tdkHtml);
+        $this->assertStringContainsString('Joko Widodo', $tdkHtml);
+        $this->assertSame(3, substr_count($tdkHtml, 'SURAT PERNYATAAN'));
+        $this->assertStringNotContainsString('Terlampir', $tdkHtml);
         $this->assertStringContainsString('B-0456/33210/KP.650/2026', $tdkHtml);
     }
 

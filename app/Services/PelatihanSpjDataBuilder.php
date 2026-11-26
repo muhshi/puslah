@@ -51,8 +51,10 @@ class PelatihanSpjDataBuilder
 
         $periode = SuratTugasPdfService::formatPeriodeTugas($startDate, $endDate);
 
-        // 2. Active SuratTugas
-        $suratTugas = $survey->suratTugas()->latest('id')->first();
+        // 2. Active SuratTugas (plus per-participant lookup)
+        $suratTugasCollection = $survey->suratTugas->sortByDesc('id');
+        $suratTugas = $suratTugasCollection->first();
+        $suratTugasByUser = $suratTugasCollection->keyBy('user_id');
         $nomorSuratTugas = $suratTugas?->nomor_surat ?? '-';
         $tanggalSuratTugas = $suratTugas?->tanggal
             ? Carbon::parse($suratTugas->tanggal)->translatedFormat('d F Y')
@@ -137,6 +139,14 @@ class PelatihanSpjDataBuilder
             $uangHarian = $su->uang_harian_override ?? $survey->biaya_uang_harian ?? 0;
             $total = (int) $transport + ((int) $uangHarian * (int) $jumlahHari);
 
+            $userSuratTugas = $user ? ($suratTugasByUser->get($user->id) ?? $suratTugas) : $suratTugas;
+            $userStNomor = $userSuratTugas?->nomor_surat ?: $nomorSuratTugas;
+            $userStTanggal = $userSuratTugas?->tanggal
+                ? Carbon::parse($userSuratTugas->tanggal)->translatedFormat('d F Y')
+                : $tanggalSuratTugas;
+            $pangkatGolongan = $user?->profile?->pangkat_golongan ?: ($sipetra->pangkat_golongan ?? '-');
+            $jabatanProfile = $user?->profile?->jabatan;
+
             $pRowIndex++;
             $paymentRow = [
                 'no' => $pRowIndex,
@@ -144,9 +154,14 @@ class PelatihanSpjDataBuilder
                 'user' => $user,
                 'survey_user' => $su,
                 'nama' => $nama,
+                'nama_tanpa_gelar' => OfficialSettingsSyncService::stripAcademicTitles($nama),
                 'nik' => $nik,
                 'nip' => $nip,
                 'nik_or_nip' => $nikOrNip,
+                'pangkat_golongan' => $pangkatGolongan,
+                'jabatan' => $jabatanProfile ?: $role,
+                'surat_tugas_nomor' => $userStNomor,
+                'surat_tugas_tanggal' => $userStTanggal,
                 'bank' => $bank,
                 'rekening' => $rekening,
                 'rekening_nama' => $rekeningNama,
