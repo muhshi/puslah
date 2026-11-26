@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpWord\PhpWord;
 use Spatie\Permission\Models\Role;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Tests\TestCase;
@@ -275,7 +276,8 @@ class PelatihanDocumentsTest extends TestCase
         $zip->close();
 
         $this->assertNotEmpty($xml);
-        $this->assertStringContainsString('Pelatihan Petugas Sensus Ekonomi 2026', $xml);
+        $this->assertStringContainsString('Undangan Pelatihan Petugas Sensus Ekonomi 2026', $xml);
+        $this->assertStringNotContainsString('Undangan Pelatihan Pelatihan', $xml);
         $this->assertStringContainsString('Budi Santoso', $xml);
         $this->assertStringContainsString('Siti Aminah', $xml);
         $this->assertStringContainsString('Joko Widodo', $xml);
@@ -470,5 +472,38 @@ class PelatihanDocumentsTest extends TestCase
         $this->assertSame('Hadi Kasubag Pengaturan', $data['penyelenggara']['name']);
         $this->assertSame('197903032004011003', $data['penyelenggara']['nip']);
         $this->assertSame('Kepala Subbagian Umum', $data['penyelenggara']['title']);
+    }
+
+    public function test_download_undangan_word_handles_custom_template_without_kelas_block_or_row_vars(): void
+    {
+        $fixture = $this->createPelatihanFixture(includeAtk: false);
+        /** @var Survey $survey */
+        $survey = $fixture['survey'];
+
+        $phpWord = new PhpWord;
+        $section = $phpWord->addSection();
+        $section->addText('Nomor: ${nomor_surat}');
+        $section->addText('Hal: ${hal}');
+        $section->addText('${kelas_block}Tabel Statis${/kelas_block}');
+
+        Storage::disk('public')->makeDirectory('templates');
+        $customRelPath = 'templates/test_custom_no_rows.docx';
+        $phpWord->save(Storage::disk('public')->path($customRelPath), 'Word2007');
+
+        $settings = app(SystemSettings::class);
+        $settings->fill(['undangan_pelatihan_template_path' => $customRelPath])->save();
+
+        $response = app(PelatihanUndanganService::class)->downloadUndanganWord($survey);
+        $filePath = $response->getFile()->getPathname();
+
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open($filePath));
+        $xml = $zip->getFromName('word/document.xml');
+        $zip->close();
+
+        $this->assertStringContainsString('B-0123/33210/KU.010/2026', $xml);
+        $this->assertStringContainsString('Undangan Pelatihan Petugas Sensus Ekonomi 2026', $xml);
+
+        Storage::disk('public')->delete($customRelPath);
     }
 }

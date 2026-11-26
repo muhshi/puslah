@@ -43,10 +43,13 @@ class PelatihanUndanganService
 
         $nomorSurat = $survey->nomor_surat_undangan ?: 'B-..../33210/'.date('Y');
         $rujukanSurat = $survey->rujukan_surat ?: ($survey->dasar_surat ?: 'DIPA BPS Kabupaten Demak Tahun Anggaran '.date('Y'));
+        $hal = str_starts_with(strtolower(trim((string) $survey->name)), 'pelatihan')
+            ? 'Undangan '.$survey->name
+            : 'Undangan Pelatihan '.$survey->name;
 
         // Set Header & Letter Variables
         $template->setValue('nomor_surat', $nomorSurat);
-        $template->setValue('hal', 'Undangan Pelatihan '.$survey->name);
+        $template->setValue('hal', $hal);
         $template->setValue('tanggal_surat', $tanggalSurat);
         $template->setValue('nama_kegiatan', $survey->name);
         $template->setValue('rujukan_surat', $rujukanSurat);
@@ -59,38 +62,61 @@ class PelatihanUndanganService
         $template->setValue('nama_kepala', $data['kepala']['name']);
         $template->setValue('nip_kepala', $data['kepala']['nip']);
 
-        // Process Lampiran 1: Classes & Participants
+        // Process Lampiran 1: Classes & Participants (gracefully supports custom templates)
         $allClasses = $data['all_classes'];
         $classCount = count($allClasses);
+        $variables = $template->getVariables();
 
-        if ($classCount === 0) {
-            $template->cloneBlock('kelas_block', 0);
-        } else {
-            $template->cloneBlock('kelas_block', $classCount, true, true);
+        if (in_array('kelas_block', $variables, true)) {
+            if ($classCount === 0) {
+                $template->cloneBlock('kelas_block', 0);
+            } else {
+                $template->cloneBlock('kelas_block', $classCount, true, true);
 
-            foreach ($allClasses as $cIdx => $classData) {
-                $c = $cIdx + 1;
-                $template->setValue("kelas_nama#{$c}", $classData['kelas_nama']);
+                foreach ($allClasses as $cIdx => $classData) {
+                    $c = $cIdx + 1;
+                    $template->setValue("kelas_nama#{$c}", $classData['kelas_nama']);
 
-                $rows = $classData['rows'];
-                $rowCount = count($rows);
+                    $rows = $classData['rows'];
+                    $rowCount = count($rows);
+                    $clonedVars = $template->getVariables();
 
-                if ($rowCount > 0) {
-                    $template->cloneRow("no#{$c}", $rowCount);
+                    if (in_array("no#{$c}", $clonedVars, true)) {
+                        if ($rowCount > 0) {
+                            $template->cloneRow("no#{$c}", $rowCount);
 
-                    foreach ($rows as $rIdx => $row) {
-                        $r = $rIdx + 1;
-                        $template->setValue("no#{$c}#{$r}", (string) $r);
-                        $template->setValue("nama#{$c}#{$r}", $row['nama']);
-                        $template->setValue("asal#{$c}#{$r}", $row['asal']);
-                        $template->setValue("bertugas_sebagai#{$c}#{$r}", $row['bertugas_sebagai']);
+                            foreach ($rows as $rIdx => $row) {
+                                $r = $rIdx + 1;
+                                $template->setValue("no#{$c}#{$r}", (string) $r);
+                                $template->setValue("nama#{$c}#{$r}", $row['nama']);
+                                $template->setValue("asal#{$c}#{$r}", $row['asal']);
+                                $template->setValue("bertugas_sebagai#{$c}#{$r}", $row['bertugas_sebagai']);
+                            }
+                        } else {
+                            $template->setValue("no#{$c}", '-');
+                            $template->setValue("nama#{$c}", '-');
+                            $template->setValue("asal#{$c}", '-');
+                            $template->setValue("bertugas_sebagai#{$c}", '-');
+                        }
                     }
-                } else {
-                    $template->setValue("no#{$c}", '-');
-                    $template->setValue("nama#{$c}", '-');
-                    $template->setValue("asal#{$c}", '-');
-                    $template->setValue("bertugas_sebagai#{$c}", '-');
                 }
+            }
+        } elseif (in_array('no', $variables, true)) {
+            $flatRows = collect($allClasses)->flatMap(fn (array $c) => $c['rows'])->values();
+            if ($flatRows->isNotEmpty()) {
+                $template->cloneRow('no', $flatRows->count());
+                foreach ($flatRows as $rIdx => $row) {
+                    $r = $rIdx + 1;
+                    $template->setValue("no#{$r}", (string) $r);
+                    $template->setValue("nama#{$r}", $row['nama']);
+                    $template->setValue("asal#{$r}", $row['asal']);
+                    $template->setValue("bertugas_sebagai#{$r}", $row['bertugas_sebagai']);
+                }
+            } else {
+                $template->setValue('no', '-');
+                $template->setValue('nama', '-');
+                $template->setValue('asal', '-');
+                $template->setValue('bertugas_sebagai', '-');
             }
         }
 

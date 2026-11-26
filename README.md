@@ -54,6 +54,11 @@ composer dev
 
 ## Changelog
 
+### 2026-11-26
+- **Peningkatan Ketahanan Parser Undangan Word (`PelatihanUndanganService.php`):**
+  - Menjaga subjek `hal` agar tidak menduplikasi kata *"Pelatihan"* saat nama kegiatan sudah diawali `"Pelatihan ..."`.
+  - Menambahkan penjagaan variabel template (`getVariables()`) untuk `${kelas_block}` dan `${no}` sehingga template Word kustom tanpa blok kelas berulang atau baris dinamis tetap diproses dengan aman tanpa error.
+
 ### 2026-11-25
 - **Default DIPA SPKRT & Pembersihan Template Undangan Pelatihan:**
   - **Nilai Default Anggaran DIPA (`PelatihanResource.php`, `PelatihanSpjDataBuilder.php`):** Mengisi otomatis nilai default Program (`054.01.GG`), Kegiatan (`2903`), KRO (`2903.BMA`), RO (`2903.BMA.007`), Komponen (`2903.BMA.009.051A`), dan MAK (`524113`).
