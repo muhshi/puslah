@@ -114,6 +114,8 @@ class TandaTerimaAtkSheet implements WithEvents, WithTitle
                 $sheet->getColumnDimension('E')->setWidth(26);
                 $sheet->getColumnDimension('F')->setWidth(15);
                 $sheet->getColumnDimension('G')->setWidth(15);
+
+                $this->applyPrintSetup($sheet, false);
             },
         ];
     }

@@ -191,6 +191,8 @@ class BuktiPenerimaanUangSheet implements WithEvents, WithTitle
                 $sheet->getColumnDimension('K')->setWidth(18);
                 $sheet->getColumnDimension('L')->setWidth(15);
                 $sheet->getColumnDimension('M')->setWidth(15);
+
+                $this->applyPrintSetup($sheet, true);
             },
         ];
     }

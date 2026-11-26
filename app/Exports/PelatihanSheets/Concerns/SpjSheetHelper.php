@@ -5,6 +5,7 @@ namespace App\Exports\PelatihanSheets\Concerns;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 trait SpjSheetHelper
@@ -69,5 +70,24 @@ trait SpjSheetHelper
         for ($r = $startRow; $r <= $endRow; $r++) {
             $sheet->getRowDimension($r)->setRowHeight($height);
         }
+    }
+
+    /**
+     * Configure consistent A4 print page setup so columns fit cleanly on a single page width.
+     */
+    protected function applyPrintSetup(Worksheet $sheet, bool $landscape = false): void
+    {
+        $pageSetup = $sheet->getPageSetup();
+        $pageSetup->setPaperSize(PageSetup::PAPERSIZE_A4);
+        $pageSetup->setOrientation($landscape ? PageSetup::ORIENTATION_LANDSCAPE : PageSetup::ORIENTATION_PORTRAIT);
+        $pageSetup->setFitToPage(true);
+        $pageSetup->setFitToWidth(1);
+        $pageSetup->setFitToHeight(0);
+
+        $margins = $sheet->getPageMargins();
+        $margins->setTop(0.5);
+        $margins->setBottom(0.5);
+        $margins->setLeft(0.4);
+        $margins->setRight(0.4);
     }
 }

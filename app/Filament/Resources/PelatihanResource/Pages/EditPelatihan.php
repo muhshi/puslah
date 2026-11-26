@@ -11,6 +11,7 @@ use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
+use Filament\Forms\Components\Select;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
@@ -23,17 +24,42 @@ class EditPelatihan extends EditRecord
     {
         return [
             ActionGroup::make([
+                Action::make('cetakBundelSpjPdfHeader')
+                    ->label('Cetak Bundel SPJ Kelas (PDF)')
+                    ->icon('heroicon-o-document-duplicate')
+                    ->schema(function (): array {
+                        $classes = app(PelatihanUndanganService::class)->getAvailableClasses($this->record);
+                        if (count($classes) <= 1) {
+                            return [];
+                        }
+
+                        $options = ['__ALL_ZIP__' => 'Semua Kelas (ZIP: 1 PDF per Kelas)'];
+                        foreach ($classes as $kelas) {
+                            $options[$kelas] = "{$kelas} (1 PDF Lengkap)";
+                        }
+
+                        return [
+                            Select::make('kelas')
+                                ->label('Pilih Kelas yang Dicetak')
+                                ->options($options)
+                                ->default('__ALL_ZIP__')
+                                ->required(),
+                        ];
+                    })
+                    ->action(fn (array $data) => app(PelatihanUndanganService::class)
+                        ->downloadBundelSpjKelas($this->record, $data['kelas'] ?? null)),
+
                 Action::make('downloadUndanganHeader')
                     ->label('Download Undangan (.docx)')
                     ->icon('heroicon-o-document-text')
                     ->action(fn () => app(PelatihanUndanganService::class)->downloadUndanganWord($this->record)),
 
                 Action::make('downloadSpjHeader')
-                    ->label('Download Paket SPJ (.xlsx)')
+                    ->label('Download Rekap SPJ (.xlsx)')
                     ->icon('heroicon-o-table-cells')
                     ->action(fn () => Excel::download(
                         new PelatihanSpjExport($this->record),
-                        'Paket_SPJ_'.Str::slug($this->record->name ?: 'Pelatihan').'.xlsx'
+                        'Rekap_SPJ_'.Str::slug($this->record->name ?: 'Pelatihan').'.xlsx'
                     )),
 
                 Action::make('cetakDaftarHadirHeader')

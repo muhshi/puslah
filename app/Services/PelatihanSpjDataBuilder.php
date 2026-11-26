@@ -51,8 +51,10 @@ class PelatihanSpjDataBuilder
 
         $periode = SuratTugasPdfService::formatPeriodeTugas($startDate, $endDate);
 
-        // 2. Active SuratTugas
-        $suratTugas = $survey->suratTugas()->latest('id')->first();
+        // 2. Active SuratTugas (plus per-participant lookup)
+        $suratTugasCollection = $survey->suratTugas->sortByDesc('id');
+        $suratTugas = $suratTugasCollection->first();
+        $suratTugasByUser = $suratTugasCollection->keyBy('user_id');
         $nomorSuratTugas = $suratTugas?->nomor_surat ?? '-';
         $tanggalSuratTugas = $suratTugas?->tanggal
             ? Carbon::parse($suratTugas->tanggal)->translatedFormat('d F Y')
@@ -137,6 +139,14 @@ class PelatihanSpjDataBuilder
             $uangHarian = $su->uang_harian_override ?? $survey->biaya_uang_harian ?? 0;
             $total = (int) $transport + ((int) $uangHarian * (int) $jumlahHari);
 
+            $userSuratTugas = $user ? ($suratTugasByUser->get($user->id) ?? $suratTugas) : $suratTugas;
+            $userStNomor = $userSuratTugas?->nomor_surat ?: $nomorSuratTugas;
+            $userStTanggal = $userSuratTugas?->tanggal
+                ? Carbon::parse($userSuratTugas->tanggal)->translatedFormat('d F Y')
+                : $tanggalSuratTugas;
+            $pangkatGolongan = $user?->profile?->pangkat_golongan ?: ($sipetra->pangkat_golongan ?? '-');
+            $jabatanProfile = $user?->profile?->jabatan;
+
             $pRowIndex++;
             $paymentRow = [
                 'no' => $pRowIndex,
@@ -144,9 +154,14 @@ class PelatihanSpjDataBuilder
                 'user' => $user,
                 'survey_user' => $su,
                 'nama' => $nama,
+                'nama_tanpa_gelar' => OfficialSettingsSyncService::stripAcademicTitles($nama),
                 'nik' => $nik,
                 'nip' => $nip,
                 'nik_or_nip' => $nikOrNip,
+                'pangkat_golongan' => $pangkatGolongan,
+                'jabatan' => $jabatanProfile ?: $role,
+                'surat_tugas_nomor' => $userStNomor,
+                'surat_tugas_tanggal' => $userStTanggal,
                 'bank' => $bank,
                 'rekening' => $rekening,
                 'rekening_nama' => $rekeningNama,
@@ -265,12 +280,14 @@ class PelatihanSpjDataBuilder
             'grand_total' => $grandTotal,
             'terbilang' => $terbilang,
             'dipa' => [
-                'program' => $survey->program ?: 'PROGRAM PENYEDIAAN DAN PELAYANAN INFORMASI STATISTIK (054.01.GG)',
-                'kegiatan' => $survey->kegiatan_dipa ?: 'PENYEDIAAN DAN PENGEMBANGAN STATISTIK HARGA (2903)',
-                'klasifikasi_ro' => $survey->klasifikasi_ro ?: 'DATA DAN INFORMASI PUBLIK (2903.BMA)',
-                'rincian_output' => $survey->rincian_output ?: 'PUBLIKASI/LAPORAN SPKRT (2903.BMA.007)',
-                'komponen' => $survey->komponen ?: 'PERSIAPAN (2903.BMA.009.051A)',
-                'mak' => $survey->mak ?: 'BELANJA PERJALANAN DINAS DALAM KOTA (524113)',
+                'program' => $survey->program ?: Survey::DEFAULT_PELATIHAN_DIPA['program'],
+                'kegiatan' => $survey->kegiatan_dipa ?: Survey::DEFAULT_PELATIHAN_DIPA['kegiatan_dipa'],
+                'klasifikasi_ro' => $survey->klasifikasi_ro ?: Survey::DEFAULT_PELATIHAN_DIPA['klasifikasi_ro'],
+                'rincian_output' => $survey->rincian_output ?: Survey::DEFAULT_PELATIHAN_DIPA['rincian_output'],
+                'komponen' => $survey->komponen ?: Survey::DEFAULT_PELATIHAN_DIPA['komponen'],
+                'mak' => (blank($survey->mak) || trim($survey->mak) === '524113')
+                    ? Survey::DEFAULT_PELATIHAN_DIPA['mak']
+                    : $survey->mak,
             ],
             'atk_items' => $survey->atk_items ?: ['Totebag', 'Pulpen', 'Pensil 2B', 'Penghapus 2 buah', 'Rautan 1 buah', 'Blocknote'],
             'include_atk' => (bool) $survey->include_atk,

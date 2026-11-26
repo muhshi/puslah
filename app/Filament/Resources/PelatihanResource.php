@@ -20,6 +20,7 @@ use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -124,37 +125,27 @@ class PelatihanResource extends Resource
                 Section::make('Anggaran DIPA & Translok')
                     ->description('Pembebanan anggaran DIPA dan tarif standar transportasi serta uang harian')
                     ->schema([
-                        TextInput::make('program')
-                            ->label('Program')
-                            ->default('PROGRAM PENYEDIAAN DAN PELAYANAN INFORMASI STATISTIK (054.01.GG)')
+                        self::dipaInput('program', 'Program')
                             ->columnSpanFull(),
-                        TextInput::make('kegiatan_dipa')
-                            ->label('Kegiatan DIPA')
-                            ->default('PENYEDIAAN DAN PENGEMBANGAN STATISTIK HARGA (2903)'),
-                        TextInput::make('klasifikasi_ro')
-                            ->label('Klasifikasi RO (KRO)')
-                            ->default('DATA DAN INFORMASI PUBLIK (2903.BMA)'),
-                        TextInput::make('rincian_output')
-                            ->label('Rincian Output (RO)')
-                            ->default('PUBLIKASI/LAPORAN SPKRT (2903.BMA.007)'),
-                        TextInput::make('komponen')
-                            ->label('Komponen')
-                            ->default('PERSIAPAN (2903.BMA.009.051A)'),
-                        TextInput::make('mak')
-                            ->label('Mata Anggaran Keluaran (MAK)')
-                            ->default('BELANJA PERJALANAN DINAS DALAM KOTA (524113)')
+                        self::dipaInput('kegiatan_dipa', 'Kegiatan DIPA'),
+                        self::dipaInput('klasifikasi_ro', 'Klasifikasi RO (KRO)'),
+                        self::dipaInput('rincian_output', 'Rincian Output (RO)'),
+                        self::dipaInput('komponen', 'Komponen'),
+                        self::dipaInput('mak', 'Mata Anggaran Keluaran (MAK)')
                             ->required(),
                         TextInput::make('biaya_transport')
                             ->label('Biaya Transportasi Standar (Rp)')
                             ->numeric()
                             ->prefix('Rp')
                             ->default(100000)
+                            ->afterStateHydrated(fn (TextInput $component, mixed $state) => filled($state) ? null : $component->state(100000))
                             ->required(),
                         TextInput::make('biaya_uang_harian')
                             ->label('Uang Harian Standar (Rp/hari)')
                             ->numeric()
                             ->prefix('Rp')
                             ->default(130000)
+                            ->afterStateHydrated(fn (TextInput $component, mixed $state) => filled($state) ? null : $component->state(130000))
                             ->required(),
                     ])
                     ->columns(2)
@@ -224,17 +215,42 @@ class PelatihanResource extends Resource
             ])
             ->recordActions([
                 ActionGroup::make([
+                    Action::make('cetakBundelSpjPdf')
+                        ->label('Cetak Bundel SPJ Kelas (PDF)')
+                        ->icon('heroicon-o-document-duplicate')
+                        ->schema(function (Survey $record): array {
+                            $classes = app(PelatihanUndanganService::class)->getAvailableClasses($record);
+                            if (count($classes) <= 1) {
+                                return [];
+                            }
+
+                            $options = ['__ALL_ZIP__' => 'Semua Kelas (ZIP: 1 PDF per Kelas)'];
+                            foreach ($classes as $kelas) {
+                                $options[$kelas] = "{$kelas} (1 PDF Lengkap)";
+                            }
+
+                            return [
+                                Select::make('kelas')
+                                    ->label('Pilih Kelas yang Dicetak')
+                                    ->options($options)
+                                    ->default('__ALL_ZIP__')
+                                    ->required(),
+                            ];
+                        })
+                        ->action(fn (Survey $record, array $data) => app(PelatihanUndanganService::class)
+                            ->downloadBundelSpjKelas($record, $data['kelas'] ?? null)),
+
                     Action::make('downloadUndangan')
                         ->label('Download Undangan (.docx)')
                         ->icon('heroicon-o-document-text')
                         ->action(fn (Survey $record) => app(PelatihanUndanganService::class)->downloadUndanganWord($record)),
 
                     Action::make('downloadSpj')
-                        ->label('Download Paket SPJ (.xlsx)')
+                        ->label('Download Rekap SPJ (.xlsx)')
                         ->icon('heroicon-o-table-cells')
                         ->action(fn (Survey $record) => Excel::download(
                             new PelatihanSpjExport($record),
-                            'Paket_SPJ_'.Str::slug($record->name ?: 'Pelatihan').'.xlsx'
+                            'Rekap_SPJ_'.Str::slug($record->name ?: 'Pelatihan').'.xlsx'
                         )),
 
                     Action::make('cetakDaftarHadir')
@@ -408,5 +424,23 @@ class PelatihanResource extends Resource
             'create' => CreatePelatihan::route('/create'),
             'edit' => EditPelatihan::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * Build a DIPA text input that auto-populates the standard Pelatihan default
+     * on both Create and Edit when the stored value is empty (or legacy bare MAK).
+     */
+    private static function dipaInput(string $name, string $label): TextInput
+    {
+        $default = Survey::DEFAULT_PELATIHAN_DIPA[$name];
+
+        return TextInput::make($name)
+            ->label($label)
+            ->default($default)
+            ->afterStateHydrated(function (TextInput $component, ?string $state) use ($name, $default): void {
+                if (blank($state) || ($name === 'mak' && trim($state) === '524113')) {
+                    $component->state($default);
+                }
+            });
     }
 }

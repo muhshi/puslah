@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 use PhpOffice\PhpWord\PhpWord;
 use Spatie\Permission\Models\Role;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -324,22 +325,82 @@ class PelatihanDocumentsTest extends TestCase
         $this->assertStringStartsWith('%PDF-', $tidakKendaraanPdf);
         $this->assertGreaterThan(500, strlen($tidakKendaraanPdf));
 
-        // Verify HTML view renders clean official names without academic titles
+        // Verify HTML renders individual pages per participant without "Terlampir"
         $data = app(PelatihanSpjDataBuilder::class)->build($survey);
         $riilHtml = view('pdf.pernyataan_riil_pelatihan', ['survey' => $survey, 'data' => $data])->render();
         $this->assertStringContainsString('PERNYATAAN PENGELUARAN RIIL', $riilHtml);
         $this->assertStringContainsString('Sulaeman', $riilHtml);
         $this->assertStringContainsString('Khomarudin', $riilHtml);
+        $this->assertStringContainsString('Budi Santoso', $riilHtml);
+        $this->assertStringContainsString('Siti Aminah', $riilHtml);
+        $this->assertStringContainsString('Joko Widodo', $riilHtml);
+        $this->assertSame(3, substr_count($riilHtml, 'PERNYATAAN PENGELUARAN RIIL'));
+        $this->assertStringNotContainsString('Terlampir', $riilHtml);
         $this->assertStringNotContainsString('Sulaeman, S.Stat', $riilHtml);
         $this->assertStringNotContainsString('Khomarudin, S.ST', $riilHtml);
 
         $tdkHtml = view('pdf.pernyataan_tidak_kendaraan_pelatihan', ['survey' => $survey, 'data' => $data])->render();
         $this->assertStringContainsString('SURAT PERNYATAAN', $tdkHtml);
         $this->assertStringContainsString('tidak menggunakan kendaraan dinas', $tdkHtml);
+        $this->assertStringContainsString('Budi Santoso', $tdkHtml);
+        $this->assertStringContainsString('Siti Aminah', $tdkHtml);
+        $this->assertStringContainsString('Joko Widodo', $tdkHtml);
+        $this->assertSame(3, substr_count($tdkHtml, 'SURAT PERNYATAAN'));
+        $this->assertStringNotContainsString('Terlampir', $tdkHtml);
         $this->assertStringContainsString('B-0456/33210/KP.650/2026', $tdkHtml);
     }
 
-    public function test_pelatihan_spj_export_generates_valid_xlsx_with_8_sheets_when_atk_false(): void
+    public function test_render_bundel_spj_per_kelas_pdf_and_zip(): void
+    {
+        $fixture = $this->createPelatihanFixture(includeAtk: true);
+        /** @var Survey $survey */
+        $survey = $fixture['survey'];
+
+        $service = app(PelatihanUndanganService::class);
+        $this->assertSame(['Kelas A', 'Kelas B'], $service->getAvailableClasses($survey));
+
+        // 1 PDF for Kelas A only
+        $kelasAPdf = $service->renderBundelSpjKelasPdf($survey, 'Kelas A')->output();
+        $this->assertStringStartsWith('%PDF-', $kelasAPdf);
+        $this->assertGreaterThan(1000, strlen($kelasAPdf));
+
+        // Verify HTML for Kelas A contains Kelas A participants & NOT Kelas B Inda Joko
+        $data = app(PelatihanSpjDataBuilder::class)->build($survey);
+        $kelasAPaymentRows = array_values(array_filter($data['payment_rows'], fn ($r) => $r['kelas'] === 'Kelas A'));
+        $html = view('pdf.bundel_spj_pelatihan', [
+            'survey' => $survey,
+            'data' => $data,
+            'kelasNama' => 'Kelas A',
+            'classAttendanceRows' => $data['attendance_classes'][0]['rows'],
+            'classPaymentRows' => $kelasAPaymentRows,
+            'classGrandTotal' => array_sum(array_column($kelasAPaymentRows, 'total')),
+            'classTerbilang' => 'tujuh ratus dua puluh ribu rupiah',
+            'logoBase64' => null,
+        ])->render();
+
+        $this->assertStringContainsString('Daftar Hadir Peserta Pelatihan', $html);
+        $this->assertStringContainsString('Daftar Hadir Instruktur Daerah', $html);
+        $this->assertStringContainsString('Daftar Bukti Penerimaan Uang Transport', $html);
+        $this->assertStringContainsString('Lampiran Laporan Pelaksanaan Dinas', $html);
+        $this->assertStringContainsString('Tanda Terima Perlengkapan Peserta', $html);
+        $this->assertStringContainsString('PERNYATAAN PENGELUARAN RIIL', $html);
+        $this->assertStringContainsString('SURAT PERNYATAAN', $html);
+        $this->assertStringContainsString('Budi Santoso', $html);
+        $this->assertStringContainsString('Siti Aminah', $html);
+        $this->assertSame(2, substr_count($html, 'PERNYATAAN PENGELUARAN RIIL'));
+        $this->assertSame(2, substr_count($html, 'SURAT PERNYATAAN'));
+        $this->assertStringNotContainsString('Terlampir', $html);
+
+        // ZIP containing 1 PDF per class when all classes requested
+        $zipResponse = $service->downloadBundelSpjKelas($survey, '__ALL_ZIP__');
+        $zipPath = $zipResponse->getFile()->getPathname();
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open($zipPath));
+        $this->assertSame(2, $zip->numFiles);
+        $zip->close();
+    }
+
+    public function test_pelatihan_spj_export_generates_valid_xlsx_with_4_sheets_when_atk_false(): void
     {
         $fixture = $this->createPelatihanFixture(includeAtk: false);
         /** @var Survey $survey */
@@ -355,24 +416,23 @@ class PelatihanDocumentsTest extends TestCase
         $fullPath = Storage::disk('local')->path($fileName);
         $spreadsheet = IOFactory::load($fullPath);
 
-        // Assert exactly 8 sheets
-        $this->assertEquals(8, $spreadsheet->getSheetCount(), 'Should have 8 sheets when include_atk is false');
+        // Assert exactly 4 rekap sheets when ATK is false
+        $this->assertEquals(4, $spreadsheet->getSheetCount(), 'Should have 4 sheets when include_atk is false');
 
         $expectedSheetTitles = [
             'Daftar Hadir',
             'Daftar Hadir INDA',
             'Bukti Penerimaan Uang',
-            'Pernyataan Riil',
-            'Lampiran Riil',
-            'Pernyataan Tdk Kendaraan',
-            'Lampiran Tdk Kendaraan',
             'Lampiran LPD',
         ];
         $this->assertEquals($expectedSheetTitles, $spreadsheet->getSheetNames());
 
-        // Check Bukti Penerimaan Uang sheet formulas
+        // Check Bukti Penerimaan Uang sheet formulas and print PageSetup
         $sheet = $spreadsheet->getSheetByName('Bukti Penerimaan Uang');
         $this->assertNotNull($sheet);
+        $this->assertTrue($sheet->getPageSetup()->getFitToPage());
+        $this->assertSame(1, $sheet->getPageSetup()->getFitToWidth());
+        $this->assertSame(PageSetup::ORIENTATION_LANDSCAPE, $sheet->getPageSetup()->getOrientation());
 
         // Check multiplication formula in row 12 (data rows start at 12)
         $k12Formula = $sheet->getCell('K12')->getValue();
@@ -385,17 +445,10 @@ class PelatihanDocumentsTest extends TestCase
         $k15Formula = $sheet->getCell('K15')->getValue();
         $this->assertStringStartsWith('=SUM(', (string) $k15Formula);
 
-        // Check Lampiran Riil formula
-        $sheetRiil = $spreadsheet->getSheetByName('Lampiran Riil');
-        $this->assertNotNull($sheetRiil);
-        // Total row in Lampiran Riil (headers 7-8, rows 9, 10, 11, total 12)
-        $f12Formula = $sheetRiil->getCell('F12')->getValue();
-        $this->assertStringStartsWith('=SUM(', (string) $f12Formula);
-
         Storage::disk('local')->delete($fileName);
     }
 
-    public function test_pelatihan_spj_export_generates_9_sheets_when_atk_true(): void
+    public function test_pelatihan_spj_export_generates_5_sheets_when_atk_true(): void
     {
         $fixture = $this->createPelatihanFixture(includeAtk: true);
         /** @var Survey $survey */
@@ -411,17 +464,13 @@ class PelatihanDocumentsTest extends TestCase
         $fullPath = Storage::disk('local')->path($fileName);
         $spreadsheet = IOFactory::load($fullPath);
 
-        // Assert exactly 9 sheets
-        $this->assertEquals(9, $spreadsheet->getSheetCount(), 'Should have 9 sheets when include_atk is true');
+        // Assert exactly 5 sheets when ATK is true
+        $this->assertEquals(5, $spreadsheet->getSheetCount(), 'Should have 5 sheets when include_atk is true');
 
         $expectedSheetTitles = [
             'Daftar Hadir',
             'Daftar Hadir INDA',
             'Bukti Penerimaan Uang',
-            'Pernyataan Riil',
-            'Lampiran Riil',
-            'Pernyataan Tdk Kendaraan',
-            'Lampiran Tdk Kendaraan',
             'Lampiran LPD',
             'Tanda Terima ATK',
         ];

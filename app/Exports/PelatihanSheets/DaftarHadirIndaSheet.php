@@ -74,9 +74,12 @@ class DaftarHadirIndaSheet implements WithEvents, WithTitle
                     foreach ($dates as $idx => $d) {
                         $colIdx = 5 + $idx;
                         $colLetter = Coordinate::stringFromColumnIndex($colIdx);
-                        $dFormatted = is_object($d) ? $d->translatedFormat('d/m/Y') : (string) $d;
+                        $dFormatted = is_object($d)
+                            ? $d->translatedFormat('d F')."\n".$d->translatedFormat('Y')
+                            : (string) $d;
                         $sheet->setCellValue("{$colLetter}".($startRow + 1), $dFormatted);
                     }
+                    $sheet->getRowDimension($startRow + 1)->setRowHeight(28);
                     $lastColLetter = $endColLetter;
                 }
 
@@ -150,6 +153,8 @@ class DaftarHadirIndaSheet implements WithEvents, WithTitle
                         $sheet->getColumnDimension(Coordinate::stringFromColumnIndex(5 + $dIdx))->setWidth(15);
                     }
                 }
+
+                $this->applyPrintSetup($sheet, $dateCount > 3);
             },
         ];
     }
