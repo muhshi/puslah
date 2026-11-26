@@ -119,7 +119,7 @@
         }
         .ttd-box {
             width: 45%;
-            text-align: left;
+            text-align: center;
             line-height: 1.3;
         }
 

@@ -175,10 +175,10 @@ class SuratUndanganDocxService
         $ttdTable->addRow();
         $ttdTable->addCell(5500); // spacer
         $cTtd = $ttdTable->addCell(4500, ['valign' => VerticalJc::TOP]);
-        $cTtd->addText('Kepala Badan Pusat Statistik', [], ['spaceAfter' => 20]);
-        $cTtd->addText('Kabupaten Demak,', [], ['spaceAfter' => 40]);
+        $cTtd->addText('Kepala Badan Pusat Statistik', [], ['alignment' => Jc::CENTER, 'spaceAfter' => 20]);
+        $cTtd->addText('Kabupaten Demak,', [], ['alignment' => Jc::CENTER, 'spaceAfter' => 40]);
         $cTtd->addTextBreak(3);
-        $cTtd->addText($suratUndangan->signer_name ?: 'Kepala BPS Demak', ['bold' => true, 'underline' => 'single']);
+        $cTtd->addText($suratUndangan->signer_name ?: 'Kepala BPS Demak', ['bold' => true, 'underline' => 'single'], ['alignment' => Jc::CENTER]);
     }
 
     protected function addLampiranPeserta($section, SuratUndangan $suratUndangan): void
