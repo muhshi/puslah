@@ -47,11 +47,61 @@ if [ "$DO_BACKUP" = true ]; then
     mkdir -p storage/app/backups-predeploy
     BACKUP_TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
     echo "${OLD_COMMIT}" > "storage/app/backups-predeploy/predeploy_${BACKUP_TIMESTAMP}.commit"
-    if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+    BACKUP_FILE="storage/app/backups-predeploy/db_predeploy_${BACKUP_TIMESTAMP}.sql.gz"
+
+    # Baca konfigurasi DB dari .env
+    get_env_val() {
+        grep -E "^${1}=" .env 2>/dev/null | tail -n 1 | cut -d '=' -f2- | tr -d '\r' | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//"
+    }
+    DB_HOST=$(get_env_val "DB_HOST")
+    DB_PORT=$(get_env_val "DB_PORT")
+    DB_DATABASE=$(get_env_val "DB_DATABASE")
+    DB_USERNAME=$(get_env_val "DB_USERNAME")
+    DB_PASSWORD=$(get_env_val "DB_PASSWORD")
+
+    BACKUP_OK=false
+
+    # Cara 1: Cek mysqldump di dalam container puslah-franken via Spatie Backup
+    if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$" && docker exec "$CONTAINER_NAME" sh -c "command -v mysqldump >/dev/null 2>&1"; then
         docker exec "$CONTAINER_NAME" php artisan backup:run --only-db --disable-notifications
-        echo "   ✅ Backup database selesai (commit sebelum deploy: ${OLD_COMMIT:-unknown})."
+        BACKUP_OK=true
+    fi
+
+    # Cara 2: Dump langsung dari container MySQL/MariaDB di network mysql-stack_mysql_network
+    if [ "$BACKUP_OK" = false ] && [ -n "$DB_DATABASE" ]; then
+        MYSQL_CONTAINER=""
+        if [ -n "$DB_HOST" ] && docker ps --format '{{.Names}}' | grep -q "^${DB_HOST}$"; then
+            MYSQL_CONTAINER="$DB_HOST"
+        else
+            MYSQL_CONTAINER=$(docker ps --filter "network=mysql-stack_mysql_network" --format '{{.Names}}' | grep -iE "mysql|mariadb|db" | head -n 1 || true)
+        fi
+
+        if [ -n "$MYSQL_CONTAINER" ]; then
+            echo "   ℹ️  Menggunakan container database: ${MYSQL_CONTAINER}"
+            if docker exec -e MYSQL_PWD="$DB_PASSWORD" "$MYSQL_CONTAINER" sh -c \
+                'if command -v mariadb-dump >/dev/null 2>&1; then exec mariadb-dump "$@"; else exec mysqldump "$@"; fi' \
+                _ -u "$DB_USERNAME" --single-transaction --quick --no-tablespaces "$DB_DATABASE" | gzip > "$BACKUP_FILE" && [ -s "$BACKUP_FILE" ]; then
+                BACKUP_OK=true
+            else
+                rm -f "$BACKUP_FILE"
+            fi
+        fi
+    fi
+
+    # Cara 3: Fallback mysqldump dari host Ubuntu
+    if [ "$BACKUP_OK" = false ] && [ -n "$DB_DATABASE" ] && command -v mysqldump >/dev/null 2>&1; then
+        echo "   ℹ️  Menggunakan mysqldump dari host..."
+        if MYSQL_PWD="$DB_PASSWORD" mysqldump -h "${DB_HOST:-127.0.0.1}" -P "${DB_PORT:-3306}" -u "$DB_USERNAME" --single-transaction --quick --no-tablespaces "$DB_DATABASE" | gzip > "$BACKUP_FILE" && [ -s "$BACKUP_FILE" ]; then
+            BACKUP_OK=true
+        else
+            rm -f "$BACKUP_FILE"
+        fi
+    fi
+
+    if [ "$BACKUP_OK" = true ]; then
+        echo "   ✅ Backup database selesai (file: ${BACKUP_FILE}, commit sebelum deploy: ${OLD_COMMIT:-unknown})."
     else
-        echo "   ❌ Container ${CONTAINER_NAME} sedang tidak berjalan. Deploy dibatalkan agar aman."
+        echo "   ❌ Gagal membuat backup database (mysqldump tidak ditemukan di container app, container DB, maupun host). Deploy dibatalkan."
         exit 1
     fi
 fi
