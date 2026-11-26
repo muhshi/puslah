@@ -14,7 +14,7 @@ CONTAINER_NAME=puslah-franken
 WORKER_NAME=puslah-worker
 SCHEDULER_NAME=puslah-scheduler
 BOT_NAME=puslah-telegram-bot
-BRANCH=main
+BRANCH=fitur/surat-undangan
 FORCE_BUILD=false
 DO_BACKUP=false
 
