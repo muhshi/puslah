@@ -142,18 +142,29 @@ class SuratUndanganDocxService
 
     protected function addTujuan($section, SuratUndangan $suratUndangan): void
     {
-        $lines = explode("\n", (string) $suratUndangan->yth_teks);
-        foreach ($lines as $line) {
-            $section->addText(trim($line), [], ['spaceAfter' => 20]);
+        $lines = array_values(array_filter(array_map('trim', explode("\n", (string) $suratUndangan->yth_teks)), fn ($l) => $l !== ''));
+        foreach ($lines as $idx => $line) {
+            $isTempat = $idx === count($lines) - 1 && strcasecmp($line, 'tempat') === 0;
+            $displayLine = $isTempat ? 'Tempat' : $line;
+            $indentLeft = $idx === 0 ? 0 : ($isTempat ? 780 : 450);
+
+            $section->addText($displayLine, [], [
+                'spaceAfter'  => 20,
+                'indentation' => ['left' => $indentLeft],
+            ]);
         }
         $section->addTextBreak(1);
     }
 
     protected function addIsiSurat($section, SuratUndangan $suratUndangan): void
     {
-        // Pembuka
+        // Pembuka (indentasi baris pertama 1,25 cm = 709 twips)
         if (!empty($suratUndangan->paragraf_pembuka)) {
-            $section->addText($suratUndangan->paragraf_pembuka, [], ['alignment' => Jc::BOTH, 'spaceAfter' => 80]);
+            $section->addText($suratUndangan->paragraf_pembuka, [], [
+                'alignment'   => Jc::BOTH,
+                'spaceAfter'  => 80,
+                'indentation' => ['firstLine' => 709],
+            ]);
         }
 
         // Isi Konten HTML (Rich Text Editor)
@@ -161,11 +172,16 @@ class SuratUndanganDocxService
             \PhpOffice\PhpWord\Shared\Html::addHtml($section, $suratUndangan->isi_surat_html, false, false);
         }
 
-        // Penutup
+        // Penutup (EYD/PUEBI: indentasi baris pertama + tanda koma baku)
         $section->addText(
-            'Demikian disampaikan, untuk dapat dipedomani dan dilaksanakan. Atas perhatiannya diucapkan terima kasih.',
+            'Demikian disampaikan untuk dapat dipedomani dan dilaksanakan. Atas perhatian Saudara, diucapkan terima kasih.',
             [],
-            ['alignment' => Jc::BOTH, 'spaceBefore' => 120, 'spaceAfter' => 120]
+            [
+                'alignment'   => Jc::BOTH,
+                'spaceBefore' => 120,
+                'spaceAfter'  => 120,
+                'indentation' => ['firstLine' => 709],
+            ]
         );
     }
 

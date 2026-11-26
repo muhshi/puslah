@@ -84,7 +84,7 @@ class SuratUndanganResource extends Resource
                                     $survey = Survey::with('surveyUsers')->find($state);
                                     if ($survey) {
                                         $set('hal', 'Undangan ' . $survey->name);
-                                        $set('yth_teks', "Yth. Peserta {$survey->name}\nBPS Kabupaten Demak\ndi\n     tempat");
+                                        $set('yth_teks', "Yth. Peserta {$survey->name}\nBPS Kabupaten Demak\ndi\n     Tempat");
                                         $dasar = $survey->dasar_surat ?: 'Surat ...';
                                         $suffix = $get('tipe_isi') === 'opsi_1'
                                             ? ', dengan ini kami mengharapkan kehadiran Saudara pada:'
@@ -138,7 +138,7 @@ class SuratUndanganResource extends Resource
                         Textarea::make('yth_teks')
                             ->label('Tujuan Surat (Yth.)')
                             ->rows(4)
-                            ->default("Yth. Peserta [Nama Kegiatan]\nBPS Kabupaten Demak\ndi\n     tempat")
+                            ->default("Yth. Peserta [Nama Kegiatan]\nBPS Kabupaten Demak\ndi\n     Tempat")
                             ->required()
                             ->columnSpanFull(),
                     ])->columns(2),

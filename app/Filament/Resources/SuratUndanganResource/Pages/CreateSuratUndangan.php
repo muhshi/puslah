@@ -22,7 +22,7 @@ class CreateSuratUndangan extends CreateRecord
                 $this->form->fill([
                     'survey_id'        => $survey->id,
                     'hal'              => 'Undangan ' . $survey->name,
-                    'yth_teks'         => "Yth. Peserta {$survey->name}\nBPS Kabupaten Demak\ndi\n     tempat",
+                    'yth_teks'         => "Yth. Peserta {$survey->name}\nBPS Kabupaten Demak\ndi\n     Tempat",
                     'paragraf_pembuka' => "Menindaklanjuti {$dasar}, dengan ini kami mengharapkan kehadiran Saudara pada:",
                     'agenda_acara'     => $survey->name,
                     'peserta_ids'      => $survey->surveyUsers->pluck('user_id')->toArray(),

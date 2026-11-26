@@ -77,6 +77,15 @@
             margin-bottom: 16px;
             line-height: 1.35;
         }
+        .tujuan-line-1 {
+            padding-left: 0;
+        }
+        .tujuan-line-indent {
+            padding-left: 30px;
+        }
+        .tujuan-line-deep {
+            padding-left: 54px;
+        }
 
         /* ISI SURAT */
         .isi-surat {
@@ -88,8 +97,11 @@
             margin: 0 0 8px 0;
             text-indent: 0;
         }
+        .isi-surat p.indent-paragraf {
+            text-indent: 1.25cm;
+        }
         .isi-surat ol, .isi-surat ul {
-            margin: 4px 0 8px 24px;
+            margin: 4px 0 8px 1.25cm;
             padding: 0;
         }
         .isi-surat li {
@@ -97,7 +109,7 @@
         }
         .isi-surat table {
             border-collapse: collapse;
-            margin: 6px 0 10px 20px;
+            margin: 6px 0 10px 1.25cm;
         }
         .isi-surat table td {
             padding: 2px 4px;
@@ -241,18 +253,28 @@
     </table>
 
     <div class="tujuan-block">
-        {!! nl2br(e($suratUndangan->yth_teks)) !!}
+        @php
+            $ythLines = array_values(array_filter(array_map('trim', explode("\n", (string) $suratUndangan->yth_teks)), fn ($l) => $l !== ''));
+        @endphp
+        @foreach($ythLines as $idx => $line)
+            @php
+                $isTempat = $idx === count($ythLines) - 1 && strcasecmp($line, 'tempat') === 0;
+                $lineClass = $idx === 0 ? 'tujuan-line-1' : ($isTempat ? 'tujuan-line-deep' : 'tujuan-line-indent');
+                $displayLine = $isTempat ? 'Tempat' : $line;
+            @endphp
+            <div class="{{ $lineClass }}">{{ $displayLine }}</div>
+        @endforeach
     </div>
 
     <div class="isi-surat">
         @if(!empty($suratUndangan->paragraf_pembuka))
-            <p style="margin-bottom: 8px;">{{ $suratUndangan->paragraf_pembuka }}</p>
+            <p class="indent-paragraf" style="margin-bottom: 8px;">{{ $suratUndangan->paragraf_pembuka }}</p>
         @endif
 
         {!! $suratUndangan->isi_surat_html !!}
 
-        <p style="margin-top: 12px;">
-            Demikian disampaikan, untuk dapat dipedomani dan dilaksanakan. Atas perhatiannya diucapkan terima kasih.
+        <p class="indent-paragraf" style="margin-top: 12px;">
+            Demikian disampaikan untuk dapat dipedomani dan dilaksanakan. Atas perhatian Saudara, diucapkan terima kasih.
         </p>
     </div>
 
