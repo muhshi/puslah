@@ -55,7 +55,7 @@ class SurveyResource extends Resource
                 TextInput::make('name')
                     ->label('Nama Kegiatan')
                     ->required()
-                    ->maxLength(255)
+                    ->maxLength(255),
                     // ->withProperCase(),
                 Select::make('jenis_kegiatan')
                     ->label('Jenis Kegiatan')
