@@ -200,7 +200,7 @@ class SurveyResource extends Resource
                             ->label('Nama Kegiatan')
                             ->required()
                             ->maxLength(255),
-                            // // ->withProperCase()  (removed)
+                            // ->withProperCase()
                             ->default(fn (Survey $record) => 'Copy of ' . $record->name),
                         Select::make('jenis_kegiatan')
                             ->label('Jenis Kegiatan')
@@ -214,13 +214,13 @@ class SurveyResource extends Resource
                             ->required(),
                         Textarea::make('tujuan')
                             ->label('Tujuan Kegiatan')
-                            // // ->withProperCase()  (removed)
+                            // ->withProperCase()
                             ->default(fn (Survey $record) => $record->tujuan)
                             ->columnSpanFull(),
                         Textarea::make('dasar_surat')
                             ->label('Dasar Surat')
                             ->required()
-                            // // ->withProperCase()  (removed)
+                            // ->withProperCase()
                             ->default(fn (Survey $record) => $record->dasar_surat)
                             ->columnSpanFull(),
                         DatePicker::make('start_date')

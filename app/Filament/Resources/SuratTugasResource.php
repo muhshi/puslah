@@ -286,7 +286,7 @@ class SuratTugasResource extends Resource
                     ])->columns(1),
 
                     Textarea::make('keperluan')
-                        ->withProperCase()
+                        // ->withProperCase()
                         ->required()
                         ->columnSpanFull(),
 
@@ -366,7 +366,7 @@ class SuratTugasResource extends Resource
                         Textarea::make('maksud_perjalanan')
                             ->label('Maksud Perjalanan Dinas')
                             ->default(fn(Get $get) => $get('keperluan'))
-                            ->withProperCase()
+                            // ->withProperCase()
                             ->columnSpanFull(),
 
                         TextInput::make('tempat_berangkat')

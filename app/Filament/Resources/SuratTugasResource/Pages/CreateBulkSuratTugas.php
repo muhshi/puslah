@@ -196,7 +196,7 @@ class CreateBulkSuratTugas extends Page implements HasForms
 
                         Textarea::make('keperluan')
                             ->label('Keperluan')
-                            ->withProperCase()
+                            // ->withProperCase()
                             ->required()
                             ->columnSpanFull(),
 

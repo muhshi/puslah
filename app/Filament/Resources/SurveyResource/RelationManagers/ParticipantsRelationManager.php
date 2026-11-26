@@ -172,7 +172,7 @@ class ParticipantsRelationManager extends RelationManager
                 ->nullable()
                 ->visible($isPelatihan),
             Textarea::make('notes')
-                ->withProperCase()
+                // ->withProperCase()
                 ->columnSpanFull(),
         ])->columns(2);
     }
