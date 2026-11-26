@@ -56,11 +56,10 @@ class SurveyResource extends Resource
                     ->label('Nama Kegiatan')
                     ->required()
                     ->maxLength(255),
-                    // ->withProperCase(),
                 Select::make('jenis_kegiatan')
                     ->label('Jenis Kegiatan')
                     ->options([
-                        'pelatihan'     => 'Pelatihan',
+                        'pelatihan' => 'Pelatihan',
                         'non-pelatihan' => 'Non-Pelatihan',
                     ])
                     ->default('non-pelatihan')
@@ -68,20 +67,18 @@ class SurveyResource extends Resource
                 Select::make('metode')
                     ->label('Metode')
                     ->options([
-                        'daring'  => 'Daring',
-                        'luring'  => 'Luring',
+                        'daring' => 'Daring',
+                        'luring' => 'Luring',
                         'blended' => 'Blended',
                     ])
                     ->default('luring')
                     ->required(),
                 Textarea::make('tujuan')
                     ->label('Tujuan Kegiatan')
-                    // ->withProperCase()
                     ->columnSpanFull(),
                 Textarea::make('dasar_surat')
                     ->label('Dasar Surat')
                     ->placeholder('Contoh: DIPA BPS Kabupaten Demak Tahun Anggaran 2026...')
-                    // ->withProperCase()
                     ->required()
                     ->columnSpanFull(),
                 DatePicker::make('start_date')
@@ -116,24 +113,24 @@ class SurveyResource extends Resource
                     ->label('Jenis')
                     ->badge()
                     ->color(fn (?string $state) => match ($state) {
-                        'pelatihan'     => 'info',
+                        'pelatihan' => 'info',
                         'non-pelatihan' => 'warning',
-                        default         => 'gray',
+                        default => 'gray',
                     })
                     ->formatStateUsing(fn (?string $state) => match ($state) {
-                        'pelatihan'     => 'Pelatihan',
+                        'pelatihan' => 'Pelatihan',
                         'non-pelatihan' => 'Non-Pelatihan',
-                        default         => $state ? ucfirst($state) : '-',
+                        default => $state ? ucfirst($state) : '-',
                     })
                     ->toggleable(),
                 TextColumn::make('metode')
                     ->label('Metode')
                     ->badge()
                     ->color(fn (?string $state) => match ($state) {
-                        'daring'  => 'success',
-                        'luring'  => 'primary',
+                        'daring' => 'success',
+                        'luring' => 'primary',
                         'blended' => 'warning',
-                        default   => 'gray',
+                        default => 'gray',
                     })
                     ->formatStateUsing(fn (?string $state) => $state ? ucfirst($state) : '-')
                     ->toggleable(),
@@ -171,14 +168,14 @@ class SurveyResource extends Resource
                 SelectFilter::make('jenis_kegiatan')
                     ->label('Jenis Kegiatan')
                     ->options([
-                        'pelatihan'     => 'Pelatihan',
+                        'pelatihan' => 'Pelatihan',
                         'non-pelatihan' => 'Non-Pelatihan',
                     ]),
                 SelectFilter::make('metode')
                     ->label('Metode')
                     ->options([
-                        'daring'  => 'Daring',
-                        'luring'  => 'Luring',
+                        'daring' => 'Daring',
+                        'luring' => 'Luring',
                         'blended' => 'Blended',
                     ]),
                 TrashedFilter::make(),
@@ -199,28 +196,32 @@ class SurveyResource extends Resource
                         TextInput::make('name')
                             ->label('Nama Kegiatan')
                             ->required()
-                            ->maxLength(255),
-                            // ->withProperCase()
-                            ->default(fn (Survey $record) => 'Copy of ' . $record->name),
+                            ->maxLength(255)
+                            ->default(fn (Survey $record) => 'Copy of '.$record->name),
                         Select::make('jenis_kegiatan')
                             ->label('Jenis Kegiatan')
-                            ->options(['pelatihan' => 'Pelatihan', 'non-pelatihan' => 'Non-Pelatihan'])
+                            ->options([
+                                'pelatihan' => 'Pelatihan',
+                                'non-pelatihan' => 'Non-Pelatihan',
+                            ])
                             ->default(fn (Survey $record) => $record->jenis_kegiatan ?? 'non-pelatihan')
                             ->required(),
                         Select::make('metode')
                             ->label('Metode')
-                            ->options(['daring' => 'Daring', 'luring' => 'Luring', 'blended' => 'Blended'])
+                            ->options([
+                                'daring' => 'Daring',
+                                'luring' => 'Luring',
+                                'blended' => 'Blended',
+                            ])
                             ->default(fn (Survey $record) => $record->metode ?? 'luring')
                             ->required(),
                         Textarea::make('tujuan')
                             ->label('Tujuan Kegiatan')
-                            // ->withProperCase()
                             ->default(fn (Survey $record) => $record->tujuan)
                             ->columnSpanFull(),
                         Textarea::make('dasar_surat')
                             ->label('Dasar Surat')
                             ->required()
-                            // ->withProperCase()
                             ->default(fn (Survey $record) => $record->dasar_surat)
                             ->columnSpanFull(),
                         DatePicker::make('start_date')
@@ -255,7 +256,7 @@ class SurveyResource extends Resource
                             if ($record->is_multiclass) {
                                 foreach ($record->classes as $oldClass) {
                                     $newClass = $newSurvey->classes()->create([
-                                        'name'        => $oldClass->name,
+                                        'name' => $oldClass->name,
                                         'description' => $oldClass->description,
                                     ]);
                                     $classMap[$oldClass->id] = $newClass->id;
@@ -265,14 +266,14 @@ class SurveyResource extends Resource
                             $participants = $record->surveyUsers()->get();
                             foreach ($participants as $participant) {
                                 $newSurvey->surveyUsers()->create([
-                                    'user_id'         => $participant->user_id,
+                                    'user_id' => $participant->user_id,
                                     'survey_class_id' => $classMap[$participant->survey_class_id] ?? null,
-                                    'role'            => $participant->role,
-                                    'role_pelatihan'  => $participant->role_pelatihan,
-                                    'kelas'           => $participant->kelas,
-                                    'status'          => $participant->status,
-                                    'registered_at'   => now(),
-                                    'notes'           => $participant->notes,
+                                    'role' => $participant->role,
+                                    'role_pelatihan' => $participant->role_pelatihan,
+                                    'kelas' => $participant->kelas,
+                                    'status' => $participant->status,
+                                    'registered_at' => now(),
+                                    'notes' => $participant->notes,
                                 ]);
                             }
                         }
@@ -280,7 +281,7 @@ class SurveyResource extends Resource
                         Notification::make()
                             ->title('Kegiatan berhasil di-copy!')
                             ->body($copyParticipants
-                                ? 'Kegiatan baru dibuat dengan ' . $participants->count() . ' petugas.'
+                                ? 'Kegiatan baru dibuat dengan '.$participants->count().' petugas.'
                                 : 'Kegiatan baru dibuat tanpa petugas.')
                             ->success()
                             ->send();
@@ -325,9 +326,9 @@ class SurveyResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'      => ListSurveys::route('/'),
-            'create'     => CreateSurvey::route('/create'),
-            'edit'       => EditSurvey::route('/{record}/edit'),
+            'index' => ListSurveys::route('/'),
+            'create' => CreateSurvey::route('/create'),
+            'edit' => EditSurvey::route('/{record}/edit'),
             'activities' => ListSurveyActivities::route('/{record}/activities'),
         ];
     }
