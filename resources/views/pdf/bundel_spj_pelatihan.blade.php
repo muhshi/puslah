@@ -362,7 +362,7 @@
                     <th rowspan="2" style="width: 17%;">Nama Penerima</th>
                     <th rowspan="2" style="width: 13%;">NIK / NIP</th>
                     <th rowspan="2" style="width: 14%;">Bank &amp; Rekening</th>
-                    <th rowspan="2" style="width: 10%;">Asal → Tujuan</th>
+                    <th rowspan="2" style="width: 10%;">Asal - Tujuan</th>
                     <th rowspan="2" style="width: 9%;">Transport (Rp)</th>
                     <th rowspan="2" style="width: 11%;">Uang Harian (Rp × Hr)</th>
                     <th rowspan="2" style="width: 10%;">Total Diterima (Rp)</th>
@@ -387,7 +387,7 @@
                             <strong>{{ $row['bank'] }}</strong><br>
                             {{ $row['rekening'] }}
                         </td>
-                        <td>{{ $row['asal'] }} → {{ $row['tujuan'] }}</td>
+                        <td>{{ $row['asal'] }} - {{ $row['tujuan'] }}</td>
                         <td class="text-right">{{ number_format((int) $row['transport'], 0, ',', '.') }}</td>
                         <td class="text-right">
                             {{ number_format($uhSubtotal, 0, ',', '.') }}<br>
