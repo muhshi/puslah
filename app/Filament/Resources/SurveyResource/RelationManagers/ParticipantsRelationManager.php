@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\SurveyResource\RelationManagers;
 
-use App\Exports\PelatihanKelasTemplateExport;
+use App\Exports\PelatihanKelasWorkbookExport;
 use App\Imports\PelatihanKelasImport;
 use App\Models\Certificate;
 use App\Models\CertificateTemplate;
@@ -64,7 +64,7 @@ class ParticipantsRelationManager extends RelationManager
         return $schema->components([
             Select::make('user_id')
                 ->label('User')
-                ->options(User::orderBy('name')->pluck('name', 'id'))
+                ->options(fn () => static::userOptionLabels())
                 ->searchable()
                 ->preload()
                 ->required(),
@@ -132,6 +132,7 @@ class ParticipantsRelationManager extends RelationManager
             ->columns([
                 TextColumn::make('user.name')
                     ->label('Nama')
+                    ->description(fn (SurveyUser $r): ?string => $r->user?->email)
                     ->searchable(),
                 SelectColumn::make('role_pelatihan')
                     ->label('Role')
@@ -209,38 +210,16 @@ class ParticipantsRelationManager extends RelationManager
                                 ->multiple()
                                 ->searchable()
                                 ->preload()
-                                ->options(function () {
-                                    return User::whereHas('roles', function ($query) {
-                                        $query->where('name', 'Mitra');
-                                    })
-                                        ->with('profile')
-                                        ->get()
-                                        ->mapWithKeys(function ($user) {
-                                            $jabatan = $user->profile->jabatan ?? '-';
-
-                                            return [$user->id => "{$user->name} ({$jabatan})"];
-                                        });
-                                })
-                                ->helperText('Cari dan pilih pegawai dengan role Mitra'),
+                                ->options(fn () => static::userOptionLabels('Mitra'))
+                                ->helperText('Cari berdasarkan nama, email, atau kecamatan mitra'),
 
                             Select::make('pegawai_bps_users')
                                 ->label('Pegawai Organik')
                                 ->multiple()
                                 ->searchable()
                                 ->preload()
-                                ->options(function () {
-                                    return User::whereHas('roles', function ($query) {
-                                        $query->where('name', 'Organik');
-                                    })
-                                        ->with('profile')
-                                        ->get()
-                                        ->mapWithKeys(function ($user) {
-                                            $jabatan = $user->profile->jabatan ?? '-';
-
-                                            return [$user->id => "{$user->name} ({$jabatan})"];
-                                        });
-                                })
-                                ->helperText('Cari dan pilih pegawai dengan role Organik'),
+                                ->options(fn () => static::userOptionLabels('Organik'))
+                                ->helperText('Cari berdasarkan nama, jabatan, atau email pegawai Organik'),
                         ])->columns(2),
 
                         Textarea::make('notes')->label('Catatan')->columnSpanFull(),
@@ -307,29 +286,27 @@ class ParticipantsRelationManager extends RelationManager
                     }),
 
                 Action::make('exportKelasTemplate')
-                    ->label('Export Format Kelas')
+                    ->label('Download Template Kelas')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
                     ->visible($isPelatihan)
-                    ->action(function ($livewire) {
-                        /** @var Survey $survey */
-                        $survey = $livewire->getOwnerRecord();
-                        $filename = 'Format_Kelas_'.Str::slug($survey->name ?: 'Pelatihan').'.xlsx';
-
-                        return Excel::download(
-                            new PelatihanKelasTemplateExport($survey),
-                            $filename
-                        );
-                    }),
+                    ->action(fn ($livewire) => static::downloadKelasWorkbook($livewire->getOwnerRecord())),
 
                 Action::make('importKelas')
                     ->label('Import Pembagian Kelas')
                     ->icon('heroicon-o-arrow-up-tray')
                     ->color('primary')
                     ->visible($isPelatihan)
+                    ->modalDescription('Tidak perlu memilih peserta satu per satu terlebih dahulu. Download template Excel (berisi sheet Pembagian Kelas + sheet Referensi Mitra & Pegawai lengkap dengan Email & Kecamatan), isi Email/Nama bersama Role & Kelas, lalu upload kembali di sini untuk mendaftarkan peserta sekaligus membagi kelas.')
                     ->schema([
                         FileUpload::make('file')
                             ->label('File Excel Format Kelas')
+                            ->hintAction(
+                                Action::make('downloadTemplateInModal')
+                                    ->label('Download Template (.xlsx)')
+                                    ->icon('heroicon-o-arrow-down-tray')
+                                    ->action(fn ($livewire) => static::downloadKelasWorkbook($livewire->getOwnerRecord()))
+                            )
                             ->acceptedFileTypes([
                                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                                 'application/vnd.ms-excel',
@@ -352,7 +329,7 @@ class ParticipantsRelationManager extends RelationManager
 
                         Notification::make()
                             ->title('Import Pembagian Kelas Selesai')
-                            ->body("Berhasil: {$import->success}, Dilewati: {$import->skipped}, Gagal: {$import->failed}")
+                            ->body("Berhasil: {$import->success} (Peserta baru: {$import->created}), Dilewati: {$import->skipped}, Gagal: {$import->failed}")
                             ->success()
                             ->send();
                     }),
@@ -566,5 +543,50 @@ class ParticipantsRelationManager extends RelationManager
     protected function issueCertificate(SurveyUser $row): void
     {
         app(CertificateIssuanceService::class)->issue($row);
+    }
+
+    /**
+     * Format user select labels with email and kecamatan/jabatan so duplicate names stay distinguishable.
+     */
+    protected static function userOptionLabels(?string $role = null): Collection
+    {
+        $query = User::query()
+            ->with('profile')
+            ->orderBy('name')
+            ->orderBy('email');
+
+        if ($role !== null) {
+            $query->whereHas('roles', fn (Builder $q) => $q->where('name', $role));
+        }
+
+        $sipetraService = app(SipetraUserDataService::class);
+
+        return $query->get()->mapWithKeys(function (User $user) use ($role, $sipetraService): array {
+            $kecamatan = $role !== 'Organik'
+                ? $sipetraService->extractAsal(null, $user, '')
+                : '';
+
+            $parts = array_filter([
+                $role === 'Organik' ? ($user->profile?->jabatan ?: null) : null,
+                $user->email ?: null,
+                filled($kecamatan) ? 'Kec. '.$kecamatan : null,
+            ]);
+
+            $label = empty($parts)
+                ? $user->name
+                : "{$user->name} (".implode(' · ', $parts).')';
+
+            return [$user->id => $label];
+        });
+    }
+
+    protected static function downloadKelasWorkbook(Survey $survey): mixed
+    {
+        $filename = 'Template_Kelas_'.Str::slug($survey->name ?: 'Pelatihan').'.xlsx';
+
+        return Excel::download(
+            new PelatihanKelasWorkbookExport($survey),
+            $filename
+        );
     }
 }

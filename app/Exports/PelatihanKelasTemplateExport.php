@@ -8,9 +8,10 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class PelatihanKelasTemplateExport implements FromCollection, ShouldAutoSize, WithHeadings, WithStyles
+class PelatihanKelasTemplateExport implements FromCollection, ShouldAutoSize, WithHeadings, WithStyles, WithTitle
 {
     public function __construct(protected Survey $survey) {}
 
@@ -43,6 +44,11 @@ class PelatihanKelasTemplateExport implements FromCollection, ShouldAutoSize, Wi
             'Asal',
             'Tujuan',
         ];
+    }
+
+    public function title(): string
+    {
+        return 'Pembagian Kelas';
     }
 
     public function styles(Worksheet $sheet): array

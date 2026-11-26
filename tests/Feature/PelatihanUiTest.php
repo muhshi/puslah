@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Exports\PelatihanKelasTemplateExport;
+use App\Exports\PelatihanKelasWorkbookExport;
 use App\Filament\Resources\PelatihanResource;
 use App\Filament\Resources\PelatihanResource\Pages\CreatePelatihan;
 use App\Filament\Resources\PelatihanResource\Pages\EditPelatihan;
@@ -527,5 +528,109 @@ class PelatihanUiTest extends TestCase
         Livewire::test(EditPelatihan::class, ['record' => $legacyPelatihan->getRouteKey()])
             ->assertSet('data.program', 'PROGRAM CUSTOM (054.01.XX)')
             ->assertSet('data.mak', 'BELANJA BAHAN (521211)');
+    }
+
+    public function test_mitra_duplicate_names_show_email_and_template_import_enrolls_directly(): void
+    {
+        $pelatihan = Survey::create([
+            'name' => 'Pelatihan SPKRT 2027',
+            'dasar_surat' => 'DIPA 2026',
+            'is_pelatihan' => true,
+            'kota_kegiatan' => 'Semarang',
+            'is_active' => true,
+        ]);
+
+        // Two Mitra with identical names but distinct emails & kecamatan
+        $mitraA = User::factory()->create(['name' => 'Ahmad Fauzi', 'email' => 'fauzi.sayung@mitra.test']);
+        $mitraA->assignRole('Mitra');
+        $mitraA->profile()->updateOrCreate(
+            ['user_id' => $mitraA->id],
+            ['full_name' => 'Ahmad Fauzi', 'address' => 'Kecamatan Sayung, Kabupaten Demak', 'nip' => '3321010101010001']
+        );
+
+        $mitraB = User::factory()->create(['name' => 'Ahmad Fauzi', 'email' => 'fauzi.mranggen@mitra.test']);
+        $mitraB->assignRole('Mitra');
+        $mitraB->profile()->updateOrCreate(
+            ['user_id' => $mitraB->id],
+            ['full_name' => 'Ahmad Fauzi', 'address' => 'Kecamatan Mranggen, Kabupaten Demak', 'nip' => '3321010101010002']
+        );
+
+        // Unrelated Organik should NOT be auto-enrolled from Sheet 2 reference sheet
+        $organik = User::factory()->create(['name' => 'Inda Dewi', 'email' => 'inda@bps.test']);
+        $organik->assignRole('Organik');
+        $organik->profile()->updateOrCreate(
+            ['user_id' => $organik->id],
+            ['full_name' => 'Inda Dewi', 'jabatan' => 'Statistisi']
+        );
+
+        // 1. Verify massAdd & importKelas UI expose distinguishing Mitra emails and downloadable template
+        $getLabels = new \ReflectionMethod(ParticipantsRelationManager::class, 'userOptionLabels');
+        $mitraLabels = $getLabels->invoke(null, 'Mitra');
+        $this->assertSame('Ahmad Fauzi (fauzi.sayung@mitra.test · Kec. Sayung)', $mitraLabels[$mitraA->id] ?? null);
+        $this->assertSame('Ahmad Fauzi (fauzi.mranggen@mitra.test · Kec. Mranggen)', $mitraLabels[$mitraB->id] ?? null);
+
+        Livewire::test(ParticipantsRelationManager::class, [
+            'ownerRecord' => $pelatihan,
+            'pageClass' => EditPelatihan::class,
+        ])
+            ->assertTableActionExists('massAdd')
+            ->assertTableActionExists('exportKelasTemplate')
+            ->assertTableActionExists('importKelas');
+
+        // Verify exact option label format via mounted action options
+        $workbook = new PelatihanKelasWorkbookExport($pelatihan);
+        $sheets = $workbook->sheets();
+        $this->assertCount(2, $sheets);
+        $this->assertSame('Pembagian Kelas', $sheets[0]->title());
+        $this->assertSame('Referensi Mitra & Pegawai', $sheets[1]->title());
+        $refEmails = $sheets[1]->collection()->pluck('email')->all();
+        $this->assertContains('fauzi.sayung@mitra.test', $refEmails);
+        $this->assertContains('fauzi.mranggen@mitra.test', $refEmails);
+        $this->assertContains('inda@bps.test', $refEmails);
+        $this->assertNotEmpty(Excel::raw($workbook, \Maatwebsite\Excel\Excel::XLSX));
+
+        // 2. Direct Excel template import (without selecting participants beforehand!)
+        $spreadsheet = new Spreadsheet;
+        $sheet1 = $spreadsheet->getActiveSheet();
+        $sheet1->setTitle('Pembagian Kelas');
+        $sheet1->fromArray([
+            ['ID', 'Nama', 'Email', 'Role (PPL/PML/Inda/Panitia)', 'Kelas', 'Asal', 'Tujuan'],
+            // Row 1: blank ID, match duplicate Mitra cleanly by email; blank Asal/Tujuan -> smart defaults
+            [null, 'Ahmad Fauzi', 'fauzi.mranggen@mitra.test', 'PPL', 'Kelas B', null, null],
+            // Row 2: blank ID + blank email + ambiguous duplicate name -> must fail instead of guessing
+            [null, 'Ahmad Fauzi', null, 'PPL', 'Kelas A', 'Demak', 'Semarang'],
+            // Row 3: completely blank trailing row -> silently ignored
+            [null, null, null, null, null, null, null],
+        ]);
+
+        // Add Sheet 2 reference sheet to ensure multi-sheet workbook import ignores Sheet 2
+        $sheet2 = $spreadsheet->createSheet();
+        $sheet2->setTitle('Referensi Mitra & Pegawai');
+        $sheet2->fromArray([
+            ['Nama', 'Email (Copy ke Sheet Pembagian Kelas)', 'Role Sistem', 'NIK / NIP', 'Kecamatan', 'Jabatan'],
+            ['Inda Dewi', 'inda@bps.test', 'Organik', '-', '-', 'Statistisi'],
+        ]);
+
+        $filePath = tempnam(sys_get_temp_dir(), 'test_template_import_').'.xlsx';
+        (new Xlsx($spreadsheet))->save($filePath);
+
+        $import = new PelatihanKelasImport($pelatihan);
+        Excel::import($import, $filePath);
+        @unlink($filePath);
+
+        $this->assertSame(1, $import->created);
+        $this->assertSame(1, $import->success);
+        $this->assertSame(1, $import->failed); // Ambiguous name-only row
+
+        $enrolled = SurveyUser::where('survey_id', $pelatihan->id)->where('user_id', $mitraB->id)->first();
+        $this->assertNotNull($enrolled);
+        $this->assertSame('PPL', $enrolled->role_pelatihan);
+        $this->assertSame('Kelas B', $enrolled->kelas);
+        $this->assertSame('Mranggen', $enrolled->asal);
+        $this->assertSame('Semarang', $enrolled->tujuan);
+
+        // Verify Mitra A and Sheet 2 Organik were NOT enrolled
+        $this->assertDatabaseMissing('survey_users', ['survey_id' => $pelatihan->id, 'user_id' => $mitraA->id]);
+        $this->assertDatabaseMissing('survey_users', ['survey_id' => $pelatihan->id, 'user_id' => $organik->id]);
     }
 }
