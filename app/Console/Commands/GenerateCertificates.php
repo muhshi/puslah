@@ -2,6 +2,11 @@
 
 namespace App\Console\Commands;
 
+use App\Models\SurveyUser;
+use App\Models\Certificate;
+use App\Models\CertificateTemplate;
+use App\Services\CertificateIssuanceService;
+use Exception;
 use Illuminate\Console\Command;
 
 class GenerateCertificates extends Command
@@ -33,7 +38,7 @@ class GenerateCertificates extends Command
         // - Survey is inactive (ended)
         // - Status is not approved
         // - User name is NOT 'terlampir' (case-insensitive)
-        $candidates = \App\Models\SurveyUser::with(['user', 'survey'])
+        $candidates = SurveyUser::with(['user', 'survey'])
             ->where('status', '!=', 'approved')
             ->whereHas('survey', function ($query) {
                 $query->where('is_active', false);
@@ -54,7 +59,7 @@ class GenerateCertificates extends Command
                 }
 
                 // Check if certificate already exists
-                $exists = \App\Models\Certificate::where('survey_id', $participant->survey_id)
+                $exists = Certificate::where('survey_id', $participant->survey_id)
                     ->where('user_id', $participant->user_id)
                     ->exists();
 
@@ -64,20 +69,20 @@ class GenerateCertificates extends Command
                 }
 
                 // Check active template
-                $template = \App\Models\CertificateTemplate::where('active', 1)->first();
+                $template = CertificateTemplate::where('active', 1)->first();
                 if (!$template) {
                     $this->error("No active certificate template found!");
                     return;
                 }
 
                 $this->info("Generating certificate for: {$participant->user->name} (Survey: {$participant->survey->name})");
-                app(\App\Services\CertificateIssuanceService::class)->issue($participant);
+                app(CertificateIssuanceService::class)->issue($participant);
                 $generatedCount++;
 
                 // Also update SurveyUser status to approved
                 $participant->update(['status' => 'approved']);
 
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 $this->error("Failed to generate for Participant ID {$participant->id}: " . $e->getMessage());
             }
         }

@@ -83,15 +83,15 @@ class SuratUndanganPdfService
         $surveyUsers = $query->get();
 
         $result = [];
-        $hasClasses = $survey->is_multiclass && $survey->classes()->count() > 0;
+        $hasClasses = ($survey->is_multiclass && $survey->classes()->count() > 0) || $survey->is_pelatihan;
 
         if ($hasClasses) {
-            $grouped = $surveyUsers->groupBy(fn ($su) => $su->class?->name ?: 'Tanpa Kelas / Umum');
+            $grouped = $surveyUsers->groupBy(fn ($su) => $su->class?->name ?: ($su->kelas ?: 'Tanpa Kelas / Umum'));
             foreach ($grouped as $className => $items) {
                 $pesertaList = [];
                 foreach ($items as $su) {
                     if ($su->user) {
-                        $pesertaList[] = $this->formatPesertaRow($su->user, $su->role);
+                        $pesertaList[] = $this->formatPesertaRow($su->user, $su->role ?: $su->role_pelatihan);
                     }
                 }
                 if (count($pesertaList) > 0) {
@@ -102,7 +102,7 @@ class SuratUndanganPdfService
             $pesertaList = [];
             foreach ($surveyUsers as $su) {
                 if ($su->user) {
-                    $pesertaList[] = $this->formatPesertaRow($su->user, $su->role);
+                    $pesertaList[] = $this->formatPesertaRow($su->user, $su->role ?: $su->role_pelatihan);
                 }
             }
             if (count($pesertaList) > 0) {

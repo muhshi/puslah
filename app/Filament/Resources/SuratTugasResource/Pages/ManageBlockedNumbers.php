@@ -2,6 +2,27 @@
 
 namespace App\Filament\Resources\SuratTugasResource\Pages;
 
+use App\Filament\Resources\SuratTugasResource\Widgets\SkippedNumbersInfoWidget;
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Forms\Components\Textarea;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Actions\Action;
+use App\Filament\Resources\SuratTugasResource\Support\SuratTugasFormFactory;
+use Exception;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\BulkAction;
+use Illuminate\Database\Eloquent\Collection;
+use Filament\Forms\Components\Select;
+use Carbon\Carbon;
+use Filament\Schemas\Components\Group;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\DatePicker;
+use Illuminate\Support\Facades\DB;
 use App\Filament\Resources\SuratTugasResource;
 use App\Models\BlockedSuratTugasNumber;
 use App\Models\SuratTugas;
@@ -11,7 +32,6 @@ use App\Models\User;
 use App\Models\UserProfile;
 use App\Settings\SystemSettings;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -26,7 +46,7 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
     use InteractsWithForms, InteractsWithTable;
 
     protected static string $resource = SuratTugasResource::class;
-    protected static string $view = 'filament.resources.surat-tugas-resource.pages.manage-blocked-numbers';
+    protected string $view = 'filament.resources.surat-tugas-resource.pages.manage-blocked-numbers';
     protected static ?string $title = 'Kelola Nomor Terblokir';
 
     public ?int $year = null;
@@ -45,7 +65,7 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
     protected function getHeaderWidgets(): array
     {
         return [
-            SuratTugasResource\Widgets\SkippedNumbersInfoWidget::class,
+            SkippedNumbersInfoWidget::class,
         ];
     }
 
@@ -56,19 +76,19 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
         ];
     }
 
-    public function blockingForm(Form $form): Form
+    public function blockingForm(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Block Nomor Baru')
+        return $schema
+            ->components([
+                Section::make('Block Nomor Baru')
                     ->description('Blokir range nomor urut agar tidak dipakai saat pembuatan surat tugas.')
                     ->schema([
-                        Forms\Components\TextInput::make('year')
+                        TextInput::make('year')
                             ->label('Tahun')
                             ->numeric()
                             ->required()
                             ->live()
-                            ->afterStateUpdated(function ($state, Forms\Set $set) {
+                            ->afterStateUpdated(function ($state, Set $set) {
                                 if ($state) {
                                     $nextNumber = SuratTugas::getNextNomorUrut((int) $state);
                                     $set('nomor_dari', $nextNumber);
@@ -76,18 +96,18 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                                 }
                             }),
 
-                        Forms\Components\TextInput::make('nomor_dari')
+                        TextInput::make('nomor_dari')
                             ->label('Nomor Dari')
                             ->numeric()
                             ->required()
                             ->minValue(1),
 
-                        Forms\Components\TextInput::make('nomor_sampai')
+                        TextInput::make('nomor_sampai')
                             ->label('Nomor Sampai')
                             ->numeric()
                             ->required()
                             ->minValue(1)
-                            ->helperText(function (Forms\Get $get) {
+                            ->helperText(function (Get $get) {
                                 $dari = (int) ($get('nomor_dari') ?? 0);
                                 $sampai = (int) ($get('nomor_sampai') ?? 0);
                                 if ($dari > 0 && $sampai > 0 && $sampai >= $dari) {
@@ -97,7 +117,7 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                                 return '';
                             }),
 
-                        Forms\Components\Textarea::make('keterangan')
+                        Textarea::make('keterangan')
                             ->label('Keterangan (Opsional)')
                             ->placeholder('Contoh: Reserved untuk ST Sakernas batch 2')
                             ->maxLength(500),
@@ -164,14 +184,14 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
         return $table
             ->query(BlockedSuratTugasNumber::query()->orderBy('year', 'desc')->orderBy('nomor_urut', 'asc'))
             ->columns([
-                Tables\Columns\TextColumn::make('nomor_urut')
+                TextColumn::make('nomor_urut')
                     ->label('Nomor Urut')
                     ->sortable()
                     ->searchable(),
-                Tables\Columns\TextColumn::make('year')
+                TextColumn::make('year')
                     ->label('Tahun')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('nomor_surat_preview')
+                TextColumn::make('nomor_surat_preview')
                     ->label('Preview Nomor Surat')
                     ->getStateUsing(function (BlockedSuratTugasNumber $record) {
                         $settings = app(SystemSettings::class);
@@ -180,19 +200,19 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                         $urut = str_pad($record->nomor_urut, 4, '0', STR_PAD_LEFT);
                         return "{$prefix}-{$urut}/{$office}/KP.650/{$record->year}";
                     }),
-                Tables\Columns\TextColumn::make('keterangan')
+                TextColumn::make('keterangan')
                     ->label('Keterangan')
                     ->limit(50)
                     ->tooltip(fn(BlockedSuratTugasNumber $record) => $record->keterangan),
-                Tables\Columns\TextColumn::make('blocker.name')
+                TextColumn::make('blocker.name')
                     ->label('Di-block oleh'),
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->label('Tanggal Block')
                     ->dateTime()
                     ->sortable(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('year')
+                SelectFilter::make('year')
                     ->label('Tahun')
                     ->options(function () {
                         $years = BlockedSuratTugasNumber::distinct()
@@ -208,25 +228,25 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                     })
                     ->default(now()->year),
             ])
-            ->actions([
-                Tables\Actions\Action::make('buatSuratTugas')
+            ->recordActions([
+                Action::make('buatSuratTugas')
                     ->label('Buat ST')
                     ->icon('heroicon-o-document-plus')
                     ->color('success')
                     ->modalHeading(fn(BlockedSuratTugasNumber $record) => 'Buat Surat Tugas — Nomor #' . $record->nomor_urut)
                     ->modalDescription(fn(BlockedSuratTugasNumber $record) => 'Nomor surat akan menggunakan nomor urut #' . $record->nomor_urut . ' yang sudah di-block. Setelah dibuat, nomor ini otomatis di-release.')
                     ->modalSubmitActionLabel('Buat Surat Tugas')
-                    ->form(fn(BlockedSuratTugasNumber $record) => \App\Filament\Resources\SuratTugasResource\Support\SuratTugasFormFactory::getBlockedNumberFormSchema($record))
+                    ->schema(fn(BlockedSuratTugasNumber $record) => SuratTugasFormFactory::getBlockedNumberFormSchema($record))
                     ->action(function (BlockedSuratTugasNumber $record, array $data) {
                         try {
-                            \App\Filament\Resources\SuratTugasResource\Support\SuratTugasFormFactory::createSuratTugasFromBlocked($record, $data);
+                            SuratTugasFormFactory::createSuratTugasFromBlocked($record, $data);
 
                             Notification::make()
                                 ->title('Surat Tugas berhasil dibuat!')
                                 ->body("Nomor {$record->nomor_urut} sudah dibuat dan nomor blokir otomatis di-release.")
                                 ->success()
                                 ->send();
-                        } catch (\Exception $e) {
+                        } catch (Exception $e) {
                             $msg = $e->getMessage();
                             $body = str_starts_with($msg, 'Overlap:') ? substr($msg, 9) : $msg;
                             Notification::make()
@@ -236,7 +256,7 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                                 ->send();
                         }
                     }),
-                Tables\Actions\Action::make('release')
+                Action::make('release')
                     ->label('Release')
                     ->icon('heroicon-o-lock-open')
                     ->color('warning')
@@ -251,155 +271,111 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                             ->send();
                     }),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\BulkAction::make('buatSuratTugasBulk')
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    BulkAction::make('buatSuratTugasBulk')
                         ->label('Buat ST Kolektif')
                         ->icon('heroicon-o-document-plus')
                         ->color('success')
-                        ->modalHeading(fn(\Illuminate\Database\Eloquent\Collection $records) => 'Buat Surat Tugas Kolektif — ' . $records->count() . ' Nomor Terpilih')
+                        ->modalHeading(fn(Collection $records) => 'Buat Surat Tugas Kolektif — ' . $records->count() . ' Nomor Terpilih')
                         ->modalDescription('Pastikan jumlah pegawai yang dipilih tidak melebihi jumlah nomor yang Anda block. Sisa nomor block yang tidak terpakai akan tetap diblock.')
                         ->modalSubmitActionLabel('Buat Surat Tugas')
-                        ->form([
-                            Forms\Components\Section::make('Pilih Survey & Pegawai')
-                                ->description('Pilih survey terlebih dahulu, lalu pilih pegawai dari peserta survey tersebut.')
+                        ->schema([
+                            Section::make('Pilih Kegiatan / Pelatihan & Pegawai')
+                                ->description('Pilih kegiatan atau pelatihan terlebih dahulu, lalu pilih pegawai dari peserta terdaftar.')
                                 ->schema([
-                                    Forms\Components\Select::make('survey_id')
-                                        ->label('Survey')
-                                        ->options(Survey::where('is_active', true)->pluck('name', 'id'))
+                                    Select::make('survey_id')
+                                        ->label('Kegiatan / Pelatihan')
+                                        ->options(fn () => SuratTugasFormFactory::getActiveSurveyOptions())
                                         ->searchable()
                                         ->preload()
                                         ->live()
-                                        ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                        ->afterStateUpdated(function ($state, Set $set) {
                                             $set('mitra_user_ids', []);
                                             $set('pegawai_bps_user_ids', []);
-
-                                            if ($state) {
-                                                $survey = Survey::find($state);
-                                                if ($survey) {
-                                                    $set('keperluan', $survey->name);
-                                                    if ($survey->start_date) {
-                                                        $set('waktu_mulai', \Carbon\Carbon::parse($survey->start_date)->format('Y-m-d'));
-                                                    }
-                                                    if ($survey->end_date) {
-                                                        $set('waktu_selesai', \Carbon\Carbon::parse($survey->end_date)->format('Y-m-d'));
-                                                    }
-                                                }
-                                            }
+                                            SuratTugasFormFactory::applySurveyDefaultsToForm($set, $state);
                                         })
                                         ->columnSpan('full')
                                         ->required(),
 
-                                    Forms\Components\Select::make('mitra_user_ids')
+                                    Select::make('mitra_user_ids')
                                         ->label('Pegawai Mitra')
                                         ->multiple()
                                         ->searchable()
                                         ->preload()
-                                        ->options(function (Forms\Get $get) {
+                                        ->options(function (Get $get) {
                                             $surveyId = $get('survey_id');
-                                            if (!$surveyId)
+                                            if (! $surveyId) {
                                                 return [];
-
-                                            $survey = Survey::find($surveyId);
-                                            $query = SurveyUser::where('survey_id', $surveyId)
-                                                ->whereHas('user.roles', function ($q) {
-                                                    $q->where('name', 'Mitra');
-                                                });
-
-                                            if ($survey && !$survey->is_multiple) {
-                                                $query->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
-                                                    $q->where('survey_id', $surveyId);
-                                                });
                                             }
 
-                                            return $query->with('user.profile')
-                                                ->get()
-                                                ->mapWithKeys(function ($su) {
-                                                    $jabatan = $su->user->profile->jabatan ?? '-';
-                                                    return [$su->user_id => "{$su->user->name} ({$jabatan})"];
-                                                });
+                                            return SuratTugasFormFactory::getSurveyParticipantOptions((int) $surveyId, 'Mitra', includeTerlampir: false);
                                         })
-                                        ->disabled(fn(Forms\Get $get) => !$get('survey_id'))
-                                        ->helperText('Hanya peserta survey dengan role Mitra'),
+                                        ->disabled(fn(Get $get) => !$get('survey_id'))
+                                        ->helperText('Hanya peserta terdaftar dengan role Mitra'),
 
-                                    Forms\Components\Select::make('pegawai_bps_user_ids')
+                                    Select::make('pegawai_bps_user_ids')
                                         ->label('Pegawai Organik')
                                         ->multiple()
                                         ->searchable()
                                         ->preload()
-                                        ->options(function (Forms\Get $get) {
+                                        ->options(function (Get $get) {
                                             $surveyId = $get('survey_id');
-                                            if (!$surveyId)
+                                            if (! $surveyId) {
                                                 return [];
-
-                                            $survey = Survey::find($surveyId);
-                                            $query = SurveyUser::where('survey_id', $surveyId)
-                                                ->whereHas('user.roles', function ($q) {
-                                                    $q->where('name', 'Organik');
-                                                });
-
-                                            if ($survey && !$survey->is_multiple) {
-                                                $query->whereDoesntHave('user.suratTugas', function ($q) use ($surveyId) {
-                                                    $q->where('survey_id', $surveyId);
-                                                });
                                             }
 
-                                            return $query->with('user.profile')
-                                                ->get()
-                                                ->mapWithKeys(function ($su) {
-                                                    $jabatan = $su->user->profile->jabatan ?? '-';
-                                                    return [$su->user_id => "{$su->user->name} ({$jabatan})"];
-                                                });
+                                            return SuratTugasFormFactory::getSurveyParticipantOptions((int) $surveyId, 'Organik', includeTerlampir: false);
                                         })
-                                        ->disabled(fn(Forms\Get $get) => !$get('survey_id'))
-                                        ->helperText('Hanya peserta survey dengan role Organik'),
+                                        ->disabled(fn(Get $get) => !$get('survey_id'))
+                                        ->helperText('Hanya peserta terdaftar dengan role Organik'),
                                 ])->columns(2),
 
-                            Forms\Components\Section::make('Data Surat (Berlaku untuk Semua)')
+                            Section::make('Data Surat (Berlaku untuk Semua)')
                                 ->schema([
-                                    Forms\Components\Group::make()->schema([
-                                        Forms\Components\TextInput::make('jabatan')
+                                    Group::make()->schema([
+                                        TextInput::make('jabatan')
                                             ->label('Jabatan (Saat Tugas)')
                                             ->helperText('Jabatan yang sama untuk semua pegawai terpilih.')
                                             ->required()
                                             ->maxLength(255),
 
-                                        Forms\Components\TextInput::make('kode_klasifikasi')
+                                        TextInput::make('kode_klasifikasi')
                                             ->label('Klasifikasi')
                                             ->default('KP.650')
                                             ->required(),
                                     ])->columns(2),
 
-                                    Forms\Components\Textarea::make('keperluan')
+                                    Textarea::make('keperluan')
                                         ->label('Keperluan')
                                         ->required()
                                         ->columnSpanFull(),
 
-                                    Forms\Components\TextInput::make('tempat_tugas')
+                                    TextInput::make('tempat_tugas')
                                         ->label('Tempat Tugas')
                                         ->maxLength(255)
                                         ->columnSpanFull(),
 
-                                    Forms\Components\Group::make()->schema([
-                                        Forms\Components\Toggle::make('abaikan_validasi')
+                                    Group::make()->schema([
+                                        Toggle::make('abaikan_validasi')
                                             ->label('Abaikan Validasi Bentrok')
                                             ->helperText('Hanya untuk Admin.')
                                             ->default(false)
                                             ->visible(fn() => auth()->user()?->hasAnyRole(['super_admin', 'Kepala', 'Kasubag'])),
-                                        Forms\Components\DatePicker::make('tanggal')
+                                        DatePicker::make('tanggal')
                                             ->label('Tanggal Surat')
                                             ->required()
                                             ->default(now()),
-                                        Forms\Components\DatePicker::make('waktu_mulai')
+                                        DatePicker::make('waktu_mulai')
                                             ->label('Mulai')
                                             ->default(now()),
-                                        Forms\Components\DatePicker::make('waktu_selesai')
+                                        DatePicker::make('waktu_selesai')
                                             ->label('Selesai')
                                             ->default(now()),
                                     ])->columns(3),
                                 ]),
                         ])
-                        ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
+                        ->action(function (Collection $records, array $data) {
                             $mitraIds = $data['mitra_user_ids'] ?? [];
                             $pegawaiIds = $data['pegawai_bps_user_ids'] ?? [];
                             $userIds = array_merge($mitraIds, $pegawaiIds);
@@ -433,14 +409,14 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
 
                             $successCount = 0;
                             try {
-                                \Illuminate\Support\Facades\DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $records, &$successCount) {
+                                DB::transaction(function () use ($userIds, $data, $settings, $prefix, $office, $klasifikasi, $records, &$successCount) {
                                     foreach ($userIds as $index => $userId) {
                                         $abaikanValidasi = $data['abaikan_validasi'] ?? false;
                                         if (!$abaikanValidasi && ($overlap = SuratTugas::getOverlap($userId, $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null))) {
                                             $user = User::find($userId);
                                             $userName = $user ? $user->name : 'Pegawai';
                                             $overlapMsg = SuratTugas::formatOverlapMessage($userName, $overlap);
-                                            throw new \Exception("Overlap: {$overlapMsg}");
+                                            throw new Exception("Overlap: {$overlapMsg}");
                                         }
 
                                         $record = $records[$index];
@@ -477,7 +453,7 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                                     ->title('Berhasil membuat ' . $successCount . ' surat tugas')
                                     ->success()
                                     ->send();
-                            } catch (\Exception $e) {
+                            } catch (Exception $e) {
                                 $msg = $e->getMessage();
                                 $body = str_starts_with($msg, 'Overlap:') ? substr($msg, 9) : 'Terjadi kesalahan: ' . $e->getMessage();
                                 Notification::make()
@@ -487,12 +463,12 @@ class ManageBlockedNumbers extends Page implements HasForms, HasTable
                                     ->send();
                             }
                         }),
-                    Tables\Actions\BulkAction::make('releaseBulk')
+                    BulkAction::make('releaseBulk')
                         ->label('Release Selected')
                         ->icon('heroicon-o-lock-open')
                         ->color('warning')
                         ->requiresConfirmation()
-                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                        ->action(function (Collection $records) {
                             $count = $records->count();
                             $records->each->delete();
 

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -58,10 +60,10 @@ class LaporanPerjalananDinas extends Model
         ->when($excludeId, fn ($q) => $q->where('id', '!=', $excludeId))
         ->pluck('tanggal_kunjungan')
         ->map(function ($d) {
-            if ($d instanceof \Carbon\CarbonInterface) {
+            if ($d instanceof CarbonInterface) {
                 return $d->format('Y-m-d');
             }
-            return \Carbon\Carbon::parse($d)->format('Y-m-d');
+            return Carbon::parse($d)->format('Y-m-d');
         })
         ->unique()
         ->values()
@@ -72,9 +74,9 @@ class LaporanPerjalananDinas extends Model
      * Check if a user already has an LPD on a specific date.
      * Returns the conflicting LaporanPerjalananDinas record or null.
      */
-    public static function getDuplicateForUser(int $userId, string|\Carbon\CarbonInterface $date, ?int $excludeId = null): ?self
+    public static function getDuplicateForUser(int $userId, string|CarbonInterface $date, ?int $excludeId = null): ?self
     {
-        $dateStr = $date instanceof \Carbon\CarbonInterface ? $date->toDateString() : \Carbon\Carbon::parse($date)->toDateString();
+        $dateStr = $date instanceof CarbonInterface ? $date->toDateString() : Carbon::parse($date)->toDateString();
 
         return self::with(['suratTugas.user'])
             ->whereHas('suratTugas', function ($q) use ($userId) {
@@ -90,15 +92,15 @@ class LaporanPerjalananDinas extends Model
      * Takes into account the Surat Tugas's dates (waktu_mulai / waktu_selesai or tanggal).
      * Only falls back to the Survey's dates if Surat Tugas has no date set.
      *
-     * @return array{start: ?\Carbon\Carbon, end: ?\Carbon\Carbon}
+     * @return array{start: ?Carbon, end: ?Carbon}
      */
     public static function getDateRangeForSuratTugas(SuratTugas $st): array
     {
         $stStart = $st->waktu_mulai 
-            ? \Carbon\Carbon::parse($st->waktu_mulai)->startOfDay() 
-            : ($st->tanggal ? \Carbon\Carbon::parse($st->tanggal)->startOfDay() : null);
+            ? Carbon::parse($st->waktu_mulai)->startOfDay() 
+            : ($st->tanggal ? Carbon::parse($st->tanggal)->startOfDay() : null);
         $stEnd = $st->waktu_selesai 
-            ? \Carbon\Carbon::parse($st->waktu_selesai)->startOfDay() 
+            ? Carbon::parse($st->waktu_selesai)->startOfDay() 
             : $stStart;
 
         if ($stStart && $stEnd && $stEnd->lt($stStart)) {
@@ -113,9 +115,9 @@ class LaporanPerjalananDinas extends Model
         }
 
         // Fallback to survey only if Surat Tugas has no dates
-        $survey = $st->survey ?? ($st->survey_id ? \App\Models\Survey::find($st->survey_id) : null);
-        $surveyStart = $survey?->start_date ? \Carbon\Carbon::parse($survey->start_date)->startOfDay() : null;
-        $surveyEnd = $survey?->end_date ? \Carbon\Carbon::parse($survey->end_date)->startOfDay() : $surveyStart;
+        $survey = $st->survey ?? ($st->survey_id ? Survey::find($st->survey_id) : null);
+        $surveyStart = $survey?->start_date ? Carbon::parse($survey->start_date)->startOfDay() : null;
+        $surveyEnd = $survey?->end_date ? Carbon::parse($survey->end_date)->startOfDay() : $surveyStart;
 
         if ($surveyStart && $surveyEnd && $surveyEnd->lt($surveyStart)) {
             $surveyEnd = $surveyStart->copy();
@@ -190,8 +192,8 @@ class LaporanPerjalananDinas extends Model
 
         // Preferred starting date: waktu_mulai if available and within range, else range['start']
         $preferredStart = $st->waktu_mulai 
-            ? \Carbon\Carbon::parse($st->waktu_mulai)->startOfDay() 
-            : ($st->tanggal ? \Carbon\Carbon::parse($st->tanggal)->startOfDay() : $range['start']);
+            ? Carbon::parse($st->waktu_mulai)->startOfDay() 
+            : ($st->tanggal ? Carbon::parse($st->tanggal)->startOfDay() : $range['start']);
 
         if ($preferredStart->lt($range['start'])) {
             $preferredStart = $range['start']->copy();

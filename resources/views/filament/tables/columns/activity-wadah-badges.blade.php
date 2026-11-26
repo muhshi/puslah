@@ -29,7 +29,7 @@
                 <span
                     role="button"
                     tabindex="0"
-                    x-on:click.stop.prevent="$wire.mountTableAction('manage_wadah', '{{ $record->id }}')"
+                    x-on:click.stop.prevent="$wire.mountAction('manage_wadah', {}, { table: true, recordKey: '{{ $record->getKey() }}' })"
                     title="Klik untuk memilih/mengubah wadah kegiatan ini"
                     class="inline-flex items-center gap-1 hover:underline cursor-pointer focus:outline-hidden font-medium"
                 >
@@ -80,7 +80,7 @@
                 size="sm"
                 tag="button"
                 type="button"
-                x-on:click.stop.prevent="$wire.mountTableAction('manage_wadah', '{{ $record->id }}')"
+                x-on:click.stop.prevent="$wire.mountAction('manage_wadah', {}, { table: true, recordKey: '{{ $record->getKey() }}' })"
                 title="Klik untuk memilih wadah KIPAPP untuk kegiatan ini"
                 icon="heroicon-m-plus-circle"
                 class="hover:ring-1 hover:ring-primary-500 dark:hover:ring-primary-400 transition-all select-none shadow-xs cursor-pointer"

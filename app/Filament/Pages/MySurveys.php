@@ -12,10 +12,10 @@ class MySurveys extends Page
 {
     use WithPagination;
 
-    protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-check';
-    protected static ?string $navigationGroup = 'Pengaturan Akun';
-    protected static ?string $title = 'Kegiatan Saya';
-    protected static string $view = 'filament.pages.my-surveys';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-clipboard-document-check';
+    protected static string | \UnitEnum | null $navigationGroup = 'Pengaturan Akun';
+    protected static ?string $title = 'Survei Saya';
+    protected string $view = 'filament.pages.my-surveys';
 
     public string $search = '';
     public string $sortBy = 'surveys.start_date';
@@ -58,7 +58,6 @@ class MySurveys extends Page
         $query = SurveyUser::query()
             ->with(['survey'])
             ->where('user_id', Auth::id())
-            ->whereHas('survey')  // hanya yang kegiatannya belum dihapus
             ->join('surveys', 'surveys.id', '=', 'survey_users.survey_id')
             ->select([
                 'survey_users.*',

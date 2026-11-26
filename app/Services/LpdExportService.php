@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use Exception;
+use App\Models\LaporanFoto;
 use App\Models\LaporanPerjalananDinas;
 use App\Settings\SystemSettings;
 use Filament\Notifications\Notification;
@@ -94,7 +96,7 @@ class LpdExportService
                         'ratio' => true,
                     ]);
                     $template->setValue("keterangan_foto_{$i}", $foto->keterangan ?? '');
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     $template->setValue("foto_{$i}", '[Error format foto]');
                     $template->setValue("keterangan_foto_{$i}", '');
                 }
@@ -232,7 +234,7 @@ class LpdExportService
     /**
      * Download single foto dari LaporanFoto.
      */
-    public function downloadSinglePhoto(\App\Models\LaporanFoto $foto): ?BinaryFileResponse
+    public function downloadSinglePhoto(LaporanFoto $foto): ?BinaryFileResponse
     {
         $path = storage_path('app/public/' . $foto->file_path);
         if (!file_exists($path)) {

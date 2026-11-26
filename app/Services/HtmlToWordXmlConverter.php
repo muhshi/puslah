@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use DOMDocument;
+use DOMNode;
+
 class HtmlToWordXmlConverter
 {
     protected static string $defaultFont = 'Aptos Display';
@@ -37,7 +40,7 @@ class HtmlToWordXmlConverter
         $html = str_replace(["\r\n", "\r"], "\n", $html);
 
         // Wrap in a container div with UTF-8 encoding
-        $dom = new \DOMDocument('1.0', 'UTF-8');
+        $dom = new DOMDocument('1.0', 'UTF-8');
         libxml_use_internal_errors(true);
         $dom->loadHTML('<?xml encoding="utf-8" ?><div>' . $html . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
         libxml_clear_errors();
@@ -186,7 +189,7 @@ class HtmlToWordXmlConverter
         return $xml;
     }
 
-    protected static function processNodes(\DOMNode $node, array &$paragraphs, array $context = []): void
+    protected static function processNodes(DOMNode $node, array &$paragraphs, array $context = []): void
     {
         foreach ($node->childNodes as $child) {
             if ($child->nodeType === XML_TEXT_NODE) {

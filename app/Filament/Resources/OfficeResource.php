@@ -2,20 +2,25 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Actions\ViewAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\OfficeResource\Pages\ListOffices;
+use App\Filament\Resources\OfficeResource\Pages\CreateOffice;
+use App\Filament\Resources\OfficeResource\Pages\EditOffice;
 use App\Filament\Resources\OfficeResource\Pages;
 use App\Filament\Resources\OfficeResource\RelationManagers;
 use App\Models\Office;
 use Dotswan\MapPicker\Fields\Map;
-use Filament\Forms;
-use Filament\Forms\Components\Group;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Form;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
 use Filament\Resources\Resource;
-use Filament\Tables;
 use Filament\Tables\Table;
-use Humaidem\FilamentMapPicker\Fields\OSMMap;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
@@ -23,24 +28,24 @@ class OfficeResource extends Resource
 {
     protected static ?string $model = Office::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-building-office-2';
 
-    protected static ?string $navigationGroup = 'Manajemen Kantor Cabang';
+    protected static string | \UnitEnum | null $navigationGroup = 'Manajemen Kantor Cabang';
     protected static ?string $navigationLabel = 'Kantor';
     protected static ?int $navigationSort = 80;
+    protected static bool $shouldRegisterNavigation = false;
 
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Group::make()
                     ->schema([
                         Section::make()
                             ->schema([
-                                Forms\Components\TextInput::make('name')
-                                    ->required()
-                                    ->withProperCase(),
+                                TextInput::make('name')
+                                    ->required(),
                                 Map::make('location')
                                     ->label('Location')
                                     ->columnSpanFull()
@@ -74,10 +79,10 @@ class OfficeResource extends Resource
                                     ]),
                                 Group::make()
                                     ->schema([
-                                        Forms\Components\TextInput::make('latitude')
+                                        TextInput::make('latitude')
                                             ->required()
                                             ->numeric(),
-                                        Forms\Components\TextInput::make('longitude')
+                                        TextInput::make('longitude')
                                             ->numeric(),
                                     ])->columns(2),
                             ]),
@@ -86,7 +91,7 @@ class OfficeResource extends Resource
                     ->schema([
                         Section::make()
                             ->schema([
-                                Forms\Components\TextInput::make('radius')
+                                TextInput::make('radius')
                                     ->required()
                                     ->numeric(),
                             ]),
@@ -98,26 +103,26 @@ class OfficeResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('latitude')
+                TextColumn::make('latitude')
                     ->numeric()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('longitude')
+                TextColumn::make('longitude')
                     ->numeric()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('radius')
+                TextColumn::make('radius')
                     ->numeric()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
+                TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('deleted_at')
+                TextColumn::make('deleted_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -125,13 +130,13 @@ class OfficeResource extends Resource
             ->filters([
                 //
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
+            ->recordActions([
+                ViewAction::make(),
+                EditAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -146,10 +151,10 @@ class OfficeResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListOffices::route('/'),
-            'create' => Pages\CreateOffice::route('/create'),
+            'index' => ListOffices::route('/'),
+            'create' => CreateOffice::route('/create'),
             //'view' => Pages\ViewOffice::route('/{record}'),
-            'edit' => Pages\EditOffice::route('/{record}/edit'),
+            'edit' => EditOffice::route('/{record}/edit'),
         ];
     }
 }

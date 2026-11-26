@@ -94,9 +94,9 @@ class SuratTugasPdfService
                 $foundUserIds = $surveyUsers->pluck('user_id')->toArray();
                 $missingUsers = $participants->filter(fn ($u) => !in_array($u->id, $foundUserIds));
 
-                if ($survey->is_multiclass) {
+                if ($survey->is_multiclass || $survey->is_pelatihan) {
                     // Kelompokkan per kelas (bahkan jika hanya 1 kelas, tetap tampilkan nama kelasnya)
-                    $grouped = $surveyUsers->groupBy(fn ($su) => $su->class?->name ?? 'Tanpa Kelas');
+                    $grouped = $surveyUsers->groupBy(fn ($su) => $su->class?->name ?: ($su->kelas ?: 'Tanpa Kelas'));
                     foreach ($grouped as $className => $items) {
                         $lampiranPesertaData[] = [
                             'class_name' => $className,

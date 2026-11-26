@@ -4,16 +4,12 @@ namespace App\Filament\Widgets;
 
 use App\Models\DailyActivity;
 use Carbon\Carbon;
-use Filament\Actions\Action;
-use Filament\Actions\Concerns\InteractsWithActions;
-use Filament\Actions\Contracts\HasActions;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Saade\FilamentFullCalendar\Widgets\FullCalendarWidget;
 
-class DailyActivityCalendarWidget extends FullCalendarWidget implements HasActions
+class DailyActivityCalendarWidget extends FullCalendarWidget
 {
-    use InteractsWithActions;
 
     protected int|string|array $columnSpan = 'full';
 

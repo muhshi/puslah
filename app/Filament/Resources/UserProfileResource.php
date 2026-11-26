@@ -2,11 +2,23 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Textarea;
+use Filament\Actions\Action;
+use Filament\Actions\EditAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\UserProfileResource\Pages\ListUserProfiles;
+use App\Filament\Resources\UserProfileResource\Pages\CreateUserProfile;
+use App\Filament\Resources\UserProfileResource\Pages\EditUserProfile;
 use App\Filament\Resources\UserProfileResource\Pages;
 use App\Filament\Resources\UserProfileResource\RelationManagers;
 use App\Models\UserProfile;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\ImageColumn;
@@ -19,20 +31,20 @@ class UserProfileResource extends Resource
 {
     protected static ?string $model = UserProfile::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-users';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-users';
 
-    protected static ?string $navigationGroup = 'Pengaturan Akun';
+    protected static string | \UnitEnum | null $navigationGroup = 'Pengaturan Akun';
     protected static ?string $navigationLabel = 'Profil Pengguna';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Select::make('user_id')
+        return $schema
+            ->components([
+                Select::make('user_id')
                     ->label('Nama User')
                     ->relationship('user', 'name')
                     ->required(),
-                Forms\Components\FileUpload::make('avatar_path')
+                FileUpload::make('avatar_path')
                     ->label('Foto Profil')
                     ->image()
                     ->directory('avatars')
@@ -43,48 +55,41 @@ class UserProfileResource extends Resource
                     ->downloadable()
                     ->openable()
                     ->helperText('JPG/PNG, maks 2MB'),
-                Forms\Components\TextInput::make('full_name')
+                TextInput::make('full_name')
                     ->label('Nama Lengkap')
-                    ->required()
-                    ->withProperCase(),
-                Forms\Components\TextInput::make('nickname')
-                    ->label('Nama Panggilan')
-                    ->withProperCase(),
-                Forms\Components\TextInput::make('birth_place')
-                    ->label('Tempat Lahir')
-                    ->withProperCase(),
-                Forms\Components\DatePicker::make('birth_date')
+                    ->required(),
+                TextInput::make('nickname')
+                    ->label('Nama Panggilan'),
+                TextInput::make('birth_place')
+                    ->label('Tempat Lahir'),
+                DatePicker::make('birth_date')
                     ->label('Tanggal Lahir'),
-                Forms\Components\Select::make('gender')
+                Select::make('gender')
                     ->label('Jenis Kelamin')
                     ->options([
                         'L' => 'Laki-laki',
                         'P' => 'Perempuan',
                     ]),
-                Forms\Components\Textarea::make('address')
+                Textarea::make('address')
                     ->label('Alamat')
-                    ->withProperCase()
                     ->columnSpanFull(),
-                Forms\Components\TextInput::make('phone')
+                TextInput::make('phone')
                     ->label('No. HP / WA')
                     ->tel(),
-                Forms\Components\TextInput::make('employment_status')
+                TextInput::make('employment_status')
                     ->label('Status Kepegawaian')
-                    ->required()
-                    ->withProperCase(),
-                Forms\Components\TextInput::make('jabatan')
+                    ->required(),
+                TextInput::make('jabatan')
                     ->label('Jabatan')
-                    ->maxLength(100)
-                    ->withProperCase(),
-                Forms\Components\TextInput::make('nip')
+                    ->maxLength(100),
+                TextInput::make('nip')
                     ->label('NIP')
                     ->maxLength(50)
                     ->helperText('Khusus Pegawai BPS'),
-                Forms\Components\TextInput::make('pangkat_golongan')
+                TextInput::make('pangkat_golongan')
                     ->label('Pangkat/Golongan')
                     ->maxLength(100)
-                    ->helperText('Contoh: Penata Muda Tingkat 1 / IIIb')
-                    ->withProperCase(),
+                    ->helperText('Contoh: Penata Muda Tingkat 1 / IIIb'),
             ]);
     }
 
@@ -95,8 +100,8 @@ class UserProfileResource extends Resource
                 ImageColumn::make('avatar_path')
                     ->label('Foto')
                     ->disk('public')       // pastikan sama dengan FileUpload
-                    ->height(48)
-                    ->width(48)
+                    ->imageHeight(48)
+                    ->imageWidth(48)
                     ->circular(),
 
                 TextColumn::make('full_name')
@@ -150,12 +155,19 @@ class UserProfileResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
+            ->recordActions([
+                Action::make('sipetra')
+                    ->label('SIPETRA')
+                    ->icon('heroicon-o-arrow-top-right-on-square')
+                    ->color('gray')
+                    ->tooltip('Buka Akun SIPETRA')
+                    ->url(fn (): string => rtrim(config('services.sipetra.base_url', 'https://bpsdemak.com'), '/') . '/account')
+                    ->openUrlInNewTab(),
+                EditAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -170,9 +182,9 @@ class UserProfileResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListUserProfiles::route('/'),
-            'create' => Pages\CreateUserProfile::route('/create'),
-            'edit' => Pages\EditUserProfile::route('/{record}/edit'),
+            'index' => ListUserProfiles::route('/'),
+            'create' => CreateUserProfile::route('/create'),
+            'edit' => EditUserProfile::route('/{record}/edit'),
         ];
     }
 }

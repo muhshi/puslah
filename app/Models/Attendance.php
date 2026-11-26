@@ -52,7 +52,7 @@ class Attendance extends Model
         $startTime = Carbon::parse($this->start_time);
         $endTime = Carbon::parse($this->end_time);
 
-        $duration = $startTime->diff($endTime);
+        $duration = $startTime->diff($endTime, true);
 
         $hours = $duration->format('%h');
 
@@ -85,7 +85,7 @@ class Attendance extends Model
             $end->addDay();
         }
 
-        return $start->diffInMinutes($end); // SELALU positif
+        return (int) $start->diffInMinutes($end, true); // SELALU positif
     }
 
     /** Merah kalau < 7 jam */

@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\Auth;
 
+use Exception;
+use Illuminate\Support\Str;
+use Filament\Notifications\Notification;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -13,21 +16,39 @@ use Laravel\Socialite\Facades\Socialite;
 
 class SsoController extends Controller
 {
-    public function redirect()
+    public function redirect(Request $request)
     {
+        // Samakan host dengan APP_URL di local agar session state cocok dengan SIPETRA_REDIRECT_URI (mis. localhost vs 127.0.0.1)
+        if (app()->environment('local')) {
+            $appUrl = rtrim((string) config('app.url'), '/');
+            $targetHost = parse_url($appUrl, PHP_URL_HOST);
+
+            if ($targetHost && $request->getHost() !== $targetHost) {
+                return redirect()->away($appUrl . $request->getRequestUri());
+            }
+        }
+
         return Socialite::driver('sipetra')->redirect();
     }
 
     public function callback(Request $request)
     {
         if ($request->has('error')) {
-            return redirect()->route('login')->with('error', 'Login SSO Dibatalkan');
+            $errorDescription = $request->get('error_description') ?? 'Login SSO dibatalkan oleh pengguna.';
+            return redirect()->route('filament.admin.auth.login')->with('error', $errorDescription);
         }
 
         try {
             $ssoUser = Socialite::driver('sipetra')->user();
-        } catch (\Exception $e) {
-            return redirect()->route('login')->with('error', 'Gagal mengambil data user');
+        } catch (Exception $e) {
+            Log::error('SIPETRA SSO Callback error: ' . $e->getMessage(), [
+                'exception' => $e,
+            ]);
+
+            return redirect()->route('filament.admin.auth.login')->with(
+                'error',
+                'Gagal terhubung dengan server SIPETRA atau otentikasi tidak valid. Silakan coba kembali.'
+            );
         }
 
         $rawData = $ssoUser->getRaw();
@@ -47,7 +68,7 @@ class SsoController extends Controller
         if ($user) {
             $user->update($data);
         } else {
-            $data['password'] = bcrypt(\Illuminate\Support\Str::random(24));
+            $data['password'] = bcrypt(Str::random(24));
             $user = User::create($data);
             
             // Assign role default (jika pakai Spatie Permission)
@@ -56,7 +77,7 @@ class SsoController extends Controller
                 // Pastikan role ini ada, atau bisa disesuaikan nanti.
                 try {
                     $user->assignRole('pegawai');
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     // Ignore if role doesn't exist
                 }
             }
@@ -124,7 +145,7 @@ class SsoController extends Controller
                     // Fallback: simpan URL langsung jika respons download bukan 200
                     $updateData['avatar_path'] = $fullAvatarUrl;
                 }
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::warning('Gagal mengunduh avatar SIPETRA: ' . $e->getMessage());
                 // Fallback: simpan URL langsung jika request gagal
                 $updateData['avatar_path'] = $fullAvatarUrl;
@@ -134,7 +155,7 @@ class SsoController extends Controller
         $profile->update($updateData);
 
         Auth::login($user);
-        \Filament\Notifications\Notification::make()
+        Notification::make()
             ->title('Profil Berhasil Disinkronkan dari SIPETRA')
             ->success()
             ->send();

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use Throwable;
 use App\Models\DailyActivity;
 use App\Models\Leave;
 use App\Models\User;
@@ -105,7 +106,7 @@ class SendDailyActivityReminderCommand extends Command
 
                 $this->info("[+] Berhasil kirim pengingat ke {$user->name}");
                 $sentCount++;
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 $this->error("[!] Gagal kirim ke {$user->name}: " . $e->getMessage());
                 Log::error("Reminder Telegram error for {$user->name}: " . $e->getMessage());
             }

@@ -3,8 +3,13 @@
 namespace App\Filament\Resources\SuratTugasResource\Pages;
 
 use App\Filament\Resources\SuratTugasResource;
-use Filament\Actions;
+use App\Models\SuratTugas;
+use App\Models\Survey;
+use App\Models\User;
+use App\Settings\SystemSettings;
+use Carbon\Carbon;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Validation\ValidationException;
 
 class CreateSuratTugas extends CreateRecord
 {
@@ -13,6 +18,28 @@ class CreateSuratTugas extends CreateRecord
     public $is_sppd = false;
     public $sppdData = [];
     public $participantIds = [];
+
+    public function mount(): void
+    {
+        parent::mount();
+
+        $surveyId = request()->integer('survey_id');
+        if ($surveyId > 0 && ($survey = Survey::find($surveyId))) {
+            $state = $this->form->getRawState();
+            $state['survey_id'] = $survey->id;
+            $state['keperluan'] = $survey->name;
+            if ($survey->start_date) {
+                $state['waktu_mulai'] = Carbon::parse($survey->start_date)->format('Y-m-d');
+            }
+            if ($survey->end_date) {
+                $state['waktu_selesai'] = Carbon::parse($survey->end_date)->format('Y-m-d');
+            }
+            if (filled($survey->lokasi)) {
+                $state['tempat_tugas'] = $survey->lokasi;
+            }
+            $this->form->fill($state);
+        }
+    }
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
@@ -27,11 +54,11 @@ class CreateSuratTugas extends CreateRecord
 
         $abaikanValidasi = $data['abaikan_validasi'] ?? false;
         
-        if (!$abaikanValidasi && ($overlap = \App\Models\SuratTugas::getOverlap($data['user_id'], $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null))) {
-            $user = \App\Models\User::find($data['user_id']);
+        if (!$abaikanValidasi && ($overlap = SuratTugas::getOverlap($data['user_id'], $data['survey_id'] ?? null, $data['waktu_mulai'] ?? null, $data['waktu_selesai'] ?? null))) {
+            $user = User::find($data['user_id']);
             $userName = $user ? $user->name : 'Pegawai ini';
-            $overlapMsg = \App\Models\SuratTugas::formatOverlapMessage($userName, $overlap);
-            throw \Illuminate\Validation\ValidationException::withMessages([
+            $overlapMsg = SuratTugas::formatOverlapMessage($userName, $overlap);
+            throw ValidationException::withMessages([
                 'waktu_mulai' => $overlapMsg,
                 'waktu_selesai' => $overlapMsg,
             ]);
@@ -62,7 +89,7 @@ class CreateSuratTugas extends CreateRecord
     protected function afterCreate(): void
     {
         if ($this->is_sppd) {
-            $settings = app(\App\Settings\SystemSettings::class);
+            $settings = app(SystemSettings::class);
             $sppdData = $this->sppdData;
             if (empty($sppdData['ppk_name'])) {
                 $sppdData['ppk_name'] = $settings->ppk_name;

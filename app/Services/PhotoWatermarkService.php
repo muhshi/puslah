@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Throwable;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -48,7 +49,7 @@ class PhotoWatermarkService
             if (is_string($capturedAt)) {
                 try {
                     $capturedAt = Carbon::parse($capturedAt, 'Asia/Jakarta');
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     $capturedAt = now('Asia/Jakarta');
                 }
             }
@@ -218,7 +219,7 @@ class PhotoWatermarkService
 
             imagedestroy($image);
             return true;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('PhotoWatermarkService error: ' . $e->getMessage());
             return false;
         }
@@ -248,7 +249,7 @@ class PhotoWatermarkService
                         break;
                 }
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Abaikan jika EXIF tidak terbaca
         }
 

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Throwable;
 use App\Models\DailyActivity;
 use App\Models\User;
 use App\Settings\SystemSettings;
@@ -158,7 +159,7 @@ class WorkReportGeneratorService
                             if (!empty($firstAtt->caption)) {
                                 $cellFoto->addText($firstAtt->caption, 'TableBodySmall', 'Center');
                             }
-                        } catch (\Throwable $e) {
+                        } catch (Throwable $e) {
                             $cellFoto->addText('[Foto tidak terbaca]', 'TableBodySmall', 'Center');
                         }
                     } else {
@@ -233,7 +234,7 @@ class WorkReportGeneratorService
                                     'ratio' => true,
                                     'alignment' => Jc::CENTER,
                                 ]);
-                            } catch (\Throwable $e) {}
+                            } catch (Throwable $e) {}
                         }
                     }
                     $c->addText($item['date'] . " - " . mb_strimwidth($item['activity'], 0, 50, '...'), 'TableBodySmall', 'Center');

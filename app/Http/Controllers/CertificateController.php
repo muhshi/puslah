@@ -2,6 +2,7 @@
 // app/Http/Controllers/CertificateController.php
 namespace App\Http\Controllers;
 
+use App\Services\CertificateImageService;
 use App\Models\Certificate;
 use App\Models\CertificateTemplate;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -16,8 +17,8 @@ class CertificateController extends Controller
     {
         $template = $certificate->template ?? CertificateTemplate::where('active', true)->firstOrFail();
 
-        $bgBase64 = \App\Services\CertificateImageService::getBase64Image($template->background_path, 'image/jpeg');
-        $signBase64 = \App\Services\CertificateImageService::getBase64Image($template->signer_image_path, 'image/png');
+        $bgBase64 = CertificateImageService::getBase64Image($template->background_path, 'image/jpeg');
+        $signBase64 = CertificateImageService::getBase64Image($template->signer_image_path, 'image/png');
 
         $qrUrl = route('certificates.verify', ['no' => $certificate->certificate_no]);
         // QR utama (SVG agar tidak butuh imagick)

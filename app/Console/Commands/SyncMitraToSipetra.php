@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -42,7 +43,7 @@ class SyncMitraToSipetra extends Command
         try {
             DB::connection('sipetra')->getPdo();
             $this->info('Successfully connected to Sipetra database.');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->error('Failed to connect to Sipetra database: ' . $e->getMessage());
             return self::FAILURE;
         }
@@ -222,7 +223,7 @@ class SyncMitraToSipetra extends Command
             $this->line("Users can now log in via SIPETRA SSO at: <info>https://bpsdemak.com/login</info> or directly from Puslah.");
 
             return self::SUCCESS;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::connection('sipetra')->rollBack();
             $this->newLine();
             $this->error('Failed during insertion: ' . $e->getMessage());

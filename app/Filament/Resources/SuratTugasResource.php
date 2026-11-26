@@ -2,22 +2,53 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Group;
+use Filament\Forms\Components\Select;
+use Filament\Schemas\Components\Utilities\Set;
+use App\Models\Survey;
+use Carbon\Carbon;
+use App\Models\SurveyUser;
+use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Textarea;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Actions\Action;
+use Illuminate\Support\Str;
+use App\Models\LaporanPerjalananDinas;
+use Filament\Actions\EditAction;
+use pxlrbt\FilamentExcel\Actions\ExportAction;
+use pxlrbt\FilamentExcel\Exports\ExcelExport;
+use pxlrbt\FilamentExcel\Columns\Column;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\BulkAction;
+use Illuminate\Database\Eloquent\Collection;
+use pxlrbt\FilamentExcel\Actions\ExportBulkAction;
+use App\Jobs\GenerateBulkSuratTugasZip;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\SuratTugasResource\Pages\ListSuratTugas;
+use App\Filament\Resources\SuratTugasResource\Pages\CreateSuratTugas;
+use App\Filament\Resources\SuratTugasResource\Pages\CreateBulkSuratTugas;
+use App\Filament\Resources\SuratTugasResource\Pages\ManageBlockedNumbers;
+use App\Filament\Resources\SuratTugasResource\Pages\EditSuratTugas;
+use App\Filament\Resources\SuratTugasResource\Pages\ListSuratTugasActivities;
 use App\Filament\Resources\SuratTugasResource\Pages;
 use App\Filament\Resources\SuratTugasResource\RelationManagers;
+use App\Filament\Resources\SuratTugasResource\Support\SuratTugasFormFactory;
 use App\Models\SuratTugas;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
 use App\Settings\SystemSettings;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Components\Split;
-use Filament\Forms\Components\Group;
 use PhpOffice\PhpWord\TemplateProcessor;
 use App\Models\User;
 use App\Models\UserProfile;
@@ -30,43 +61,41 @@ class SuratTugasResource extends Resource
 {
     protected static ?string $model = SuratTugas::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
-    protected static ?string $navigationGroup = 'Manajemen Dokumen';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-document-text';
+    protected static string | \UnitEnum | null $navigationGroup = 'Manajemen Dokumen';
     protected static ?string $navigationLabel = 'Surat Tugas';
 
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Section::make('Informasi Tugas')->schema([
-                    Forms\Components\Group::make()->schema([
-                        Forms\Components\Select::make('survey_id')
-                            ->label('Kegiatan (Opsional)')
-                            ->relationship('survey', 'name')
+                    Group::make()->schema([
+                        Select::make('survey_id')
+                            ->label('Kegiatan / Pelatihan (Opsional)')
+                            ->relationship(
+                                'survey',
+                                'name',
+                                fn (Builder $query) => $query->orderByDesc('is_active')->orderByDesc('created_at')
+                            )
+                            ->getOptionLabelFromRecordUsing(fn (Survey $record) => $record->selector_label)
                             ->searchable()
                             ->preload()
                             ->live()
                             ->afterStateUpdated(function (Set $set, $state) {
                                 // Reset user_id when survey changes
                                 $set('user_id', null);
-                                // Auto-fill keperluan and dates if survey selected
+                                // Auto-fill keperluan, dates, and location if survey/pelatihan selected
                                 if ($state) {
-                                    $survey = \App\Models\Survey::find($state);
-                                    if ($survey) {
-                                        $set('keperluan', "{$survey->name}");
-                                        // Auto-fill waktu_mulai/selesai from survey dates
-                                        if ($survey->start_date) {
-                                            $set('waktu_mulai', \Carbon\Carbon::parse($survey->start_date)->format('Y-m-d'));
-                                        }
-                                        if ($survey->end_date) {
-                                            $set('waktu_selesai', \Carbon\Carbon::parse($survey->end_date)->format('Y-m-d'));
-                                        }
+                                    $survey = SuratTugasFormFactory::applySurveyDefaultsToForm($set, $state);
+                                    if (! $survey) {
+                                        return;
                                     }
 
                                     // Checker for empty users
-                                    $query = \App\Models\SurveyUser::where('survey_id', $state);
-                                    if (!$survey->is_multiple) {
+                                    $query = SurveyUser::where('survey_id', $state);
+                                    if (! $survey->is_multiple) {
                                         $query->where(function ($q) use ($state) {
                                             $q->whereHas('user', function ($uq) {
                                                 $uq->where('name', 'like', '%Terlampir%');
@@ -77,16 +106,16 @@ class SuratTugasResource extends Resource
                                     }
                                     $hasParticipants = $query->exists();
 
-                                    if (!$hasParticipants) {
-                                        \Filament\Notifications\Notification::make()
-                                            ->title('Semua petugas pada survey ini sudah memiliki Surat Tugas.')
+                                    if (! $hasParticipants) {
+                                        Notification::make()
+                                            ->title('Semua petugas pada kegiatan/pelatihan ini sudah memiliki Surat Tugas.')
                                             ->warning()
                                             ->send();
                                     }
                                 }
                             }),
 
-                        Forms\Components\Radio::make('tipe_penugasan')
+                        \Filament\Forms\Components\Radio::make('tipe_penugasan')
                             ->label('Metode Penugasan')
                             ->options([
                                 'individu' => 'Individu (1 Pegawai)',
@@ -106,7 +135,7 @@ class SuratTugasResource extends Resource
                                 }
                             }),
 
-                        Forms\Components\Select::make('participant_ids')
+                        Select::make('participant_ids')
                             ->label('Daftar Petugas yang Ditugaskan (Halaman Lampiran)')
                             ->multiple()
                             ->searchable()
@@ -118,17 +147,17 @@ class SuratTugasResource extends Resource
                                     $survey = \App\Models\Survey::with(['classes', 'surveyUsers.user.profile', 'surveyUsers.class'])->find($surveyId);
                                     if ($survey) {
                                         $participants = $survey->surveyUsers;
-                                        if ($survey->is_multiclass) {
+                                        if ($survey->is_multiclass || $survey->is_pelatihan) {
                                             return $participants->mapWithKeys(function ($su) {
                                                 $userName = $su->user?->profile?->full_name ?: ($su->user?->name ?: 'Petugas');
-                                                $className = $su->class?->name ?: 'Tanpa Kelas';
-                                                $role = $su->role ?: 'Peserta';
+                                                $className = $su->class?->name ?: ($su->kelas ?: 'Tanpa Kelas');
+                                                $role = $su->role ?: ($su->role_pelatihan ?: 'Peserta');
                                                 return [$su->user_id => "[{$className}] {$userName} ({$role})"];
                                             });
                                         } else {
                                             return $participants->mapWithKeys(function ($su) {
                                                 $userName = $su->user?->profile?->full_name ?: ($su->user?->name ?: 'Petugas');
-                                                $role = $su->role ?: 'Peserta';
+                                                $role = $su->role ?: ($su->role_pelatihan ?: 'Peserta');
                                                 return [$su->user_id => "{$userName} ({$role})"];
                                             });
                                         }
@@ -144,43 +173,26 @@ class SuratTugasResource extends Resource
                             ->visible(fn (Get $get) => $get('tipe_penugasan') === 'kolektif')
                             ->required(fn (Get $get) => $get('tipe_penugasan') === 'kolektif'),
 
-                        Forms\Components\Select::make('user_id')
+                        Select::make('user_id')
                             ->label('Pegawai yang Ditugaskan')
                             ->relationship('user', 'name')
                             ->visible(fn (Get $get) => $get('tipe_penugasan') !== 'kolektif')
                             ->options(function (Get $get) {
                                 $surveyId = $get('survey_id');
 
-                                // If survey selected, filter by survey participants only
+                                // If survey/pelatihan selected, filter by participants only
                                 if ($surveyId) {
-                                    $survey = \App\Models\Survey::find($surveyId);
-                                    $query = \App\Models\SurveyUser::where('survey_id', $surveyId);
-
-                                    if ($survey && !$survey->is_multiple) {
-                                        $query->where(function ($q) use ($surveyId) {
-                                            $q->whereHas('user', function ($uq) {
-                                                $uq->where('name', 'like', '%Terlampir%');
-                                            })->orWhereDoesntHave('user.suratTugas', function ($sq) use ($surveyId) {
-                                                $sq->where('survey_id', $surveyId);
-                                            });
-                                        });
-                                    }
-
-                                    return $query->with('user.profile')
-                                        ->get()
-                                        ->mapWithKeys(function ($su) {
-                                            $jabatan = $su->user->profile->jabatan ?? '-';
-                                            return [$su->user_id => "{$su->user->name} ({$jabatan})"];
-                                        });
+                                    return SuratTugasFormFactory::getSurveyParticipantOptions((int) $surveyId);
                                 }
 
                                 // If no survey, show all users
                                 return User::with('profile')
                                     ->get()
                                     ->mapWithKeys(function ($user) {
-                                    $jabatan = $user->profile->jabatan ?? '-';
-                                    return [$user->id => "{$user->name} ({$jabatan})"];
-                                });
+                                        $jabatan = $user->profile->jabatan ?? '-';
+
+                                        return [$user->id => "{$user->name} ({$jabatan})"];
+                                    });
                             })
                             ->searchable()
                             ->preload()
@@ -195,7 +207,7 @@ class SuratTugasResource extends Resource
                             })
                             ->required(),
 
-                        Forms\Components\TextInput::make('jabatan')
+                        TextInput::make('jabatan')
                             ->label('Jabatan (Saat Tugas)')
                             ->helperText('Otomatis diambil dari profil, bisa diedit jika perlu.')
                             ->withProperCase()
@@ -204,7 +216,7 @@ class SuratTugasResource extends Resource
                             ->required()
                             ->maxLength(255),
 
-                        Forms\Components\TextInput::make('nomor_surat')
+                        TextInput::make('nomor_surat')
                             ->required()
                             ->maxLength(255)
                             ->unique(ignoreRecord: true)
@@ -227,53 +239,58 @@ class SuratTugasResource extends Resource
                             ->readOnly()
                             ->helperText('Otomatis dibuat oleh sistem.'),
 
-                        Forms\Components\Hidden::make('kode_klasifikasi')
+                        Hidden::make('kode_klasifikasi')
                             ->default('KP.650'),
-                        Forms\Components\Hidden::make('nomor_urut')
+                        Hidden::make('nomor_urut')
                             ->default(function () {
                                 return SuratTugas::getNextNomorUrut(now()->year);
                             }),
                     ])->columns(1),
 
-                    Forms\Components\Group::make()->schema([
-                        Forms\Components\DatePicker::make('tanggal')
+                    Group::make()->schema([
+                        DatePicker::make('tanggal')
                             ->label('Tanggal Surat')
                             ->required()
                             ->default(now())
                             ->live()
-                            ->afterStateUpdated(function (Get $get, Set $set, $state) {
-                                // If year changes, re-fetch max sequence for that year
+                            ->afterStateUpdated(function (Get $get, Set $set, $state, ?SuratTugas $record) {
+                                // Only auto-assign next sequence on create, or if the year actually changed
                                 if ($state) {
-                                    $year = \Carbon\Carbon::parse($state)->year;
-                                    $next = SuratTugas::getNextNomorUrut($year);
-                                    $set('nomor_urut', $next);
+                                    $newYear = Carbon::parse($state)->year;
+                                    $oldYear = $record?->tanggal ? Carbon::parse($record->tanggal)->year : null;
 
-                                    // For SPPD
-                                    $nextSppd = SuratTugas::getNextNomorUrutSppd($year);
-                                    $set('nomor_urut_sppd', $nextSppd);
+                                    if (!$record || $newYear !== $oldYear) {
+                                        $next = SuratTugas::getNextNomorUrut($newYear);
+                                        $set('nomor_urut', $next);
+                                        self::updateNomorSurat($get, $set);
+
+                                        if (!$record || !$record->sppd) {
+                                            $nextSppd = SuratTugas::getNextNomorUrutSppd($newYear);
+                                            $set('nomor_urut_sppd', $nextSppd);
+                                            self::updateNomorSppd($get, $set);
+                                        }
+                                    }
                                 }
-                                self::updateNomorSurat($get, $set);
-                                self::updateNomorSppd($get, $set);
                             }),
-                        Forms\Components\Toggle::make('abaikan_validasi')
+                        Toggle::make('abaikan_validasi')
                             ->label('Abaikan Validasi Bentrok Tanggal')
                             ->helperText('Hanya untuk Admin. Jika diaktifkan, pegawai bisa ditugaskan di tanggal yang sama dengan survei lain.')
                             ->default(false)
                             ->visible(fn() => auth()->user()?->hasAnyRole(['super_admin', 'Kepala', 'Kasubag'])),
-                        Forms\Components\DatePicker::make('waktu_mulai')
+                        DatePicker::make('waktu_mulai')
                             ->label('Mulai')
                             ->default(now()),
-                        Forms\Components\DatePicker::make('waktu_selesai')
+                        DatePicker::make('waktu_selesai')
                             ->label('Selesai')
                             ->default(now()),
                     ])->columns(1),
 
-                    Forms\Components\Textarea::make('keperluan')
+                    Textarea::make('keperluan')
                         ->withProperCase()
                         ->required()
                         ->columnSpanFull(),
 
-                    Forms\Components\TextInput::make('tempat_tugas')
+                    TextInput::make('tempat_tugas')
                         ->label('Tempat Tugas')
                         ->placeholder('Contoh: Kecamatan Demak')
                         ->withProperCase()
@@ -282,14 +299,13 @@ class SuratTugasResource extends Resource
                 ])->columns(2),
 
                 Section::make('Informasi SPPD')->schema([
-                    Forms\Components\Toggle::make('is_sppd')
+                    Toggle::make('is_sppd')
                         ->label('Memerlukan SPPD?')
                         ->default(false)
-                        ->dehydrated(false) // Don't save this field automatically
                         ->live(),
 
-                    Forms\Components\Group::make()->schema([
-                        Forms\Components\TextInput::make('nomor_sppd')
+                    Group::make()->schema([
+                        TextInput::make('nomor_sppd')
                             ->required()
                             ->maxLength(255)
                             ->unique(table: 'sppds', column: 'nomor_sppd', ignorable: fn (?SuratTugas $record) => $record?->sppd)
@@ -305,28 +321,28 @@ class SuratTugasResource extends Resource
                                 return "{$prefix}-{$urut}/{$office}/SE2026/{$klasifikasi}/{$year}";
                             })
                             ->live(onBlur: true)
-                            ->afterStateUpdated(function (\Filament\Forms\Get $get, \Filament\Forms\Set $set, $state) {
-                                if (preg_match('/(?:B-)?0*(\d+)\//', $state, $matches)) {
+                            ->afterStateUpdated(function (Get $get, Set $set, $state) {
+                                if (preg_match('/^(?:[A-Za-z]+-)?0*(\d+)\//', (string) $state, $matches)) {
                                     $set('nomor_urut_sppd', (int) $matches[1]);
                                 }
                             })
                             ->helperText('Otomatis di-generate saat disimpan.'),
 
-                        Forms\Components\Hidden::make('kode_klasifikasi_sppd')
+                        Hidden::make('kode_klasifikasi_sppd')
                             ->default('KP.650'),
 
-                        Forms\Components\TextInput::make('nomor_urut_sppd')
+                        TextInput::make('nomor_urut_sppd')
                             ->label('No. Urut SPPD')
                             ->numeric()
                             ->default(function () {
                                 return SuratTugas::getNextNomorUrutSppd(now()->year);
                             })
-                            ->live()
+                            ->live(onBlur: true)
                             ->afterStateUpdated(function (Get $get, Set $set) {
                                 self::updateNomorSppd($get, $set);
                             }),
 
-                        Forms\Components\Select::make('tingkat_perjalanan_dinas')
+                        Select::make('tingkat_perjalanan_dinas')
                             ->label('Tingkat Perjalanan Dinas')
                             ->options([
                                 'A' => 'Tingkat A',
@@ -335,31 +351,31 @@ class SuratTugasResource extends Resource
                             ])
                             ->default('C'),
 
-                        Forms\Components\TextInput::make('alat_angkutan')
+                        TextInput::make('alat_angkutan')
                             ->label('Alat Angkutan')
                             ->default('Kendaraan Pribadi')
                             ->withProperCase()
                             ->maxLength(255),
 
-                        Forms\Components\TextInput::make('mak')
+                        TextInput::make('mak')
                             ->label('Pembebanan Anggaran (MAK)')
                             ->default('054.01.GG.2902.006.005.A.524113')
                             ->maxLength(255)
                             ->columnSpanFull(),
 
-                        Forms\Components\Textarea::make('maksud_perjalanan')
+                        Textarea::make('maksud_perjalanan')
                             ->label('Maksud Perjalanan Dinas')
                             ->default(fn(Get $get) => $get('keperluan'))
                             ->withProperCase()
                             ->columnSpanFull(),
 
-                        Forms\Components\TextInput::make('tempat_berangkat')
+                        TextInput::make('tempat_berangkat')
                             ->label('Tempat Berangkat')
                             ->default('Demak')
                             ->withProperCase()
                             ->maxLength(255),
 
-                        Forms\Components\TextInput::make('tempat_tujuan')
+                        TextInput::make('tempat_tujuan')
                             ->label('Tempat Tujuan')
                             ->placeholder('Kosongkan untuk mengikuti Tempat Tugas')
                             ->withProperCase()
@@ -370,19 +386,19 @@ class SuratTugasResource extends Resource
                 Section::make('Pejabat Penandatangan (Snapshot)')
                     ->description('Data ini tersimpan di surat dan tidak akan berubah meski pengaturan sistem diganti.')
                     ->schema([
-                        Forms\Components\TextInput::make('signer_city')
+                        TextInput::make('signer_city')
                             ->label('Kota Penetapan')
                             ->default(fn() => app(SystemSettings::class)->cert_city)
                             ->readOnly(),
-                        Forms\Components\TextInput::make('signer_name')
+                        TextInput::make('signer_name')
                             ->label('Nama Pejabat')
                             ->default(fn() => app(SystemSettings::class)->cert_signer_name)
                             ->readOnly(),
-                        Forms\Components\TextInput::make('signer_nip')
+                        TextInput::make('signer_nip')
                             ->label('NIP')
                             ->default(fn() => app(SystemSettings::class)->cert_signer_nip)
                             ->readOnly(),
-                        Forms\Components\Textarea::make('signer_title')
+                        Textarea::make('signer_title')
                             ->label('Jabatan Pejabat')
                             ->rows(3)
                             ->default(fn() => app(SystemSettings::class)->cert_signer_title)
@@ -390,7 +406,7 @@ class SuratTugasResource extends Resource
                             ->columnSpanFull(),
 
                         // Hidden signature path
-                        Forms\Components\Hidden::make('signer_signature_path')
+                        Hidden::make('signer_signature_path')
                             ->default(fn() => app(SystemSettings::class)->cert_signer_signature_path),
                     ])
                     ->collapsed() // Collapsed by default so it doesn't clutter
@@ -404,29 +420,29 @@ class SuratTugasResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('nomor_surat')
+                TextColumn::make('nomor_surat')
                     ->searchable()
                     ->sortable()
                     ->wrap() // Allow wrapping for long numbers
                     ->width('18%'), // Explicit width suggestion
-                Tables\Columns\TextColumn::make('survey.name')
+                TextColumn::make('survey.name')
                     ->label('Nama Survei')
                     ->searchable()
                     ->sortable()
                     ->limit(40) // Limit characters
-                    ->tooltip(function (Tables\Columns\TextColumn $column): ?string {
+                    ->tooltip(function (TextColumn $column): ?string {
                         return $column->getState();
                     })
                     ->wrap(), // Wrap if still long within limit
-                Tables\Columns\TextColumn::make('user.name')
+                TextColumn::make('user.name')
                     ->label('Pegawai')
                     ->searchable()
                     ->sortable()
                     ->limit(25)
-                    ->tooltip(function (Tables\Columns\TextColumn $column): ?string {
+                    ->tooltip(function (TextColumn $column): ?string {
                         return $column->getState();
                     }),
-                Tables\Columns\TextColumn::make('tanggal')
+                TextColumn::make('tanggal')
                     ->label('Tanggal')
                     ->date('d M Y')
                     ->sortable()
@@ -444,7 +460,7 @@ class SuratTugasResource extends Resource
                         return 'Pelaksanaan Tugas: ' . SuratTugasResource::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
                     }),
 
-                Tables\Columns\TextColumn::make('status')
+                TextColumn::make('status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
                         'approved' => 'success',
@@ -452,18 +468,19 @@ class SuratTugasResource extends Resource
                         default => 'warning',
                     })
                     ->sortable(),
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('survey_id')
-                    ->label('Filter berdasarkan Kegiatan')
+                SelectFilter::make('survey_id')
+                    ->label('Filter Kegiatan / Pelatihan')
                     ->relationship('survey', 'name')
+                    ->getOptionLabelFromRecordUsing(fn (Survey $record) => $record->selector_label)
                     ->searchable()
                     ->preload(),
-                Tables\Filters\SelectFilter::make('status')
+                SelectFilter::make('status')
                     ->label('Status')
                     ->options([
                         'pending' => 'Pending',
@@ -471,8 +488,8 @@ class SuratTugasResource extends Resource
                         'rejected' => 'Rejected',
                     ]),
             ])
-            ->actions([
-                Tables\Actions\Action::make('preview')
+            ->recordActions([
+                Action::make('preview')
                     ->label('Preview')
                     ->icon('heroicon-o-eye')
                     ->visible(false)
@@ -480,7 +497,7 @@ class SuratTugasResource extends Resource
                     ->url(fn(SuratTugas $record) => route('surat-tugas.preview', $record->id))
                     ->openUrlInNewTab(),
 
-                Tables\Actions\Action::make('approve')
+                Action::make('approve')
                     ->label('Approve')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
@@ -493,29 +510,29 @@ class SuratTugasResource extends Resource
                     ->action(function (SuratTugas $record) {
                         $updateData = ['status' => 'approved'];
                         if (empty($record->hash)) {
-                            $updateData['hash'] = \Illuminate\Support\Str::random(32);
+                            $updateData['hash'] = Str::random(32);
                         }
                         $record->update($updateData);
 
-                        \Filament\Notifications\Notification::make()
+                        Notification::make()
                             ->title('Surat Tugas Berhasil Disetujui')
                             ->body('Dokumen telah disahkan secara elektronik.')
                             ->success()
                             ->send();
                     }),
-                Tables\Actions\Action::make('pdf')
+                Action::make('pdf')
                     ->label('PDF')
                     ->icon('heroicon-o-document-arrow-down')
                     ->color(fn(SuratTugas $record) => $record->status === 'approved' ? 'danger' : 'gray')
                     ->action(fn(SuratTugas $record) => app(SuratTugasPdfService::class)->downloadPdf($record)),
 
-                Tables\Actions\Action::make('generate_sppd')
+                Action::make('generate_sppd')
                     ->label('Buat SPPD')
                     ->icon('heroicon-o-plus-circle')
                     ->color('primary')
                     ->visible(fn(SuratTugas $record) => $record->sppd === null && auth()->user()->hasAnyRole(['super_admin', 'Kasubag', 'Kepala', 'Operator', 'Ketua Tim', 'Pegawai']))
-                    ->form([
-                        Forms\Components\TextInput::make('nomor_sppd')
+                    ->schema([
+                        TextInput::make('nomor_sppd')
                             ->label('Nomor SPPD')
                             ->required()
                             ->maxLength(255)
@@ -524,27 +541,27 @@ class SuratTugasResource extends Resource
                                 $settings = app(SystemSettings::class);
                                 $prefix = $settings->surat_prefix ?? 'B';
                                 $office = $settings->office_code ?? '33210';
-                                $year = \Carbon\Carbon::parse($record->tanggal)->year;
+                                $year = Carbon::parse($record->tanggal)->year;
                                 $nextUrut = SuratTugas::getNextNomorUrutSppd($year);
                                 $urut = str_pad($nextUrut, 4, '0', STR_PAD_LEFT);
                                 $klasifikasi = 'KP.650';
                                 return "{$prefix}-{$urut}/{$office}/SE2026/{$klasifikasi}/{$year}";
                             })
                             ->live(onBlur: true)
-                            ->afterStateUpdated(function (\Filament\Forms\Get $get, \Filament\Forms\Set $set, $state) {
+                            ->afterStateUpdated(function (Get $get, Set $set, $state) {
                                 if (preg_match('/(?:B-)?0*(\d+)\//', $state, $matches)) {
                                     $set('nomor_urut_sppd', (int) $matches[1]);
                                 }
                             }),
-                        Forms\Components\TextInput::make('nomor_urut_sppd')
+                        TextInput::make('nomor_urut_sppd')
                             ->label('No. Urut SPPD')
                             ->numeric()
                             ->required()
                             ->default(function (SuratTugas $record) {
-                                return SuratTugas::getNextNomorUrutSppd(\Carbon\Carbon::parse($record->tanggal)->year);
+                                return SuratTugas::getNextNomorUrutSppd(Carbon::parse($record->tanggal)->year);
                             })
                             ->live()
-                            ->afterStateUpdated(function (\Filament\Forms\Get $get, \Filament\Forms\Set $set, $state) {
+                            ->afterStateUpdated(function (Get $get, Set $set, $state) {
                                 if (blank($state))
                                     return;
                                 $settings = app(SystemSettings::class);
@@ -555,9 +572,9 @@ class SuratTugasResource extends Resource
                                 $year = $get('tahun_sppd') ?? now()->year;
                                 $set('nomor_sppd', "{$prefix}-{$urut}/{$office}/SE2026/{$klasifikasi}/{$year}");
                             }),
-                        Forms\Components\Hidden::make('kode_klasifikasi_sppd')->default('KP.650'),
-                        Forms\Components\Hidden::make('tahun_sppd')->default(fn(SuratTugas $record) => \Carbon\Carbon::parse($record->tanggal)->year),
-                        Forms\Components\Select::make('tingkat_perjalanan_dinas')
+                        Hidden::make('kode_klasifikasi_sppd')->default('KP.650'),
+                        Hidden::make('tahun_sppd')->default(fn(SuratTugas $record) => Carbon::parse($record->tanggal)->year),
+                        Select::make('tingkat_perjalanan_dinas')
                             ->label('Tingkat Perjalanan Dinas')
                             ->options([
                                 'A' => 'Tingkat A',
@@ -566,32 +583,32 @@ class SuratTugasResource extends Resource
                             ])
                             ->default('C')
                             ->required(),
-                        Forms\Components\TextInput::make('alat_angkutan')
+                        TextInput::make('alat_angkutan')
                             ->label('Alat Angkutan')
                             ->default('Kendaraan Pribadi')
                             ->maxLength(255)
                             ->required(),
-                        Forms\Components\TextInput::make('mak')
+                        TextInput::make('mak')
                             ->label('Pembebanan Anggaran (MAK)')
                             ->default('054.01.GG.2902.006.005.A.524113')
                             ->maxLength(255)
                             ->required(),
-                        Forms\Components\TextInput::make('biaya_transport')
+                        TextInput::make('biaya_transport')
                             ->label('Biaya Transport (Rp)')
                             ->numeric()
                             ->default(170000)
                             ->required(),
-                        Forms\Components\Textarea::make('maksud_perjalanan')
+                        Textarea::make('maksud_perjalanan')
                             ->label('Maksud Perjalanan Dinas')
                             ->default(fn(SuratTugas $record) => "Transport lokal dalam rangka {$record->keperluan}")
                             ->required()
                             ->columnSpanFull(),
-                        Forms\Components\TextInput::make('tempat_berangkat')
+                        TextInput::make('tempat_berangkat')
                             ->label('Tempat Berangkat')
                             ->default('Demak')
                             ->maxLength(255)
                             ->required(),
-                        Forms\Components\TextInput::make('tempat_tujuan')
+                        TextInput::make('tempat_tujuan')
                             ->label('Tempat Tujuan')
                             ->default(fn(SuratTugas $record) => $record->tempat_tugas)
                             ->maxLength(255)
@@ -599,24 +616,24 @@ class SuratTugasResource extends Resource
                     ])
                     ->action(function (SuratTugas $record, array $data) {
                         app(SppdService::class)->createSppd($record, $data);
-                        \Filament\Notifications\Notification::make()->title('SPPD Berhasil Dibuat')->success()->send();
+                        Notification::make()->title('SPPD Berhasil Dibuat')->success()->send();
                     }),
-                Tables\Actions\Action::make('word_sppd')
+                Action::make('word_sppd')
                     ->label('Cetak SPPD')
                     ->icon('heroicon-o-document-text')
                     ->color('success')
                     ->visible(fn(SuratTugas $record) => $record->sppd !== null)
                     ->action(fn(SuratTugas $record) => app(SppdService::class)->downloadWord($record)),
-                Tables\Actions\Action::make('generate_lpd')
+                Action::make('generate_lpd')
                     ->label('Buat LPD')
                     ->icon('heroicon-o-document-plus')
                     ->color('info')
-                    ->visible(fn(SuratTugas $record) => \App\Models\LaporanPerjalananDinas::canCreateLpd($record))
+                    ->visible(fn(SuratTugas $record) => LaporanPerjalananDinas::canCreateLpd($record))
                     ->url(fn(SuratTugas $record) => LaporanPerjalananDinasResource::getUrl('create', ['surat_tugas_id' => $record->id])),
-                Tables\Actions\Action::make('view_lpd')
+                Action::make('view_lpd')
                     ->label(function (SuratTugas $record) {
                         $count = $record->laporan_perjalanan_dinas_count ?? $record->laporanPerjalananDinas->count();
-                        $max = \App\Models\LaporanPerjalananDinas::getMaxLpdCount($record);
+                        $max = LaporanPerjalananDinas::getMaxLpdCount($record);
                         if ($max > 1) {
                             return "Lihat LPD ({$count}/{$max})";
                         }
@@ -636,66 +653,66 @@ class SuratTugasResource extends Resource
                             ],
                         ]);
                     }),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('activities')
+                EditAction::make(),
+                Action::make('activities')
                     ->label('History')
                     ->icon('heroicon-o-clock')
                     ->color('info')
                     ->url(fn ($record) => SuratTugasResource::getUrl('activities', ['record' => $record])),
             ])
             ->headerActions([
-                \pxlrbt\FilamentExcel\Actions\Tables\ExportAction::make()
+                ExportAction::make()
                     ->exports([
-                        \pxlrbt\FilamentExcel\Exports\ExcelExport::make()
+                        ExcelExport::make()
                             ->fromTable()
                             ->withFilename('Surat_Tugas_' . date('Y-m-d'))
                             ->withColumns([
-                                \pxlrbt\FilamentExcel\Columns\Column::make('nomor_surat'),
-                                \pxlrbt\FilamentExcel\Columns\Column::make('user.name')->heading('Pegawai'),
-                                \pxlrbt\FilamentExcel\Columns\Column::make('jabatan')->heading('Jabatan'),
-                                \pxlrbt\FilamentExcel\Columns\Column::make('survey.name')->heading('Survei'),
-                                \pxlrbt\FilamentExcel\Columns\Column::make('tanggal'),
-                                \pxlrbt\FilamentExcel\Columns\Column::make('keperluan'),
-                                \pxlrbt\FilamentExcel\Columns\Column::make('tempat_tugas'),
-                                \pxlrbt\FilamentExcel\Columns\Column::make('waktu_mulai'),
-                                \pxlrbt\FilamentExcel\Columns\Column::make('waktu_selesai'),
+                                Column::make('nomor_surat'),
+                                Column::make('user.name')->heading('Pegawai'),
+                                Column::make('jabatan')->heading('Jabatan'),
+                                Column::make('survey.name')->heading('Survei'),
+                                Column::make('tanggal'),
+                                Column::make('keperluan'),
+                                Column::make('tempat_tugas'),
+                                Column::make('waktu_mulai'),
+                                Column::make('waktu_selesai'),
                             ]),
                     ]),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\BulkAction::make('approveBulk')
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    BulkAction::make('approveBulk')
                         ->label('Approve Selected')
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->visible(fn() => auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag']))
                         ->requiresConfirmation()
-                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                        ->action(function (Collection $records) {
                             $count = 0;
                             foreach ($records as $record) {
                                 if ($record->status !== 'approved') {
                                     $updateData = ['status' => 'approved'];
                                     if (empty($record->hash)) {
-                                        $updateData['hash'] = \Illuminate\Support\Str::random(32);
+                                        $updateData['hash'] = Str::random(32);
                                     }
                                     $record->update($updateData);
                                     $count++;
                                 }
                             }
 
-                            \Filament\Notifications\Notification::make()
+                            Notification::make()
                                 ->title('Berhasil Disetujui')
                                 ->body("{$count} surat tugas telah di-approve & disahkan secara elektronik.")
                                 ->success()
                                 ->send();
                         }),
-                    Tables\Actions\BulkAction::make('generateSppdBulk')
+                    BulkAction::make('generateSppdBulk')
                         ->label('Buat SPPD')
                         ->icon('heroicon-o-document-plus')
                         ->color('primary')
                         ->visible(fn() => auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag', 'Operator', 'Ketua Tim', 'Pegawai']))
-                        ->form([
-                            Forms\Components\TextInput::make('nomor_urut_sppd_mulai')
+                        ->schema([
+                            TextInput::make('nomor_urut_sppd_mulai')
                                 ->label('Nomor Urut Mulai')
                                 ->numeric()
                                 ->required()
@@ -703,7 +720,7 @@ class SuratTugasResource extends Resource
                                     return SuratTugas::getNextNomorUrutSppd(now()->year);
                                 })
                                 ->helperText('Nomor urut akan di-increment otomatis untuk setiap SPPD dari angka ini.'),
-                            Forms\Components\TextInput::make('format_nomor_sppd')
+                            TextInput::make('format_nomor_sppd')
                                 ->label('Format Nomor SPPD')
                                 ->required()
                                 ->default(function () {
@@ -715,7 +732,7 @@ class SuratTugasResource extends Resource
                                     return "{$prefix}-{urut}/{$office}/SE2026/{$klasifikasi}/{$year}";
                                 })
                                 ->helperText('Gunakan {urut} di mana nomor urut akan disisipkan (contoh: B-{urut}/33210/SE2026/KP.650/2026)'),
-                            Forms\Components\Select::make('tingkat_perjalanan_dinas')
+                            Select::make('tingkat_perjalanan_dinas')
                                 ->label('Tingkat Perjalanan Dinas')
                                 ->options([
                                     'A' => 'Tingkat A',
@@ -724,49 +741,49 @@ class SuratTugasResource extends Resource
                                 ])
                                 ->default('C')
                                 ->required(),
-                            Forms\Components\TextInput::make('alat_angkutan')
+                            TextInput::make('alat_angkutan')
                                 ->label('Alat Angkutan')
                                 ->default('Kendaraan Pribadi')
                                 ->maxLength(255)
                                 ->required(),
-                            Forms\Components\TextInput::make('mak')
+                            TextInput::make('mak')
                                 ->label('Pembebanan Anggaran (MAK)')
                                 ->default('054.01.GG.2902.006.005.A.524113')
                                 ->maxLength(255)
                                 ->required(),
-                            Forms\Components\TextInput::make('biaya_transport')
+                            TextInput::make('biaya_transport')
                                 ->label('Biaya Transport (Rp)')
                                 ->numeric()
                                 ->default(170000)
                                 ->required(),
-                            Forms\Components\Textarea::make('maksud_perjalanan')
+                            Textarea::make('maksud_perjalanan')
                                 ->label('Maksud Perjalanan Dinas (Opsional, kosongkan untuk default otomatis)')
                                 ->columnSpanFull(),
-                            Forms\Components\TextInput::make('tempat_berangkat')
+                            TextInput::make('tempat_berangkat')
                                 ->label('Tempat Berangkat')
                                 ->default('Demak')
                                 ->maxLength(255)
                                 ->required(),
-                            Forms\Components\TextInput::make('tempat_tujuan')
+                            TextInput::make('tempat_tujuan')
                                 ->label('Tempat Tujuan (Kosongkan jika mengikuti Surat Tugas)')
                                 ->maxLength(255),
                         ])
-                        ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
+                        ->action(function (Collection $records, array $data) {
                             $count = app(SppdService::class)->generateBulkSppd($records, $data);
 
-                            \Filament\Notifications\Notification::make()
+                            Notification::make()
                                 ->title('Berhasil!')
                                 ->body("{$count} SPPD baru telah di-generate.")
                                 ->success()
                                 ->send();
                         }),
-                    Tables\Actions\BulkAction::make('syncPejabatBulk')
+                    BulkAction::make('syncPejabatBulk')
                         ->label('Update Pejabat Terpilih')
                         ->icon('heroicon-o-arrow-path')
                         ->color('warning')
                         ->visible(fn() => auth()->user()->hasAnyRole(['super_admin', 'kepala', 'kasubag']))
                         ->requiresConfirmation()
-                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                        ->action(function (Collection $records) {
                             $settings = app(SystemSettings::class);
                             $records->each(function ($record) use ($settings) {
                                 $record->update([
@@ -778,23 +795,23 @@ class SuratTugasResource extends Resource
                                 ]);
                             });
 
-                            \Filament\Notifications\Notification::make()
+                            Notification::make()
                                 ->title('Berhasil!')
                                 ->body("Data pejabat pada {$records->count()} surat tugas telah diperbarui ke pengaturan terbaru.")
                                 ->success()
                                 ->send();
                         }),
-                    \pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction::make(),
-                    Tables\Actions\BulkAction::make('downloadBulk')
+                    ExportBulkAction::make(),
+                    BulkAction::make('downloadBulk')
                         ->label('Download Semua (ZIP)')
                         ->icon('heroicon-o-arrow-down-tray')
                         ->color('success')
-                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                        ->action(function (Collection $records) {
                             $settings = app(SystemSettings::class);
                             $templatePath = $settings->surat_tugas_template_path;
 
                             if (!$templatePath || !file_exists(storage_path('app/public/' . $templatePath))) {
-                                \Filament\Notifications\Notification::make()
+                                Notification::make()
                                     ->title('Template belum diupload di Pengaturan Sistem')
                                     ->danger()
                                     ->send();
@@ -802,26 +819,26 @@ class SuratTugasResource extends Resource
                             }
 
                             // Dispatch Job
-                            \App\Jobs\GenerateBulkSuratTugasZip::dispatch($records->pluck('id')->toArray(), 'word', auth()->id());
+                            GenerateBulkSuratTugasZip::dispatch($records->pluck('id')->toArray(), 'word', auth()->id());
 
-                            \Filament\Notifications\Notification::make()
+                            Notification::make()
                                 ->title('Proses Download Dimulai')
                                 ->body('File sedang dikompresi di latar belakang. Anda akan menerima notifikasi di Ikon Lonceng jika file ZIP sudah siap didownload.')
                                 ->success()
                                 ->send();
                         }),
-                    Tables\Actions\BulkAction::make('downloadPdfBulk')
+                    BulkAction::make('downloadPdfBulk')
                         ->label('Download PDF (Gabungan)')
                         ->icon('heroicon-o-document-arrow-down')
                         ->color('danger')
-                        ->modalHeading(function (\Illuminate\Database\Eloquent\Collection $records) {
+                        ->modalHeading(function (Collection $records) {
                             $pendingCount = $records->where('status', '!=', 'approved')->count();
                             if ($pendingCount > 0) {
                                 return "⚠️ {$pendingCount} surat tugas belum di-approve";
                             }
                             return 'Download PDF';
                         })
-                        ->modalDescription(function (\Illuminate\Database\Eloquent\Collection $records) {
+                        ->modalDescription(function (Collection $records) {
                             $pendingCount = $records->where('status', '!=', 'approved')->count();
                             if ($pendingCount > 0) {
                                 return "Ada {$pendingCount} surat tugas yang belum di-approve. PDF yang belum approved tidak akan memiliki QR Code. Tetap download?";
@@ -829,16 +846,16 @@ class SuratTugasResource extends Resource
                             return "Download {$records->count()} surat tugas sebagai satu file PDF gabungan?";
                         })
                         ->requiresConfirmation()
-                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
-                            \App\Jobs\GenerateBulkSuratTugasZip::dispatch($records->pluck('id')->toArray(), 'pdf', auth()->id());
+                        ->action(function (Collection $records) {
+                            GenerateBulkSuratTugasZip::dispatch($records->pluck('id')->toArray(), 'pdf', auth()->id());
 
-                            \Filament\Notifications\Notification::make()
+                            Notification::make()
                                 ->title('Proses Download Dimulai')
                                 ->body('File PDF sedang di-generate dan digabungkan di latar belakang. Anda akan menerima notifikasi di Ikon Lonceng jika file PDF sudah siap didownload.')
                                 ->success()
                                 ->send();
                         }),
-                    Tables\Actions\DeleteBulkAction::make(),
+                    DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('nomor_urut', 'desc');
@@ -850,7 +867,7 @@ class SuratTugasResource extends Resource
             ->with(['user.profile', 'survey', 'sppd', 'laporanPerjalananDinas'])
             ->withCount('laporanPerjalananDinas');
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = auth()->user();
 
         if ($user && !$user->hasRole(['super_admin', 'Kasubag', 'Kepala', 'Operator', 'Ketua Tim'])) {
@@ -870,12 +887,12 @@ class SuratTugasResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSuratTugas::route('/'),
-            'create' => Pages\CreateSuratTugas::route('/create'),
-            'create-bulk' => Pages\CreateBulkSuratTugas::route('/create-bulk'),
-            'manage-blocked-numbers' => Pages\ManageBlockedNumbers::route('/manage-blocked-numbers'),
-            'edit' => Pages\EditSuratTugas::route('/{record}/edit'),
-            'activities' => Pages\ListSuratTugasActivities::route('/{record}/activities'),
+            'index' => ListSuratTugas::route('/'),
+            'create' => CreateSuratTugas::route('/create'),
+            'create-bulk' => CreateBulkSuratTugas::route('/create-bulk'),
+            'manage-blocked-numbers' => ManageBlockedNumbers::route('/manage-blocked-numbers'),
+            'edit' => EditSuratTugas::route('/{record}/edit'),
+            'activities' => ListSuratTugasActivities::route('/{record}/activities'),
         ];
     }
 
@@ -884,7 +901,7 @@ class SuratTugasResource extends Resource
         $nomor = SuratTugasNumberingService::formatNomorSurat(
             $get('nomor_urut') ?? 0,
             $get('kode_klasifikasi') ?? 'KP.650',
-            $get('tanggal') ? \Carbon\Carbon::parse($get('tanggal'))->year : now()->year
+            $get('tanggal') ? Carbon::parse($get('tanggal'))->year : now()->year
         );
         $set('nomor_surat', $nomor);
     }
@@ -896,10 +913,15 @@ class SuratTugasResource extends Resource
 
     protected static function updateNomorSppd(Get $get, Set $set): void
     {
+        $urut = $get('nomor_urut_sppd');
+        if (blank($urut)) {
+            return;
+        }
+
         $nomor = SppdService::formatNomorSppd(
-            $get('nomor_urut_sppd') ?? 0,
+            $urut,
             $get('kode_klasifikasi_sppd') ?? 'KP.650',
-            $get('tanggal') ? \Carbon\Carbon::parse($get('tanggal'))->year : now()->year
+            $get('tanggal') ? Carbon::parse($get('tanggal'))->year : now()->year
         );
         $set('nomor_sppd', $nomor);
     }

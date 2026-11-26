@@ -2,14 +2,34 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\SurveyResource\Pages;
-use App\Filament\Resources\SurveyResource\RelationManagers;
+use App\Filament\Resources\SurveyResource\Pages\CreateSurvey;
+use App\Filament\Resources\SurveyResource\Pages\EditSurvey;
+use App\Filament\Resources\SurveyResource\Pages\ListSurveyActivities;
+use App\Filament\Resources\SurveyResource\Pages\ListSurveys;
 use App\Filament\Resources\SurveyResource\RelationManagers\ParticipantsRelationManager;
 use App\Models\Survey;
-use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
-use Filament\Tables;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ToggleColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -18,129 +38,69 @@ class SurveyResource extends Resource
 {
     protected static ?string $model = Survey::class;
 
-    protected static ?string $navigationIcon = 'heroicon-m-clipboard-document-check';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-m-clipboard-document-check';
 
-    protected static ?string $navigationGroup = 'Manajemen Kegiatan';
+    protected static string|\UnitEnum|null $navigationGroup = 'Manajemen Kegiatan';
+
     protected static ?string $navigationLabel = 'Kegiatan';
+
     protected static ?string $modelLabel = 'Kegiatan';
+
     protected static ?string $pluralModelLabel = 'Kegiatan';
 
-    /**
-     * Helper: Tombol Proper Case — mengubah teks menjadi Title Case
-     * tanpa logika akronim yang rumit. User cukup klik tombol jika dibutuhkan.
-     */
-    public static function toProperCase(string $value): string
+    public static function form(Schema $schema): Schema
     {
-        // Normalize whitespace dulu
-        $value = trim(preg_replace('/\s+/', ' ', $value));
-        // mb_convert_case dengan MB_CASE_TITLE
-        return mb_convert_case($value, MB_CASE_TITLE, 'UTF-8');
-    }
-
-    protected static function nameFieldSchema(string $defaultValue = ''): array
-    {
-        return [
-            Forms\Components\TextInput::make('name')
-                ->label('Nama Kegiatan')
-                ->required()
-                ->maxLength(255)
-                ->withProperCase()
-                ->rules([
-                    fn ($record) => function (string $attribute, $value, \Closure $fail) use ($record) {
-                        $normalized = mb_strtolower(trim(preg_replace('/\s+/', ' ', $value)));
-                        $exists = Survey::withoutGlobalScopes()
-                            ->whereNull('deleted_at')
-                            ->when($record?->id, fn ($q) => $q->where('id', '!=', $record->id))
-                            ->get(['id', 'name'])
-                            ->contains(function ($item) use ($normalized) {
-                                $itemNorm = mb_strtolower(trim(preg_replace('/\s+/', ' ', $item->name)));
-                                return $itemNorm === $normalized;
-                            });
-                        if ($exists) {
-                            $fail('Nama kegiatan sudah terdaftar (terdeteksi nama serupa meski berbeda spasi/huruf besar-kecil).');
-                        }
-                    }
-                ]),
-        ];
-    }
-
-    public static function form(Form $form): Form
-    {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('name')
+        return $schema
+            ->components([
+                TextInput::make('name')
                     ->label('Nama Kegiatan')
                     ->required()
                     ->maxLength(255)
-                    ->withProperCase()
-                    ->rules([
-                        fn ($record) => function (string $attribute, $value, \Closure $fail) use ($record) {
-                            $normalized = mb_strtolower(trim(preg_replace('/\s+/', ' ', $value)));
-                            $exists = Survey::withoutGlobalScopes()
-                                ->whereNull('deleted_at')
-                                ->when($record?->id, fn ($q) => $q->where('id', '!=', $record->id))
-                                ->get(['id', 'name'])
-                                ->contains(function ($item) use ($normalized) {
-                                    $itemNorm = mb_strtolower(trim(preg_replace('/\s+/', ' ', $item->name)));
-                                    return $itemNorm === $normalized;
-                                });
-                            if ($exists) {
-                                $fail('Nama kegiatan sudah terdaftar (terdeteksi nama serupa meski berbeda spasi/huruf besar-kecil).');
-                            }
-                        }
-                    ]),
-
-                Forms\Components\Select::make('jenis_kegiatan')
+                    ->withProperCase(),
+                Select::make('jenis_kegiatan')
                     ->label('Jenis Kegiatan')
                     ->options([
                         'pelatihan'     => 'Pelatihan',
                         'non-pelatihan' => 'Non-Pelatihan',
                     ])
-                    ->default('pelatihan')
+                    ->default('non-pelatihan')
                     ->required(),
-
-                Forms\Components\Select::make('metode')
+                Select::make('metode')
                     ->label('Metode')
                     ->options([
-                        'daring'   => 'Daring (Online)',
-                        'luring'   => 'Luring (Tatap Muka)',
-                        'blended'  => 'Blended (Hybrid)',
+                        'daring'  => 'Daring',
+                        'luring'  => 'Luring',
+                        'blended' => 'Blended',
                     ])
                     ->default('luring')
                     ->required(),
-
-                Forms\Components\Textarea::make('tujuan')
+                Textarea::make('tujuan')
                     ->label('Tujuan Kegiatan')
                     ->withProperCase()
                     ->columnSpanFull(),
-
-                Forms\Components\Textarea::make('dasar_surat')
+                Textarea::make('dasar_surat')
                     ->label('Dasar Surat')
-                    ->placeholder('Contoh: DIPA BPS Kabupaten Demak Tahun Anggaran 2025...')
+                    ->placeholder('Contoh: DIPA BPS Kabupaten Demak Tahun Anggaran 2026...')
                     ->withProperCase()
                     ->required()
                     ->columnSpanFull(),
-
-                Forms\Components\DatePicker::make('start_date')
+                DatePicker::make('start_date')
                     ->label('Mulai'),
-                Forms\Components\DatePicker::make('end_date')
+                DatePicker::make('end_date')
                     ->label('Selesai'),
-
-                Forms\Components\Toggle::make('is_active')
+                Toggle::make('is_active')
+                    ->label('Aktif')
                     ->default(true)
                     ->required(),
-
-                Forms\Components\Toggle::make('is_multiple')
+                Toggle::make('is_multiple')
                     ->label('Multiple Surat Tugas')
                     ->helperText('Jika diaktifkan, satu pegawai bisa dibuatkan beberapa surat tugas pada kegiatan ini')
                     ->default(false)
                     ->required(),
-
-                Forms\Components\Toggle::make('is_multiclass')
+                Toggle::make('is_multiclass')
                     ->label('Kegiatan Multi-Kelas')
-                    ->helperText('Aktifkan jika kegiatan ini dibagi menjadi beberapa kelas pelatihan/pembelajaran')
-                    ->default(false)
-                    ->required(),
+                    ->helperText('Aktifkan jika peserta dibagi ke beberapa kelas (Kelas A, Kelas B, dll)')
+                    ->default(false),
             ]);
     }
 
@@ -148,137 +108,139 @@ class SurveyResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->searchable()
                     ->sortable()
                     ->label('Nama Kegiatan'),
-                Tables\Columns\TextColumn::make('jenis_kegiatan')
+                TextColumn::make('jenis_kegiatan')
                     ->label('Jenis')
                     ->badge()
-                    ->color(fn (string $state) => match ($state) {
+                    ->color(fn (?string $state) => match ($state) {
                         'pelatihan'     => 'info',
                         'non-pelatihan' => 'warning',
                         default         => 'gray',
                     })
-                    ->formatStateUsing(fn (string $state) => match ($state) {
+                    ->formatStateUsing(fn (?string $state) => match ($state) {
                         'pelatihan'     => 'Pelatihan',
                         'non-pelatihan' => 'Non-Pelatihan',
-                        default         => ucfirst($state),
-                    }),
-                Tables\Columns\TextColumn::make('metode')
+                        default         => $state ? ucfirst($state) : '-',
+                    })
+                    ->toggleable(),
+                TextColumn::make('metode')
                     ->label('Metode')
                     ->badge()
-                    ->color(fn (string $state) => match ($state) {
-                        'daring'   => 'success',
-                        'luring'   => 'primary',
-                        'blended'  => 'warning',
-                        default    => 'gray',
+                    ->color(fn (?string $state) => match ($state) {
+                        'daring'  => 'success',
+                        'luring'  => 'primary',
+                        'blended' => 'warning',
+                        default   => 'gray',
                     })
-                    ->formatStateUsing(fn (string $state) => match ($state) {
-                        'daring'  => 'Daring',
-                        'luring'  => 'Luring',
-                        'blended' => 'Blended',
-                        default   => ucfirst($state),
-                    }),
-                Tables\Columns\TextColumn::make('start_date')
+                    ->formatStateUsing(fn (?string $state) => $state ? ucfirst($state) : '-')
+                    ->toggleable(),
+                TextColumn::make('start_date')
                     ->date('d M Y')
                     ->sortable()
                     ->label('Mulai'),
-                Tables\Columns\TextColumn::make('end_date')
+                TextColumn::make('end_date')
                     ->date('d M Y')
                     ->sortable()
                     ->label('Selesai'),
-                Tables\Columns\IconColumn::make('is_active')
+                IconColumn::make('is_active')
                     ->boolean()
                     ->label('Aktif'),
-                Tables\Columns\ToggleColumn::make('is_multiclass')
+                ToggleColumn::make('is_multiclass')
                     ->label('Multi-Kelas')
                     ->tooltip('Aktifkan jika kegiatan memiliki beberapa kelas peserta'),
-                Tables\Columns\TextColumn::make('participants_count')
+                TextColumn::make('participants_count')
                     ->counts('participants')
                     ->label('Peserta'),
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
+                TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('deleted_at')
+                TextColumn::make('deleted_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('jenis_kegiatan')
+                SelectFilter::make('jenis_kegiatan')
                     ->label('Jenis Kegiatan')
                     ->options([
                         'pelatihan'     => 'Pelatihan',
                         'non-pelatihan' => 'Non-Pelatihan',
                     ]),
-                Tables\Filters\SelectFilter::make('metode')
+                SelectFilter::make('metode')
                     ->label('Metode')
                     ->options([
                         'daring'  => 'Daring',
                         'luring'  => 'Luring',
                         'blended' => 'Blended',
                     ]),
-                Tables\Filters\TrashedFilter::make(),
+                TrashedFilter::make(),
             ])
-            ->actions([
-                Tables\Actions\Action::make('copy')
+            ->recordActions([
+                Action::make('buat_undangan')
+                    ->label('Undangan')
+                    ->icon('heroicon-o-envelope')
+                    ->color('success')
+                    ->url(fn (Survey $record) => SuratUndanganResource::getUrl('create', ['survey_id' => $record->id])),
+                Action::make('copy')
                     ->label('Copy')
                     ->icon('heroicon-o-document-duplicate')
                     ->color('info')
                     ->modalHeading('Copy Kegiatan')
                     ->modalDescription('Ubah data kegiatan sebelum menyimpan. Petugas yang sudah di-assign akan ter-copy.')
-                    ->form([
-                        Forms\Components\TextInput::make('name')
+                    ->schema([
+                        TextInput::make('name')
                             ->label('Nama Kegiatan')
                             ->required()
                             ->maxLength(255)
                             ->withProperCase()
                             ->default(fn (Survey $record) => 'Copy of ' . $record->name),
-                        Forms\Components\Select::make('jenis_kegiatan')
+                        Select::make('jenis_kegiatan')
                             ->label('Jenis Kegiatan')
                             ->options(['pelatihan' => 'Pelatihan', 'non-pelatihan' => 'Non-Pelatihan'])
-                            ->default(fn (Survey $record) => $record->jenis_kegiatan ?? 'pelatihan')
+                            ->default(fn (Survey $record) => $record->jenis_kegiatan ?? 'non-pelatihan')
                             ->required(),
-                        Forms\Components\Select::make('metode')
+                        Select::make('metode')
                             ->label('Metode')
                             ->options(['daring' => 'Daring', 'luring' => 'Luring', 'blended' => 'Blended'])
                             ->default(fn (Survey $record) => $record->metode ?? 'luring')
                             ->required(),
-                        Forms\Components\Textarea::make('tujuan')
+                        Textarea::make('tujuan')
                             ->label('Tujuan Kegiatan')
                             ->withProperCase()
                             ->default(fn (Survey $record) => $record->tujuan)
                             ->columnSpanFull(),
-                        Forms\Components\Textarea::make('dasar_surat')
+                        Textarea::make('dasar_surat')
                             ->label('Dasar Surat')
                             ->required()
                             ->withProperCase()
                             ->default(fn (Survey $record) => $record->dasar_surat)
                             ->columnSpanFull(),
-                        Forms\Components\DatePicker::make('start_date')
+                        DatePicker::make('start_date')
                             ->label('Mulai')
                             ->default(fn (Survey $record) => $record->start_date),
-                        Forms\Components\DatePicker::make('end_date')
+                        DatePicker::make('end_date')
                             ->label('Selesai')
                             ->default(fn (Survey $record) => $record->end_date),
-                        Forms\Components\Toggle::make('is_active')
+                        Toggle::make('is_active')
                             ->label('Aktif')
                             ->default(fn (Survey $record) => $record->is_active),
-                        Forms\Components\Toggle::make('is_multiple')
+                        Toggle::make('is_multiple')
                             ->label('Multiple Surat Tugas')
                             ->default(fn (Survey $record) => $record->is_multiple),
-                        Forms\Components\Toggle::make('is_multiclass')
+                        Toggle::make('is_multiclass')
                             ->label('Kegiatan Multi-Kelas')
                             ->default(fn (Survey $record) => $record->is_multiclass),
-                        Forms\Components\Toggle::make('copy_participants')
-                            ->label('Copy Peserta')
-                            ->helperText('Centang untuk meng-copy semua peserta yang sudah di-assign ke kegiatan asli')
+                        Toggle::make('copy_participants')
+                            ->label('Copy Petugas/Peserta')
+                            ->helperText('Centang untuk meng-copy semua petugas yang sudah di-assign ke kegiatan asli')
                             ->default(true),
                     ])
                     ->action(function (Survey $record, array $data): void {
@@ -287,12 +249,13 @@ class SurveyResource extends Resource
 
                         $newSurvey = Survey::create($data);
 
+                        $participants = collect();
                         if ($copyParticipants) {
                             $classMap = [];
                             if ($record->is_multiclass) {
                                 foreach ($record->classes as $oldClass) {
                                     $newClass = $newSurvey->classes()->create([
-                                        'name' => $oldClass->name,
+                                        'name'        => $oldClass->name,
                                         'description' => $oldClass->description,
                                     ]);
                                     $classMap[$oldClass->id] = $newClass->id;
@@ -305,6 +268,8 @@ class SurveyResource extends Resource
                                     'user_id'         => $participant->user_id,
                                     'survey_class_id' => $classMap[$participant->survey_class_id] ?? null,
                                     'role'            => $participant->role,
+                                    'role_pelatihan'  => $participant->role_pelatihan,
+                                    'kelas'           => $participant->kelas,
                                     'status'          => $participant->status,
                                     'registered_at'   => now(),
                                     'notes'           => $participant->notes,
@@ -312,36 +277,31 @@ class SurveyResource extends Resource
                             }
                         }
 
-                        \Filament\Notifications\Notification::make()
+                        Notification::make()
                             ->title('Kegiatan berhasil di-copy!')
                             ->body($copyParticipants
-                                ? 'Kegiatan baru dibuat dengan ' . (isset($participants) ? $participants->count() : 0) . ' peserta.'
-                                : 'Kegiatan baru dibuat tanpa peserta.')
+                                ? 'Kegiatan baru dibuat dengan ' . $participants->count() . ' petugas.'
+                                : 'Kegiatan baru dibuat tanpa petugas.')
                             ->success()
                             ->send();
                     }),
-                Tables\Actions\Action::make('buat_undangan')
-                    ->label('Undangan')
-                    ->icon('heroicon-o-envelope')
-                    ->color('success')
-                    ->url(fn (Survey $record) => \App\Filament\Resources\SuratUndanganResource::getUrl('create', ['survey_id' => $record->id])),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('activities')
+                EditAction::make(),
+                Action::make('activities')
                     ->label('History')
                     ->icon('heroicon-o-clock')
                     ->color('info')
                     ->url(fn ($record) => SurveyResource::getUrl('activities', ['record' => $record])),
-                Tables\Actions\DeleteAction::make(),
-                Tables\Actions\ForceDeleteAction::make(),
-                Tables\Actions\RestoreAction::make(),
+                DeleteAction::make(),
+                ForceDeleteAction::make(),
+                RestoreAction::make(),
             ])
             ->defaultSort('created_at', 'desc')
             ->modifyQueryUsing(fn (Builder $query) => $query->orderBy('is_active', 'desc')->orderBy('created_at', 'desc'))
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                    Tables\Actions\ForceDeleteBulkAction::make(),
-                    Tables\Actions\RestoreBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
+                    RestoreBulkAction::make(),
                 ]),
             ]);
     }
@@ -349,6 +309,7 @@ class SurveyResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
+            ->where('is_pelatihan', false)
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);
@@ -364,10 +325,10 @@ class SurveyResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'      => Pages\ListSurveys::route('/'),
-            'create'     => Pages\CreateSurvey::route('/create'),
-            'edit'       => Pages\EditSurvey::route('/{record}/edit'),
-            'activities' => Pages\ListSurveyActivities::route('/{record}/activities'),
+            'index'      => ListSurveys::route('/'),
+            'create'     => CreateSurvey::route('/create'),
+            'edit'       => EditSurvey::route('/{record}/edit'),
+            'activities' => ListSurveyActivities::route('/{record}/activities'),
         ];
     }
 }

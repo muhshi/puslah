@@ -7,6 +7,7 @@ use App\Models\SuratTugas;
 use App\Models\Survey;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class LaporanPerjalananDinasValidationTest extends TestCase
@@ -54,7 +55,7 @@ class LaporanPerjalananDinasValidationTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_existing_lpd_dates_for_a_user()
     {
         $user1 = User::factory()->create();
@@ -84,7 +85,7 @@ class LaporanPerjalananDinasValidationTest extends TestCase
         $this->assertEquals(['2026-08-10'], $datesUser2);
     }
 
-    /** @test */
+    #[Test]
     public function it_detects_duplicate_lpd_for_same_user_and_same_date()
     {
         $user = User::factory()->create();
@@ -107,7 +108,7 @@ class LaporanPerjalananDinasValidationTest extends TestCase
         $this->assertNull($freeDate);
     }
 
-    /** @test */
+    #[Test]
     public function different_users_can_have_lpd_on_same_date()
     {
         $userA = User::factory()->create();
@@ -122,7 +123,7 @@ class LaporanPerjalananDinasValidationTest extends TestCase
         $this->assertNull($duplicateUserB);
     }
 
-    /** @test */
+    #[Test]
     public function it_determines_first_available_date_in_surat_tugas_range()
     {
         $user = User::factory()->create();
@@ -151,7 +152,7 @@ class LaporanPerjalananDinasValidationTest extends TestCase
         $this->assertNull($noneAvailable);
     }
 
-    /** @test */
+    #[Test]
     public function it_fails_form_validation_when_creating_lpd_with_duplicate_date()
     {
         $user = User::factory()->create();
@@ -180,7 +181,7 @@ class LaporanPerjalananDinasValidationTest extends TestCase
             ->assertHasFormErrors(['tanggal_kunjungan']);
     }
 
-    /** @test */
+    #[Test]
     public function it_allows_creating_lpd_with_available_date()
     {
         $user = User::factory()->create();
@@ -213,7 +214,7 @@ class LaporanPerjalananDinasValidationTest extends TestCase
         $this->assertEquals('2026-09-21', $createdLpd->tanggal_kunjungan->toDateString());
     }
 
-    /** @test */
+    #[Test]
     public function it_allows_updating_existing_lpd_with_its_own_date()
     {
         $user = User::factory()->create();
@@ -240,7 +241,7 @@ class LaporanPerjalananDinasValidationTest extends TestCase
         $this->assertStringContainsString('Updated uraian kegiatan', $lpd->uraian_kegiatan);
     }
 
-    /** @test */
+    #[Test]
     public function it_allows_multiple_lpds_for_same_surat_tugas_on_different_dates()
     {
         $user = User::factory()->create();
@@ -273,7 +274,7 @@ class LaporanPerjalananDinasValidationTest extends TestCase
         $this->assertEquals(2, $st->laporanPerjalananDinas()->count());
     }
 
-    /** @test */
+    #[Test]
     public function it_fails_validation_when_tanggal_kunjungan_is_outside_range()
     {
         $user = User::factory()->create();
@@ -313,7 +314,7 @@ class LaporanPerjalananDinasValidationTest extends TestCase
             ->assertHasFormErrors(['tanggal_kunjungan']);
     }
 
-    /** @test */
+    #[Test]
     public function it_restricts_single_day_surat_tugas_to_only_one_lpd()
     {
         $user = User::factory()->create();
@@ -348,7 +349,7 @@ class LaporanPerjalananDinasValidationTest extends TestCase
             ->assertHasFormErrors(['surat_tugas_id']);
     }
 
-    /** @test */
+    #[Test]
     public function it_restricts_multiday_surat_tugas_to_its_maximum_day_count()
     {
         $user = User::factory()->create();
@@ -388,7 +389,7 @@ class LaporanPerjalananDinasValidationTest extends TestCase
             ->assertHasFormErrors(['surat_tugas_id']);
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_expand_single_day_surat_tugas_range_to_full_survey_month()
     {
         $user = User::factory()->create();

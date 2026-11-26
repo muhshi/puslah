@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\SuratTugas;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class SuratTugasNumberingTest extends TestCase
@@ -17,7 +18,7 @@ class SuratTugasNumberingTest extends TestCase
         \Spatie\Permission\Models\Role::create(['name' => 'Mitra', 'guard_name' => 'web']);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_detect_skipped_numbers()
     {
         $year = 2026;
@@ -37,7 +38,7 @@ class SuratTugasNumberingTest extends TestCase
         $this->assertEquals("3-4", SuratTugas::formatSkippedNumbers($skipped));
     }
 
-    /** @test */
+    #[Test]
     public function it_can_detect_multiple_gaps()
     {
         $year = 2026;
@@ -58,7 +59,7 @@ class SuratTugasNumberingTest extends TestCase
         $this->assertEquals("2, 4, 7-8", SuratTugas::formatSkippedNumbers($skipped));
     }
 
-    /** @test */
+    #[Test]
     public function it_calculates_next_number_correctly()
     {
         $year = 2026;

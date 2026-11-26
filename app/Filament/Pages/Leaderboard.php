@@ -2,14 +2,14 @@
 
 namespace App\Filament\Pages;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Grid;
 use App\Models\User;
 use Carbon\Carbon;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Forms\Form;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Grid;
 use Filament\Pages\Page;
 use Illuminate\Support\Collection;
 
@@ -28,11 +28,11 @@ class Leaderboard extends Page implements HasForms
     public int $totalPegawai = 0;
     public int $totalMitra = 0;
 
-    protected static ?string $navigationIcon = 'heroicon-o-trophy';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-trophy';
 
-    protected static string $view = 'filament.pages.leaderboard';
+    protected string $view = 'filament.pages.leaderboard';
 
-    protected static ?string $navigationGroup = null;
+    protected static string | \UnitEnum | null $navigationGroup = null;
 
     protected static ?string $navigationLabel = 'Leaderboard';
 
@@ -63,10 +63,10 @@ class Leaderboard extends Page implements HasForms
         $this->updateData();
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Grid::make(2)->schema([
                     Select::make('month')
                         ->label('Pilih Bulan')

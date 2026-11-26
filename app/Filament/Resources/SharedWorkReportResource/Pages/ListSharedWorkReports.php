@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\SharedWorkReportResource\Pages;
 
+use Filament\Actions\CreateAction;
 use App\Filament\Resources\SharedWorkReportResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
@@ -14,11 +15,11 @@ class ListSharedWorkReports extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make()
+            CreateAction::make()
                 ->label('Buat Wadah KIPAPP Baru 📁')
                 ->slideOver()
                 ->modalHeading('Buat Wadah Butir KIPAPP Baru')
-                ->mutateFormDataUsing(function (array $data): array {
+                ->mutateDataUsing(function (array $data): array {
                     $data['user_id'] = Auth::id();
                     return $data;
                 }),

@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Settings;
 
 use Spatie\LaravelSettings\Settings;
@@ -6,36 +7,86 @@ use Spatie\LaravelSettings\Settings;
 class SystemSettings extends Settings
 {
     public float $default_office_lat;
+
     public float $default_office_lng;
+
     public int $default_geofence_radius_m;
+
     public string $default_work_start; // 'H:i'
+
     public string $default_work_end;   // 'H:i'
+
     /** @var array<int> 1=Mon ... 7=Sun */
     public array $default_workdays;
+
     public string $default_office_name;
+
     public string $cert_signer_name;
+
     public string $cert_signer_nip;  // Added NIP
+
     public string $cert_signer_title; // Jabatan
+
     public string $cert_city;         // Kota penetapan surat
+
     public string $office_code;       // Kode Kantor (ex: 33210)
+
     public string $surat_prefix;      // Prefix Surat (ex: B)
+
     public ?string $surat_tugas_template_path; // Path to DOCX template
+
     public ?string $laporan_dinas_template_path; // Path to Laporan DOCX template
+
     public ?string $laporan_lembur_template_path; // Path to Laporan Lembur DOCX template
+
     public ?string $cert_signer_signature_path;
+
     public string $cert_number_prefix;        // ex: 'BPS-DMK'
+
     public array $cert_number_seq_by_year;    // ex: ['2025'=>123]
+
     public ?string $logo_bps_path;
+
     public ?string $pdf_master_password;
-    
+
     // SPPD Settings
     public ?string $sppd_template_path;
+
     public string $ppk_name;
+
     public string $ppk_nip;
+
     public string $ppk_title;
+
+    // Official User IDs (linked to users table)
+    public ?int $kepala_user_id;
+
+    public ?int $ppk_user_id;
+
+    public ?int $bendahara_user_id;
+
+    public ?int $kasubag_umum_user_id;
+
+    // Bendahara Settings
+    public string $bendahara_name;
+
+    public string $bendahara_nip;
+
+    public string $bendahara_title;
+
+    // Kasubag Umum / Penanggung Jawab Settings
+    public string $kasubag_umum_name;
+
+    public string $kasubag_umum_nip;
+
+    public string $kasubag_umum_title;
+
+    // Pelatihan Template Override (optional)
+    public ?string $undangan_pelatihan_template_path;
 
     // AI Settings
     public ?string $gemini_api_key;
+
     public ?string $gemini_model;
 
     // Kegiatan Settings
@@ -121,6 +172,17 @@ class SystemSettings extends Settings
             'ppk_name' => '-',
             'ppk_nip' => '-',
             'ppk_title' => 'Pejabat Pembuat Komitmen',
+            'kepala_user_id' => null,
+            'ppk_user_id' => null,
+            'bendahara_user_id' => null,
+            'bendahara_name' => '-',
+            'bendahara_nip' => '-',
+            'bendahara_title' => 'Bendahara Pengeluaran',
+            'kasubag_umum_user_id' => null,
+            'kasubag_umum_name' => '-',
+            'kasubag_umum_nip' => '-',
+            'kasubag_umum_title' => 'Kepala Subbagian Umum',
+            'undangan_pelatihan_template_path' => null,
             'gemini_api_key' => null,
             'gemini_model' => 'gemini-3.5-flash',
             'kegiatan_roles' => ['PML', 'PCL', 'Penanggung Jawab', 'Panitia', 'Peserta'],

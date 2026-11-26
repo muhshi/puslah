@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -49,7 +50,7 @@ class DailyActivity extends Model
         return $this->belongsTo(SharedWorkReport::class, 'shared_work_report_id');
     }
 
-    public function sharedWorkReports(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    public function sharedWorkReports(): BelongsToMany
     {
         return $this->belongsToMany(SharedWorkReport::class, 'daily_activity_shared_work_report');
     }

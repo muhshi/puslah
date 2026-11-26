@@ -2,11 +2,20 @@
 
 namespace App\Jobs;
 
+use ZipArchive;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use Filament\Actions\Action;
+use Throwable;
+use App\Filament\Resources\SuratTugasResource;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\SuratTugas;
 use App\Models\User;
 use App\Settings\SystemSettings;
 use Filament\Notifications\Notification;
-use Filament\Notifications\Actions\Action;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -59,8 +68,8 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
 
         $zip = null;
         if (!$isPdf) {
-            $zip = new \ZipArchive();
-            if ($zip->open($outputPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            $zip = new ZipArchive();
+            if ($zip->open($outputPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
                 $this->notifyUser('Gagal', 'Sistem gagal membuat file ZIP.', 'danger');
                 return;
             }
@@ -73,7 +82,7 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
         $chunks = array_chunk($this->recordIds, 50);
         $totalRecords = count($this->recordIds);
 
-        \Illuminate\Support\Facades\Log::info("Mulai memproses Bulk " . strtoupper($this->type) . " untuk {$totalRecords} data...");
+        Log::info("Mulai memproses Bulk " . strtoupper($this->type) . " untuk {$totalRecords} data...");
 
         foreach ($chunks as $chunkIds) {
             $records = SuratTugas::whereIn('id', $chunkIds)->with(['survey', 'user.profile'])->get();
@@ -86,7 +95,7 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
 
             $totalProcessed += $records->count();
             
-            \Illuminate\Support\Facades\Log::info("Progres Bulk: {$totalProcessed} / {$totalRecords} selesai.");
+            Log::info("Progres Bulk: {$totalProcessed} / {$totalRecords} selesai.");
 
             // Clear memory after each chunk
             unset($records);
@@ -115,9 +124,9 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
                 $command = "gs {$gsFlags} -sOutputFile={$outputPdfEscaped} {$fileArgs} 2>&1";
                 $output = shell_exec($command);
                 
-                \Illuminate\Support\Facades\Log::info("Ghostscript merge complete untuk {$outputFileName}. Output: " . ($output ?: 'OK'));
+                Log::info("Ghostscript merge complete untuk {$outputFileName}. Output: " . ($output ?: 'OK'));
             } else {
-                \Illuminate\Support\Facades\Log::warning("Tidak ada file PDF yang dihasilkan untuk dimerge.");
+                Log::warning("Tidak ada file PDF yang dihasilkan untuk dimerge.");
             }
         }
 
@@ -132,9 +141,9 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
         $user = User::find($this->userId);
         if ($user) {
             try {
-                \Illuminate\Support\Facades\Log::info("Mengirim notifikasi ke user #{$this->userId} pada DB: " . \Illuminate\Support\Facades\DB::connection()->getDatabaseName());
+                Log::info("Mengirim notifikasi ke user #{$this->userId} pada DB: " . DB::connection()->getDatabaseName());
                 
-                \Filament\Notifications\Notification::make()
+                Notification::make()
                     ->title('File Surat Tugas Siap!')
                     ->body('Proses pembuatan ' . $totalProcessed . ' file ' . strtoupper($this->type) . ' telah selesai.')
                     ->success()
@@ -147,12 +156,12 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
                     ])
                     ->sendToDatabase($user);
                     
-                \Illuminate\Support\Facades\Log::info("Notifikasi Filament berhasil dikirim ke user #{$this->userId}.");
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::error("Gagal kirim notifikasi: " . $e->getMessage());
+                Log::info("Notifikasi Filament berhasil dikirim ke user #{$this->userId}.");
+            } catch (Throwable $e) {
+                Log::error("Gagal kirim notifikasi: " . $e->getMessage());
             }
         } else {
-            \Illuminate\Support\Facades\Log::warning("User #{$this->userId} tidak ditemukan untuk notifikasi.");
+            Log::warning("User #{$this->userId} tidak ditemukan untuk notifikasi.");
         }
     }
 
@@ -179,7 +188,7 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
             $template->setValue('tempat_tugas', $record->tempat_tugas ?? '-');
             $template->setValue('tanggal_surat', $record->tanggal->translatedFormat('d F Y'));
 
-            $periodeTugas = \App\Filament\Resources\SuratTugasResource::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
+            $periodeTugas = SuratTugasResource::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
             $template->setValue('periode_tugas', $periodeTugas);
 
             $template->setValue('nama_kepala', $record->signer_name);
@@ -201,7 +210,7 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
 
     protected function processPdf($records, &$tempFiles)
     {
-        $logoBase64 = \Illuminate\Support\Facades\Cache::remember('logo_bps_static_base64', 86400, function () {
+        $logoBase64 = Cache::remember('logo_bps_static_base64', 86400, function () {
             $logoPath = public_path('images/logo_bps.png');
             if (file_exists($logoPath)) {
                 return 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
@@ -211,19 +220,19 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
         foreach ($records as $record) {
             try {
                 if (!$record->hash) {
-                    $record->update(['hash' => \Illuminate\Support\Str::random(32)]);
+                    $record->update(['hash' => Str::random(32)]);
                 }
 
                 $qrBase64 = null;
                 if ($record->status === 'approved') {
                     $verifyUrl = route('surat-tugas.verify', $record->hash);
-                    $qrSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(100)->margin(0)->generate($verifyUrl);
+                    $qrSvg = QrCode::format('svg')->size(100)->margin(0)->generate($verifyUrl);
                     $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
                 }
 
-                $periode = \App\Filament\Resources\SuratTugasResource::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
+                $periode = SuratTugasResource::formatPeriodeTugas($record->waktu_mulai, $record->waktu_selesai);
 
-                $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('surat-tugas.pdf_table_layout', [
+                $pdf = Pdf::loadView('surat-tugas.pdf_table_layout', [
                     'surat' => $record,
                     'logoBase64' => $logoBase64,
                     'qrBase64' => $qrBase64,
@@ -247,8 +256,8 @@ class GenerateBulkSuratTugasZip implements ShouldQueue
                 
                 // Clean up heavy DomPDF objects
                 unset($pdf);
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning("Skipped PDF for SuratTugas #{$record->id} ({$record->nomor_surat}): " . $e->getMessage());
+            } catch (Throwable $e) {
+                Log::warning("Skipped PDF for SuratTugas #{$record->id} ({$record->nomor_surat}): " . $e->getMessage());
                 continue;
             }
         }

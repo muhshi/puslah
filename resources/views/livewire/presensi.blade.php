@@ -317,7 +317,7 @@
 
                     <!-- Tombol Submit Presensi (Muncul jika lokasi valid) -->
                     @if ($hasLocation && ($isWithinRadius || $ruleWfa))
-                        <form wire:submit.prevent="store" class="w-full sm:w-auto">
+                        <form wire:submit="store" class="w-full sm:w-auto">
                             <button type="submit"
                                     class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl {{ $attendance?->start_time ? 'bg-bps-orange hover:bg-orange-600 text-white shadow-orange-500/20' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20' }} text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-[0.98] cursor-pointer animate-bounce-subtle">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

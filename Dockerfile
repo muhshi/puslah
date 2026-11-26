@@ -1,5 +1,5 @@
-# Image dasar FrankenPHP (PHP 8.3 + Caddy)
-FROM dunglas/frankenphp:php8.3
+# Image dasar FrankenPHP (PHP 8.4 + Caddy)
+FROM dunglas/frankenphp:php8.4
 
 ENV SERVER_NAME=":80"
 # Lokasi proyek di dalam container

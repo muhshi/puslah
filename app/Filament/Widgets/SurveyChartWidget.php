@@ -9,9 +9,9 @@ use Flowframe\Trend\TrendValue;
 
 class SurveyChartWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Grafik Jumlah Kegiatan (Tahun Ini)';
+    protected ?string $heading = 'Grafik Jumlah Survei (Tahun Ini)';
     protected static ?int $sort = 3;
-    protected static bool $isLazy = true;
+    protected static ?bool $isLazyLoaded = true;
 
     protected function getData(): array
     {
@@ -26,7 +26,7 @@ class SurveyChartWidget extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Kegiatan Dibuat',
+                    'label' => 'Survei Dibuat',
                     'data' => $data->map(fn(TrendValue $value) => $value->aggregate),
                     'borderColor' => '#6CBE45', // BPS Green
                     'backgroundColor' => 'rgba(108, 190, 69, 0.1)',

@@ -2,13 +2,30 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\TimePicker;
+use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\FileUpload;
+use Filament\Actions\Action;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Support\Enums\Width;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Actions\EditAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\BulkAction;
+use Illuminate\Database\Eloquent\Collection;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\LaporanLemburResource\Pages\ListLaporanLemburs;
+use App\Filament\Resources\LaporanLemburResource\Pages\CreateLaporanLembur;
+use App\Filament\Resources\LaporanLemburResource\Pages\EditLaporanLembur;
+use App\Filament\Resources\LaporanLemburResource\Pages\ListLaporanLemburActivities;
 use App\Filament\Resources\LaporanLemburResource\Pages;
 use App\Filament\Resources\LaporanLemburResource\RelationManagers;
 use App\Models\LaporanLembur;
-use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
-use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -18,17 +35,17 @@ class LaporanLemburResource extends Resource
 {
     protected static ?string $model = LaporanLembur::class;
 
-    protected static ?string $navigationGroup = 'Manajemen Dokumen';
+    protected static string | \UnitEnum | null $navigationGroup = 'Manajemen Dokumen';
     protected static ?string $navigationLabel = 'Laporan Lembur';
-    protected static ?string $navigationIcon = 'heroicon-o-clock';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-clock';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Pegawai & Waktu')
+        return $schema
+            ->components([
+                Section::make('Pegawai & Waktu')
                     ->schema([
-                        Forms\Components\Select::make('user_id')
+                        Select::make('user_id')
                             ->label('Pegawai')
                             ->relationship('user', 'name')
                             ->default(fn() => auth()->id())
@@ -37,18 +54,18 @@ class LaporanLemburResource extends Resource
                             ->preload()
                             ->disabled(fn() => !auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag']))
                             ->dehydrated(),
-                        Forms\Components\DatePicker::make('waktu')
+                        DatePicker::make('waktu')
                             ->label('Hari/Tanggal')
                             ->required()
                             ->default(now()),
-                        Forms\Components\TimePicker::make('mulai')
+                        TimePicker::make('mulai')
                             ->label('Waktu Mulai')
                             ->seconds(false)
                             ->native(false)
                             ->displayFormat('H:i')
                             ->required()
                             ->default(now()),
-                        Forms\Components\TimePicker::make('selesai')
+                        TimePicker::make('selesai')
                             ->label('Waktu Selesai')
                             ->seconds(false)
                             ->native(false)
@@ -57,9 +74,9 @@ class LaporanLemburResource extends Resource
                             ->default(now()->addHours(2)),
                     ])->columns(2),
 
-                Forms\Components\Section::make('Uraian Pekerjaan')
+                Section::make('Uraian Pekerjaan')
                     ->schema([
-                        Forms\Components\RichEditor::make('pekerjaan')
+                        RichEditor::make('pekerjaan')
                             ->label('Uraian Pekerjaan / Output')
                             ->required()
                             ->toolbarButtons([
@@ -78,10 +95,10 @@ class LaporanLemburResource extends Resource
                             ->columnSpanFull(),
                     ]),
 
-                Forms\Components\Section::make('Dokumentasi Foto')
+                Section::make('Dokumentasi Foto')
                     ->description('Wajib melampirkan minimal 2 foto.')
                     ->schema([
-                        Forms\Components\FileUpload::make('foto_1')
+                        FileUpload::make('foto_1')
                             ->label('Foto 1')
                             ->image()
                             ->imageResizeMode('cover')
@@ -95,7 +112,7 @@ class LaporanLemburResource extends Resource
                             ->downloadable()
                             ->openable()
                             ->hintAction(
-                                Forms\Components\Actions\Action::make('download_foto_1')
+                                Action::make('download_foto_1')
                                     ->label('Download Foto')
                                     ->icon('heroicon-o-arrow-down-tray')
                                     ->color('success')
@@ -106,7 +123,7 @@ class LaporanLemburResource extends Resource
                                     }, shouldOpenInNewTab: false)
                             )
                             ->required(),
-                        Forms\Components\FileUpload::make('foto_2')
+                        FileUpload::make('foto_2')
                             ->label('Foto 2')
                             ->image()
                             ->imageResizeMode('cover')
@@ -120,7 +137,7 @@ class LaporanLemburResource extends Resource
                             ->downloadable()
                             ->openable()
                             ->hintAction(
-                                Forms\Components\Actions\Action::make('download_foto_2')
+                                Action::make('download_foto_2')
                                     ->label('Download Foto')
                                     ->icon('heroicon-o-arrow-down-tray')
                                     ->color('success')
@@ -131,7 +148,7 @@ class LaporanLemburResource extends Resource
                                     }, shouldOpenInNewTab: false)
                             )
                             ->required(),
-                        Forms\Components\FileUpload::make('foto_3')
+                        FileUpload::make('foto_3')
                             ->label('Foto 3 (Opsional)')
                             ->image()
                             ->imageResizeMode('cover')
@@ -145,7 +162,7 @@ class LaporanLemburResource extends Resource
                             ->downloadable()
                             ->openable()
                             ->hintAction(
-                                Forms\Components\Actions\Action::make('download_foto_3')
+                                Action::make('download_foto_3')
                                     ->label('Download Foto')
                                     ->icon('heroicon-o-arrow-down-tray')
                                     ->color('success')
@@ -155,7 +172,7 @@ class LaporanLemburResource extends Resource
                                         return $path ? url('/download/file?path=' . urlencode($path)) : null;
                                     }, shouldOpenInNewTab: false)
                             ),
-                        Forms\Components\FileUpload::make('foto_4')
+                        FileUpload::make('foto_4')
                             ->label('Foto 4 (Opsional)')
                             ->image()
                             ->imageResizeMode('cover')
@@ -169,7 +186,7 @@ class LaporanLemburResource extends Resource
                             ->downloadable()
                             ->openable()
                             ->hintAction(
-                                Forms\Components\Actions\Action::make('download_foto_4')
+                                Action::make('download_foto_4')
                                     ->label('Download Foto')
                                     ->icon('heroicon-o-arrow-down-tray')
                                     ->color('success')
@@ -188,21 +205,21 @@ class LaporanLemburResource extends Resource
         return $table
             ->defaultSort('created_at', 'desc')
             ->columns([
-                Tables\Columns\TextColumn::make('user.name')
+                TextColumn::make('user.name')
                     ->label('Pegawai')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('waktu')
+                TextColumn::make('waktu')
                     ->label('Hari/Tanggal')
                     ->date('d M Y')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('mulai')
+                TextColumn::make('mulai')
                     ->time('H:i')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('selesai')
+                TextColumn::make('selesai')
                     ->time('H:i')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('status')
+                TextColumn::make('status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
                         'approved' => 'success',
@@ -210,7 +227,7 @@ class LaporanLemburResource extends Resource
                         default => 'warning',
                     })
                     ->sortable(),
-                Tables\Columns\TextColumn::make('fotos_count')
+                TextColumn::make('fotos_count')
                     ->label('Foto')
                     ->badge()
                     ->getStateUsing(function (LaporanLembur $record) {
@@ -222,28 +239,28 @@ class LaporanLemburResource extends Resource
                     })
                     ->color(fn(int $state): string => $state > 0 ? 'warning' : 'gray')
                     ->action(
-                        Tables\Actions\Action::make('columnLemburPhotos')
+                        Action::make('columnLemburPhotos')
                             ->modalHeading(fn(LaporanLembur $record) => 'Dokumentasi Foto Lembur - ' . ($record->user?->name ?? 'Pegawai'))
-                            ->modalWidth(\Filament\Support\Enums\MaxWidth::FourExtraLarge)
+                            ->modalWidth(Width::FourExtraLarge)
                             ->modalSubmitAction(false)
                             ->modalCancelActionLabel('Tutup')
                             ->modalContent(fn(LaporanLembur $record) => view('filament.resources.laporan-lembur.photos-modal', [
                                 'record' => $record,
                             ]))
                     ),
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('user')
+                SelectFilter::make('user')
                     ->relationship('user', 'name')
                     ->label('Nama Pegawai')
                     ->searchable()
                     ->preload()
                     ->visible(fn () => auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag'])),
-                Tables\Filters\SelectFilter::make('status')
+                SelectFilter::make('status')
                     ->label('Status')
                     ->options([
                         'pending' => 'Pending',
@@ -251,9 +268,9 @@ class LaporanLemburResource extends Resource
                         'rejected' => 'Rejected',
                     ]),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('approve')
+            ->recordActions([
+                EditAction::make(),
+                Action::make('approve')
                     ->label('Approve')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
@@ -261,37 +278,37 @@ class LaporanLemburResource extends Resource
                         return $record->status === 'pending' && auth()->user()->hasAnyRole(['super_admin', 'Kepala', 'Kasubag']);
                     })
                     ->action(fn(LaporanLembur $record) => $record->update(['status' => 'approved'])),
-                Tables\Actions\Action::make('word')
+                Action::make('word')
                     ->label('Word')
                     ->icon('heroicon-o-document-arrow-down')
                     ->color('info')
                     ->action(fn(LaporanLembur $record) => app(LemburExportService::class)->downloadWord($record)),
-                Tables\Actions\Action::make('photos')
+                Action::make('photos')
                     ->label('Foto')
                     ->icon('heroicon-o-camera')
                     ->color('warning')
                     ->visible(fn (LaporanLembur $record) => !empty($record->foto_1) || !empty($record->foto_2) || !empty($record->foto_3) || !empty($record->foto_4))
                     ->modalHeading(fn (LaporanLembur $record) => 'Dokumentasi Foto Lembur - ' . ($record->user?->name ?? 'Pegawai'))
-                    ->modalWidth(\Filament\Support\Enums\MaxWidth::FourExtraLarge)
+                    ->modalWidth(Width::FourExtraLarge)
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Tutup')
                     ->modalContent(fn (LaporanLembur $record) => view('filament.resources.laporan-lembur.photos-modal', [
                         'record' => $record,
                     ])),
-                Tables\Actions\Action::make('activities')
+                Action::make('activities')
                     ->label('History')
                     ->icon('heroicon-o-clock')
                     ->color('info')
                     ->url(fn ($record) => LaporanLemburResource::getUrl('activities', ['record' => $record])),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\BulkAction::make('downloadBulk')
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    BulkAction::make('downloadBulk')
                         ->label('Download Semua (ZIP)')
                         ->icon('heroicon-o-arrow-down-tray')
                         ->color('success')
-                        ->action(fn(\Illuminate\Database\Eloquent\Collection $records) => app(LemburExportService::class)->downloadBulkZip($records)),
-                    Tables\Actions\DeleteBulkAction::make(),
+                        ->action(fn(Collection $records) => app(LemburExportService::class)->downloadBulkZip($records)),
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -324,10 +341,10 @@ class LaporanLemburResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListLaporanLemburs::route('/'),
-            'create' => Pages\CreateLaporanLembur::route('/create'),
-            'edit' => Pages\EditLaporanLembur::route('/{record}/edit'),
-            'activities' => Pages\ListLaporanLemburActivities::route('/{record}/activities'),
+            'index' => ListLaporanLemburs::route('/'),
+            'create' => CreateLaporanLembur::route('/create'),
+            'edit' => EditLaporanLembur::route('/{record}/edit'),
+            'activities' => ListLaporanLemburActivities::route('/{record}/activities'),
         ];
     }
 }

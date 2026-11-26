@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Models\Survey;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use App\Models\SuratTugas;
@@ -23,7 +24,7 @@ class StatsOverviewWidget extends BaseWidget
                 ->color('warning')
                 ->url(route('filament.admin.resources.surat-tugas.index', ['tableFilters[status][value]' => 'pending'])),
 
-            Stat::make('Kegiatan Aktif', \App\Models\Survey::where('is_active', 1)
+            Stat::make('Survey Aktif', Survey::where('is_active', 1)
                 ->where(function ($query) {
                     $query->whereNull('start_date')
                         ->orWhereDate('start_date', '<=', now());
@@ -37,6 +38,7 @@ class StatsOverviewWidget extends BaseWidget
                 ->descriptionIcon('heroicon-m-clipboard-document-check')
                 ->color('success')
                 ->url(route('filament.admin.resources.surveys.index')),
+
             Stat::make('Surat Tugas Tahun Ini', SuratTugas::whereYear('created_at', now()->year)->count())
                 ->description('Total surat tugas sepanjang tahun')
                 ->descriptionIcon('heroicon-m-document-text')

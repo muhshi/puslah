@@ -2,17 +2,20 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Spatie\Activitylog\Traits\LogsActivity;
+use Illuminate\Support\Facades\DB;
 use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Survey extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -31,6 +34,26 @@ class Survey extends Model
         'is_active',
         'is_multiple',
         'is_multiclass',
+        'is_pelatihan',
+        'lokasi',
+        'kota_kegiatan',
+        'nomor_surat_undangan',
+        'tanggal_surat_undangan',
+        'rujukan_surat',
+        'link_materi',
+        'program',
+        'kegiatan_dipa',
+        'klasifikasi_ro',
+        'rincian_output',
+        'komponen',
+        'mak',
+        'biaya_transport',
+        'biaya_uang_harian',
+        'penyelenggara_user_id',
+        'ppk_user_id',
+        'bendahara_user_id',
+        'include_atk',
+        'atk_items',
     ];
 
     public function getDescriptionAttribute(): ?string
@@ -49,13 +72,32 @@ class Survey extends Model
         'is_active' => 'boolean',
         'is_multiple' => 'boolean',
         'is_multiclass' => 'boolean',
+        'is_pelatihan' => 'boolean',
+        'tanggal_surat_undangan' => 'date',
+        'biaya_transport' => 'integer',
+        'biaya_uang_harian' => 'integer',
+        'include_atk' => 'boolean',
+        'atk_items' => 'array',
     ];
 
     public function participants(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'survey_users')
             ->using(SurveyUser::class)
-            ->withPivot(['role', 'status', 'registered_at', 'score', 'notes'])
+            ->withPivot([
+                'role',
+                'survey_class_id',
+                'status',
+                'registered_at',
+                'score',
+                'notes',
+                'role_pelatihan',
+                'kelas',
+                'asal',
+                'tujuan',
+                'transport_override',
+                'uang_harian_override',
+            ])
             ->withTimestamps();
     }
 
@@ -74,23 +116,58 @@ class Survey extends Model
         return $this->hasMany(SurveyClass::class);
     }
 
+    public function penyelenggara(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'penyelenggara_user_id');
+    }
+
+    public function ppk(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'ppk_user_id');
+    }
+
+    public function bendahara(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'bendahara_user_id');
+    }
+
+    public function scopePelatihan(Builder $query): Builder
+    {
+        return $query->where('is_pelatihan', true);
+    }
+
+    public function scopeNonPelatihan(Builder $query): Builder
+    {
+        return $query->where('is_pelatihan', false);
+    }
+
+    /**
+     * Label tampil pada dropdown agar Pelatihan dan Kegiatan mudah dibedakan.
+     */
+    public function getSelectorLabelAttribute(): string
+    {
+        $prefix = $this->is_pelatihan ? '[Pelatihan]' : '[Kegiatan]';
+
+        return "{$prefix} {$this->name}";
+    }
+
     /**
      * Scope untuk survei yang memiliki aktivitas presensi dari anggotanya
      */
-    public function scopeWithAttendanceActivity(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    public function scopeWithAttendanceActivity(Builder $query): Builder
     {
         return $query->whereExists(function ($sub) {
-            $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+            $sub->select(DB::raw(1))
                 ->from('survey_users')
                 ->join('attendances', 'attendances.user_id', '=', 'survey_users.user_id')
                 ->whereColumn('survey_users.survey_id', 'surveys.id')
                 ->where(function ($q) {
                     $q->whereNull('surveys.start_date')
-                      ->orWhereRaw('DATE(attendances.created_at) >= DATE(surveys.start_date)');
+                        ->orWhereRaw('DATE(attendances.created_at) >= DATE(surveys.start_date)');
                 })
                 ->where(function ($q) {
                     $q->whereNull('surveys.end_date')
-                      ->orWhereRaw('DATE(attendances.created_at) <= DATE(surveys.end_date)');
+                        ->orWhereRaw('DATE(attendances.created_at) <= DATE(surveys.end_date)');
                 });
         });
     }

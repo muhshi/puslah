@@ -2,12 +2,12 @@
 
 namespace App\Http\Responses;
 
+use Filament\Auth\Http\Responses\Contracts\LogoutResponse;
 use Filament\Facades\Filament;
-use Filament\Http\Responses\Auth\Contracts\LogoutResponse as Responsable;
 use Illuminate\Http\RedirectResponse;
 use Livewire\Features\SupportRedirects\Redirector;
 
-class SsoLogoutResponse implements Responsable
+class SsoLogoutResponse implements LogoutResponse
 {
     public function toResponse($request): RedirectResponse|Redirector
     {

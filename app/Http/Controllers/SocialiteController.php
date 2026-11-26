@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Exception;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,7 +19,7 @@ class SocialiteController extends Controller
     {
         try {
             $socialUser = Socialite::driver('google')->user();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return redirect('/admin/login')->with('error', 'Google login failed');
         }
 

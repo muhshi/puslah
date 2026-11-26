@@ -4,9 +4,9 @@ Aplikasi internal **BPS Kabupaten Demak** berbasis Laravel + FilamentPHP untuk m
 
 ## Tech Stack
 
-- **Backend:** Laravel 11, PHP 8.2+
-- **Admin Panel:** FilamentPHP v3
-- **Database:** PostgreSQL
+- **Backend:** Laravel 13, PHP 8.4+
+- **Admin Panel:** FilamentPHP v5 (Livewire v4, Tailwind CSS v4)
+- **Database:** MySQL / PostgreSQL
 - **PDF:** barryvdh/laravel-dompdf, SimpleSoftwareIO/QrCode
 - **Settings:** spatie/laravel-settings
 - **Auth & RBAC:** filament-shield (Spatie Permission)
@@ -69,8 +69,53 @@ composer dev
   - **Preview & Ekspor Ganda (PDF & DOCX):**
     - Menambahkan `SuratUndanganPdfService`, `SuratUndanganDocxService` (PhpWord), serta preview modal PDF langsung di tabel dan download `.pdf` maupun `.docx`.
     - Menghasilkan berkas sampel verifikasi (`dummy_undangan_kasus_1.pdf/.docx` dan `dummy_undangan_kasus_2.pdf/.docx`) di `storage/app/public/`.
+- **Penghapusan Gelar Akademik Pejabat & PDF Pernyataan Riil / Tidak Kendaraan Dinas:**
+  - **Normalisasi Nama Pejabat Tanpa Gelar (`OfficialSettingsSyncService`, `SystemSettingsPage`, `PelatihanSpjDataBuilder`):** Menambahkan `stripAcademicTitles()` agar nama **Kepala BPS**, **PPK**, **Bendahara**, dan **Kasubag Umum / Penanggung Jawab** tersimpan dan tercetak bersih tanpa gelar (mis. `Khomarudin`, `Sulaeman`, `Khusnul Khotimah`), beserta dukungan `pangkat_golongan` penyelenggara pada SPJ.
+  - **2 Dokumen PDF Resmi Pelatihan (`pernyataan_riil_pelatihan.blade.php`, `pernyataan_tidak_kendaraan_pelatihan.blade.php`, `PelatihanUndanganService`, `PelatihanResource`):** Menambahkan generator PDF siap cetak untuk **Pernyataan Pengeluaran Riil (+ Lampiran Rincian Peserta)** dan **Surat Pernyataan Tidak Menggunakan Kendaraan Dinas (+ Lampiran Peserta)** lengkap dengan menu cetak di aksi baris maupun halaman edit `PelatihanResource`, serta memperbaiki pengisian kolom tanda tangan zig-zag pada `LampiranRiilSheet`.
+- **Peningkatan Ketahanan Parser Undangan Word (`PelatihanUndanganService.php`):**
+  - Menjaga subjek `hal` agar tidak menduplikasi kata *"Pelatihan"* saat nama kegiatan sudah diawali `"Pelatihan ..."`.
+  - Menambahkan penjagaan variabel template (`getVariables()`) untuk `${kelas_block}` dan `${no}` sehingga template Word kustom tanpa blok kelas berulang atau baris dinamis tetap diproses dengan aman tanpa error.
+
+### 2026-11-25
+- **Default DIPA SPKRT & Pembersihan Template Undangan Pelatihan:**
+  - **Nilai Default Anggaran DIPA (`PelatihanResource.php`, `PelatihanSpjDataBuilder.php`):** Mengisi otomatis nilai default Program (`054.01.GG`), Kegiatan (`2903`), KRO (`2903.BMA`), RO (`2903.BMA.007`), Komponen (`2903.BMA.009.051A`), dan MAK (`524113`).
+  - **Penghapusan Field `link_materi` & Dokumentasi Placeholder (`template_undangan_pelatihan.docx`, `PelatihanUndanganService.php`, `SystemSettingsPage.php`):** Menghapus input *Tautan Materi / Bahan Tayang* dan baris tautannya dari template Word bawaan (sekaligus memperbaiki escaping XML `&amp;` di jadwal bawaan), serta menampilkan daftar lengkap variabel `${...}` pada pengaturan upload template undangan.
+- **Sentralisasi Pejabat Pelatihan (Kasubag Umum, PPK, Bendahara) & Full-Span DIPA:**
+  - **Penambahan Kasubag Umum / Penanggung Jawab di Pengaturan Sistem (`SystemSettings`, `SystemSettingsPage`, `OfficialSettingsSyncService`):** Menambahkan dropdown & sinkronisasi profil pegawai untuk **Kasubag Umum / Penanggung Jawab** (`kasubag_umum_user_id`, `kasubag_umum_name`, `kasubag_umum_nip`, `kasubag_umum_title`) di tab *Pejabat & Persuratan*.
+  - **Penyederhanaan Form Pelatihan (`PelatihanResource`, `PelatihanSpjDataBuilder`):** Menghapus input manual PPK, Bendahara, dan Penanggung Jawab dari form Pelatihan karena seluruh pejabat SPJ kini diambil langsung dari *Pengaturan Sistem*, sekaligus mengubah section **Anggaran DIPA & Translok** dan **Perlengkapan ATK (Opsional)** menjadi `columnSpanFull()`.
+- **Integrasi Pelatihan ke Surat Tugas (`SuratTugasResource`, `SuratTugasFormFactory`, `PelatihanResource`):**
+  - Menyatukan pemanggilan **Kegiatan & Pelatihan** di form pembuatan/edit Surat Tugas satuan, kolektif (`CreateBulkSuratTugas`), nomor terblokir (`ManageBlockedNumbers` & `SuratTugasFormFactory`), import Excel (`ListSuratTugas`), serta filter tabel dengan label prefix `[Pelatihan]` / `[Kegiatan]` (`Survey::$selector_label`).
+  - Menambahkan auto-fill `tempat_tugas` dari lokasi pelatihan, tampilan informasi peran & kelas pelatihan pada dropdown peserta, pesan bentrok tanggal yang kontekstual (`pelatihan` vs `survei`), serta tombol pintasan **"Buat Surat Tugas"** di tabel dan halaman edit `PelatihanResource` dengan pre-fill parameter `?survey_id=`.
+- **Modul Manajemen Pelatihan & Paket Dokumen SPJ:**
+  - **Menu Terpisah `Kegiatan` & `Pelatihan` (`PelatihanResource.php`, `SurveyResource.php`):** Menambahkan resource **Pelatihan** di bawah grup *Manajemen Kegiatan* yang berbagi tabel `surveys` via flag `is_pelatihan`, lengkap dengan manajemen kelas dinamis (`pelatihan_classes`), opsi ATK (`pelatihan_has_atk`), serta metadata surat & waktu pelaksanaan.
+  - **Peserta, Role & Kelas (`ParticipantsRelationManager.php`):** Menambahkan kolom `role` (*Peserta*, *Panitia*, *Pengajar*, *Narasumber*) dan `class` di `survey_users` dengan smart default saat mass-assign peserta, bulk action ubah kelas & ubah role, serta fitur **Download Template Excel (`PelatihanKelasTemplateExport`) & Import Kelas/Role (`PelatihanKelasImport`)**.
+  - **Integrasi Data Bank & NIK SIPETRA (`SipetraUserDataService.php`):** Menarik batch data rekening (`nama_bank`, `nomor_rekening`, `nama_pemilik_rekening`), `nik`, dan `alamat` dari koneksi `sipetra` secara aman tanpa query *N+1*.
+  - **Generator Undangan Word, Daftar Hadir PDF & Paket SPJ Excel (`PelatihanSpjDataBuilder`, `PelatihanUndanganService`, `PelatihanSpjExport`):** Menghasilkan file `.docx` Undangan + Daftar Kelas (`template_undangan_pelatihan.docx`), Quick-Print Daftar Hadir PDF (`daftar_hadir_pelatihan.blade.php`), dan workbook `.xlsx` Paket SPJ multi-sheet (8 sheet standar atau 9 sheet dengan Pengadaan ATK) beserta test `SipetraUserDataServiceTest`, `PelatihanDocumentsTest`, dan `PelatihanUiTest`.
+  - **Proteksi Database Pengujian (`phpunit.xml`, `tests/TestCase.php`):** Menambahkan `force="true"` pada konfigurasi environment PHPUnit dan guard di `TestCase::createApplication()` agar suite pengujian selalu berjalan pada `sqlite :memory:` dan menolak berjalan jika koneksi mengarah ke database produksi.
+- **Modernisasi Pengaturan Pejabat, Kompatibilitas Shield v4 & Perbaikan UX:**
+  - **Pengaturan Sistem 4 Tab (`SystemSettingsPage.php`):** Merombak layout pengaturan menjadi 4 tab penuh (`Pejabat & Persuratan`, `Template Dokumen`, `Kantor & Presensi`, `Keamanan & AI`), mengganti input manual Kepala BPS dan PPK menjadi dropdown pegawai internal non-Mitra (`OfficialSettingsSyncService`) serta menambahkan konfigurasi **Bendahara Pengeluaran** dengan sinkronisasi otomatis ke properti lama.
+  - **Perapian Menu & Upload File:** Mengubah label grup dan menu `Survei` → **Kegiatan** (`Manajemen Kegiatan`), menyembunyikan 3 field template/TTD lama yang tidak dipakai dari UI, menambahkan `->disk('public')` + status hint pada upload template, serta mengganti `MapPicker` dengan `MapWithSearch` agar peta Leaflet tampil mulus di dalam tab.
+  - **Sinkronisasi Filament Shield v4:** Mengaktifkan `define_via_gate` untuk `super_admin`, mengecualikan `DailyActivityResource` & `SharedWorkReportResource`, meregenerasi 15 policy ke format PascalCase v4 (`shield:generate`), serta menambahkan migrasi non-destructive translasi permission v3 → v4 untuk seluruh role (`FilamentShieldV4CompatibilityTest`).
+  - **UX Modal Wadah KIPAPP (`DailyActivityResource.php`):** Mengganti multi-select dropdown pada modal *Atur Wadah KIPAPP* menjadi `CheckboxList` dengan pencarian & scroll internal agar tidak menutupi tombol simpan.
+- **Upgrade Stack ke Laravel 13, Filament v5 & Livewire v4 (`PHP 8.4`):**
+  - **Framework & Runtime:** Upgrade bertahap `laravel/framework` (`v11` → `v12` → `v13.44.1`), `livewire/livewire` (`v4.4.10`), `pestphp/pest` (`v4.7.8`), `spatie/laravel-backup` (`v10.5.0`), `barryvdh/laravel-dompdf` (`v3.1.2`), `flowframe/laravel-trend` (`v0.5.0`), serta update `Dockerfile` ke `dunglas/frankenphp:php8.4`.
+  - **Filament v5 & Plugin:** Upgrade `filament/filament` (`v3` → `v4` → `v5.12.0`), `bezhansalleh/filament-shield` (`v4.3.1`), `saade/filament-fullcalendar` (`v4.0.1`), `pxlrbt/filament-excel` (`v3.6.1`), `pxlrbt/filament-activity-log` (`v2.2.0`), dan `dotswan/filament-map-picker` (`v2.3.3`). Menghapus paket tidak terpakai (`humaidem/filament-map-picker`, `joshembling/image-optimizer`) serta menjaga migrasi Pulse lama tetap no-op.
+  - **Custom Theme Tailwind v4 & Perbaikan Kompatibilitas:** Menambahkan `resources/css/filament/admin/theme.css` (`->viteTheme(...)`) agar seluruh halaman custom (`/admin/login`, `Survey Saya`, widget `Monitor Nomor Surat`, komponen Livewire) ter-styling penuh termasuk hasil build `public/build/` untuk deploy tanpa Node di container. Memperbaiki kalkulasi tanggal Carbon 3 (`diffIn*`), middleware `PreventRequestForgery`, normalisasi host `APP_URL` di `SsoController::redirect()` untuk SSO SIPETRA lokal, serta menyembunyikan menu `Manajemen Kantor Cabang` (`OfficeResource`, `ScheduleResource`, `ShiftResource`) dari sidebar tanpa menghapus model/fitur presensi & dokumen.
+  - **Automated Smoke Tests:** Menambahkan `tests/Feature/FilamentUpgradeSmokeTest.php` untuk memverifikasi route panel, halaman, resource, dan widget Livewire/Filament.
+
+### 2026-11-24
+- **Redesain Landing Page Publik DINAMIT (`welcome.blade.php`)**:
+  - **Struktur Baru Berbasis Token CSS:** Mengganti layout lama (hero terpusat + kartu generik + strip statistik gelap) dengan hero split yang menampilkan cuplikan produk nyata, bagian layanan, alur penggunaan, akses, dan bantuan. Seluruh warna, tipografi, radius, dan bayangan memakai CSS variable semantik dengan identitas BPS (biru `#005596`, oranye sebagai aksen).
+  - **Cuplikan Produk Interaktif:** Menambahkan tab **Surat Tugas / Bukti Dukung / Sertifikat** pada mockup hero dengan dukungan keyboard (ARIA tab pattern), serta menu seluler yang dapat dibuka tanpa JS framework.
+  - **Data Statistik Langsung dari Database:** Mengganti angka statis dengan `User::count()`, `SuratTugas::count()`, `LaporanPerjalananDinas::count()`, dan `Survey::count()` (total survei/kegiatan, bukan hanya yang aktif) dengan format ribuan Indonesia.
+  - **Akses & Aksesibilitas:** Tombol menyesuaikan status login (`@auth`/`@else`) menuju dashboard atau halaman login Filament, logo memakai `asset()`, tahun footer dinamis, skip link, fokus keyboard terlihat, kontras teks minimum 4.5:1, dan `prefers-reduced-motion`.
 
 ### 2026-11-23
+- **Konsolidasi SSOT Profil & Password Terpusat ke SIPETRA**:
+  - **Peniadaan Halaman Profil Lokal DINAMIT (`ProfileMe`):** Menghapus halaman dan view profil lokal (`ProfileMe.php` & `profile-me.blade.php`) serta pendaftarannya di sidebar navigasi panel untuk mencegah duplikasi antarmuka profil dan inkonsistensi data.
+  - **Satu Pintu Profil pada Menu Pengguna:** Memperbarui menu profil di dropdown avatar (`userMenuItems`) agar langsung mengarah ke halaman akun SIPETRA (`https://bpsdemak.com/account`) sebagai Single Source of Truth (SSOT), didampingi tombol sinkronisasi profil 1-klik.
+  - **Redirect Otomatis Rute Legacy:** Menambahkan redirect otomatis dari `/admin/profile-me` langsung menuju akun SIPETRA bagi pengguna yang mengakses tautan atau bookmark lama.
+  - **Integrasi Pintasan SIPETRA di CRUD Profil Pengguna:** Menambahkan tombol pintasan *"SIPETRA"* pada tabel dan form edit `UserProfileResource` agar admin dapat langsung beralih ke pengelolaan terpusat SIPETRA.
 - **Fitur Multi-Kelas (Multiclass), Pembagian Kelas Peserta & Surat Tugas Kolektif Terlampir**:
   - **Toggle Multi-Kelas pada Kegiatan (`SurveyResource`):** Menambahkan toggle `is_multiclass` (*Kegiatan Multi-Kelas*) pada form kegiatan dan kolom toggle interaktif langsung di tabel daftar kegiatan. Mendukung duplikasi kegiatan multi-kelas secara utuh beserta kelas-kelasnya pada modal copy.
   - **Manajemen Kelas & Tab Dinamis (`ParticipantsRelationManager`):**
@@ -91,35 +136,40 @@ composer dev
     - Desain halaman lampiran berfokus penuh (*full content*) pada tabel peserta tanpa duplikasi blok tanda tangan, dengan arsitektur modular multi-lampiran (`$lampirans = [...]`) yang siap menampung Lampiran 2, 3, dst (misal: Jadwal Kegiatan) di masa mendatang.
     - Jika kegiatan memiliki multi-kelas, lampiran otomatis dikelompokkan per sub-header nama kelas masing-masing, **dengan tetap menampilkan nama kelasnya meskipun peserta yang dipilih hanya berasal dari 1 kelas**.
 - **Tombol Proper Case Universal Seluruh Form Admin (`withProperCase`)**:
-  - **Macro Reaktif Filament (`AppServiceProvider`):** Mendaftarkan macro `withProperCase()` pada komponen `TextInput` dan `Textarea` Filament menggunakan concern `Macroable`. Macro menyisipkan suffix action berikon kilau (*heroicon-m-sparkles*) abu-abu yang secara cerdas menormalisasi spasi berulang dan mengonversi teks menjadi Title/Proper Case menggunakan `mb_convert_case($val, MB_CASE_TITLE, 'UTF-8')`.
-  - **Penerapan Luas pada Seluruh Resource:** Diterapkan secara menyeluruh pada semua input teks deskriptif di panel admin:
-    - *Manajemen Kegiatan (`SurveyResource`):* Nama Kegiatan, Tujuan Kegiatan, Dasar Surat (baik pada form utama maupun modal salin/copy kegiatan).
-    - *Peserta Kegiatan (`SurveyUserResource` & `ParticipantsRelationManager`):* Nama Lengkap dan Catatan Peserta.
-    - *Surat Tugas (`SuratTugasResource` & `CreateBulkSuratTugas`):* Jabatan, Keperluan, Tempat Tugas, Alat Angkutan, Maksud Perjalanan, Tempat Berangkat, dan Tempat Tujuan.
-    - *Laporan Perjalanan Dinas (`LaporanPerjalananDinasResource`):* Tujuan/Keperluan, Nama Pejabat yang Dikunjungi, Desa/Lokasi Pejabat, Poin Lapangan AI, dan Keterangan Foto.
-    - *Bukti Dukung Harian (`DailyActivityResource`):* Tujuan/Keperluan, Lokasi/Instansi, dan Nama Pejabat pada modal agregasi LPD.
-    - *Manajemen Pengguna & Profil (`UserResource`, `UserProfileResource`, & `ProfileMe`):* Nama Pengguna, Nama Lengkap, Panggilan, Tempat Lahir, Alamat Domisili, Jabatan, Pangkat/Golongan, dan Status Kepegawaian.
-    - *Kantor Cabang (`OfficeResource`):* Nama Kantor.
-    - *Pengaturan Sistem (`SystemSettingsPage`):* Nama Kantor Default, Kota Penetapan Sertifikat, Nama Pejabat Penandatangan, Jabatan Penandatangan, Nama PPK, dan Jabatan PPK.
-  - **Proteksi Field Sensitif:** Tetap mempertahankan format asli tanpa tombol Proper Case untuk field yang bersifat *case-sensitive*, numerik, atau kode sistem (NIP, email, password, nomor surat/sppd, koordinat GPS, kode MAK, prefix surat, dan path berkas/API keys).
+  - **Macro Reaktif Filament (`AppServiceProvider`):** Mendaftarkan macro `withProperCase()` pada komponen `TextInput` dan `Textarea` Filament v5 menggunakan concern `Macroable` untuk menormalisasi spasi dan mengonversi teks menjadi Proper Case.
+
+### 2026-11-21
+- **UI/UX Polish Tombol Login SIPETRA SSO**:
+  - **Penyempurnaan Padding & Kontainer Badge Logo BPS (`login.blade.php`):** Membungkus logo BPS ke dalam container badge putih ber-radius (`rounded-lg bg-white p-1.5 shadow-sm`) agar logo tidak mepet/terpotong di latar tombol biru BPS (`#005596`), memberikan tampilan yang lebih rapi, proporsional, dan estetik.
+- **Transisi Login Tunggal SIPETRA SSO (Single Sign-On)**:
+  - **Halaman Login Satu Pintu SIPETRA (`App\Filament\Pages\Auth\Login` & `login.blade.php`):** Menyederhanakan proses autentikasi menjadi metode tunggal berbasis SIPETRA SSO dengan antarmuka bersih dan tombol heroik ber-branding BPS Demak, menggantikan tampilan form ganda (email/password dan SSO).
+  - **Opsi Darurat / Pengembang (Emergency Fallback):** Menyediakan collapsible toggle halus untuk form login email & password standar yang tersembunyi secara default (dapat diakses via toggle atau parameter `?fallback=1`) saat server SIPETRA offline atau untuk keperluan pengujian lokal.
+  - **Penonaktifan Registrasi Publik & Pembersihan Route Auth Legacy:** Menghapus `->registration()` pada `AdminPanelProvider` dan membersihkan rute legacy Google Socialite di `routes/web.php` guna mencegah pembuatan akun lokal tanpa relasi SSO.
+  - **Penyempurnaan Penanganan Error SSO (`SsoController.php`):** Memperbaiki penanganan callback saat terjadi error atau pembatalan otorisasi dengan redirect langsung ke login panel beserta notifikasi flash error yang informatif.
+  - **Harmonisasi Halaman Profil Pengguna (`ProfileMe.php`):** Menambahkan penjelasan pada form ganti kata sandi bahwa akun dikelola terpusat via SIPETRA SSO dan pergantian sandi lokal hanya ditujukan untuk akses darurat.
 
 ### 2026-11-19
+- **Perbaikan Urutan Default Tabel Bukti Dukung Harian (Terbaru di Paling Atas)**:
+  - **Default Grouping Direction Descending (`ListDailyActivities.php` & `DailyActivityResource.php`):** Memperbaiki perilaku grouping tabel Filament yang sebelumnya secara default mengurutkan tanggal secara *ascending* (tanggal paling lawas di atas).
+  - **Automated Regression Test:** Menambahkan test `test_activities_across_different_dates_are_ordered_with_newest_date_first` pada `DailyActivityDateRangeTest.php`.
 - **Pembaruan Menyeluruh Manajemen Kegiatan & Peserta (Rebranding dari Survei)**:
-  - **Unifikasi Terminologi (Survei → Kegiatan):** Mengubah seluruh istilah *"Manajemen Survei"*, *"Survei"*, dan *"Peserta Survei"* menjadi *"Manajemen Kegiatan"*, *"Kegiatan"*, dan *"Peserta Kegiatan"* pada sidebar panel Filament, header form, breadcrumbs, modal copy kegiatan, widget statistik dashboard, kalender penugasan, dan rekapitulasi presensi.
-  - **Penggantian Deskripsi menjadi Tujuan (`tujuan`):** Mengganti kolom dan label `description` menjadi `tujuan` (*Tujuan Kegiatan*) dengan mutator/accessor *backward-compatible* pada model `Survey`.
-  - **Tombol Proper Case ("Propering") Interaktif:** Menyediakan tombol aksi suffix (*Proper Case* berikon ✨) pada field Nama Kegiatan dan Tujuan Kegiatan untuk mengubah teks menjadi format kapital setiap awal kata secara fleksibel tanpa memerlukan aturan akronim yang kaku.
-  - **Pencegahan Duplikat Nama Toleran Spasi:** Menerapkan validasi cerdas anti-duplikasi pada input nama kegiatan yang menormalisasi spasi berulang/berlebih (*multiple spaces*) dan huruf besar-kecil (*case-insensitive*), mencegah entri serupa di kemudian hari tanpa mengotori atau mengubah riwayat data lama di database.
-  - **Atribut Jenis Kegiatan & Metode:** Menambahkan field `jenis_kegiatan` (`pelatihan`, `non-pelatihan`) dan `metode` (`daring`, `luring`, `blended`) pada skema database, form, tabel admin dengan badge visual, serta kartu kegiatan di halaman *Kegiatan Saya*.
-  - **Manajemen Role Peserta & Pemetaan Dinamis ke Sertifikat:**
-    - Menambahkan kolom `role` pada tabel `survey_users` dengan opsi bawaan `['PML', 'PCL', 'Penanggung Jawab', 'Panitia', 'Peserta']` serta opsi penambahan peran kustom.
-    - **Pemetaan Otomatis Singkatan ke Nama Resmi di Sertifikat (`kegiatan_roles_map`):** Mengintegrasikan konfigurasi Key-Value di Pengaturan Sistem (`SystemSettingsPage`) yang memetakan kode/singkatan peran ke nama lengkap resminya (misal: `PML` → *"Petugas Pengawas Lapangan"*, `PCL` → *"Petugas Pencacah Lapangan"*).
-    - Penambahan peran baru kini menanyakan singkatan dan nama lengkap resmi, otomatis tersimpan ke pengaturan sistem, dan saat sertifikat dicetak akan menggunakan nama resmi tanpa perlu sentuh kode pemrograman lagi (*100% No-Code Maintenance*).
-    - Pada form peserta, dropdown otomatis menampilkan label informatif format `KODE (Nama Lengkap Resmi)`.
-    - Pada aksi *Tambah Peserta (Banyak)*, admin dapat langsung menetapkan peran/role serentak untuk seluruh peserta yang dipilih.
-  - **Pembersihan Data Orphan dari Kegiatan yang Dihapus:**
-    - Menerapkan scope query `whereHas('survey')` pada `SurveyUserResource` dan halaman *Kegiatan Saya* (`MySurveys`), sehingga peserta dari kegiatan yang telah di-*soft-delete* tidak lagi muncul dengan kolom kegiatan bernilai kosong/null.
+  - **Unifikasi Terminologi (Survei → Kegiatan):** Mengubah seluruh istilah *"Manajemen Survei"*, *"Survei"*, dan *"Peserta Survei"* menjadi *"Manajemen Kegiatan"*, *"Kegiatan"*, dan *"Peserta Kegiatan"*.
+  - **Penggantian Deskripsi menjadi Tujuan (`tujuan`):** Mengganti kolom `description` menjadi `tujuan` (*Tujuan Kegiatan*) dengan mutator/accessor *backward-compatible* pada model `Survey`.
+  - **Pencegahan Duplikat Nama Toleran Spasi:** Menerapkan validasi anti-duplikasi pada input nama kegiatan yang menormalisasi spasi berulang dan huruf besar-kecil.
+  - **Atribut Jenis Kegiatan & Metode & Role Peserta:** Menambahkan field `jenis_kegiatan`, `metode`, dan `role` pada tabel `survey_users` dengan pemetaan otomatis `kegiatan_roles_map` di Pengaturan Sistem.
+  - **Pembersihan Data Orphan dari Kegiatan yang Dihapus:** Menerapkan scope query `whereHas('survey')` pada `SurveyUserResource` dan halaman *Kegiatan Saya* (`MySurveys`).
+
+### 2026-11-17
+- **Hierarchical Sorting & Kolom Waktu Input Bukti Dukung Harian (`DailyActivityResource.php`)**:
+  - **Sorting Bertingkat (Hierarchical Sorting):** Mengonfigurasi `orderQueryUsing` pada `Group` agar urutan data bertingkat (`activity_date DESC`, `created_at ASC`).
+  - **Kolom Waktu Input Fleksibel (`created_at`):** Menambahkan kolom `created_at` (*"Waktu Input"*) berformat `d M Y, H:i`.
+- **Table Grouping per Tanggal & Pengisian Rentang Tanggal Multi-Hari (Web & Telegram)** & **Perbaikan Pemilih Titik di Peta (Map Picker)**.
 
 ### 2026-11-12
+- **Monitor Nomor SPPD, Perbaikan Edit Nomor SPPD, & Pembaruan Desain Card Monitor Nomor**:
+  - **Monitor Nomor Terlewat SPPD (`Sppd.php`, `SkippedNumbersInfoWidget.php`):** Menambahkan deteksi nomor urut SPPD yang terlewat/belum terpakai per bulan (`Sppd::getSkippedNumbers()` & `Sppd::getSkippedNumbersByMonth()`) serta tab switcher **Surat Tugas | SPPD** dengan badge jumlah nomor terlewat di widget `Monitor Nomor Surat`. Sekaligus memperbaiki pengurutan bulan agar selalu kronologis (`Januari` s/d `Desember`) pada Surat Tugas dan SPPD.
+  - **Perbaikan Bug Edit Nomor SPPD (`SuratTugasResource.php`, `EditSuratTugas.php`):** Menghapus `dehydrated(false)` pada toggle `is_sppd`, menjaga agar perubahan tanggal saat edit tidak menimpa `nomor_urut_sppd` / `nomor_sppd` yang sudah ada dengan nomor urut terakhir, mengganti `nomor_urut_sppd` ke `live(onBlur: true)`, serta menyinkronkan `nomor_sppd` dan `nomor_urut_sppd` saat menyimpan di `EditSuratTugas::mutateFormDataBeforeSave()`.
+  - **Redesain Card Monitor Nomor (`skipped-numbers-info.blade.php`):** Mempercantik tampilan card *Belum Terpakai / Terlewat* dengan chip rentang nomor berformat monospace yang rapi serta card *Nomor Di-block (Khusus / Reserved)* dengan badge `whitespace-nowrap` (mencegah teks wrapping), kotak rentang nomor yang jelas, dan header aksi `Kelola Semua` full-width.
 - **Sinkronisasi Foto Profil / Avatar dari SIPETRA SSO**:
   - **Auto-Download & Cache Avatar (`SsoController.php`):** Menambahkan mapping foto profil/avatar dari response OAuth2 SIPETRA (`$ssoUser->getAvatar()`, `$rawData['avatar']`, dll) pada proses callback SSO. Sistem secara otomatis mengunduh file gambar ke storage disk `public` Puslah (`avatars/sipetra_{user_id}_{timestamp}.{ext}`) dengan fallback URL yang aman, serta membersihkan file avatar lama saat sinkronisasi ulang.
   - **Dukungan Native Avatar Panel Filament (`User.php`):** Mengimplementasikan kontrak `Filament\Models\Contracts\HasAvatar` dan method `getFilamentAvatarUrl()` pada model `User`, sehingga foto profil yang tersinkron langsung tampil resmi di pojok kanan atas panel Filament serta form Profil Saya (`ProfileMe`).

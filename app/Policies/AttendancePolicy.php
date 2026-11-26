@@ -1,108 +1,75 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Policies;
 
-use App\Models\User;
+use Illuminate\Foundation\Auth\User as AuthUser;
 use App\Models\Attendance;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class AttendancePolicy
 {
     use HandlesAuthorization;
-
-    /**
-     * Determine whether the user can view any models.
-     */
-    public function viewAny(User $user): bool
+    
+    public function viewAny(AuthUser $authUser): bool
     {
-        return $user->can('view_any_attendance');
+        return $authUser->can('ViewAny:Attendance');
     }
 
-    /**
-     * Determine whether the user can view the model.
-     */
-    public function view(User $user, Attendance $attendance): bool
+    public function view(AuthUser $authUser, Attendance $attendance): bool
     {
-        return $user->can('view_attendance');
+        return $authUser->can('View:Attendance');
     }
 
-    /**
-     * Determine whether the user can create models.
-     */
-    public function create(User $user): bool
+    public function create(AuthUser $authUser): bool
     {
-        return $user->can('create_attendance');
+        return $authUser->can('Create:Attendance');
     }
 
-    /**
-     * Determine whether the user can update the model.
-     */
-    public function update(User $user, Attendance $attendance): bool
+    public function update(AuthUser $authUser, Attendance $attendance): bool
     {
-        return $user->can('update_attendance');
+        return $authUser->can('Update:Attendance');
     }
 
-    /**
-     * Determine whether the user can delete the model.
-     */
-    public function delete(User $user, Attendance $attendance): bool
+    public function delete(AuthUser $authUser, Attendance $attendance): bool
     {
-        return $user->can('delete_attendance');
+        return $authUser->can('Delete:Attendance');
     }
 
-    /**
-     * Determine whether the user can bulk delete.
-     */
-    public function deleteAny(User $user): bool
+    public function deleteAny(AuthUser $authUser): bool
     {
-        return $user->can('delete_any_attendance');
+        return $authUser->can('DeleteAny:Attendance');
     }
 
-    /**
-     * Determine whether the user can permanently delete.
-     */
-    public function forceDelete(User $user, Attendance $attendance): bool
+    public function restore(AuthUser $authUser, Attendance $attendance): bool
     {
-        return $user->can('{{ ForceDelete }}');
+        return $authUser->can('Restore:Attendance');
     }
 
-    /**
-     * Determine whether the user can permanently bulk delete.
-     */
-    public function forceDeleteAny(User $user): bool
+    public function forceDelete(AuthUser $authUser, Attendance $attendance): bool
     {
-        return $user->can('{{ ForceDeleteAny }}');
+        return $authUser->can('ForceDelete:Attendance');
     }
 
-    /**
-     * Determine whether the user can restore.
-     */
-    public function restore(User $user, Attendance $attendance): bool
+    public function forceDeleteAny(AuthUser $authUser): bool
     {
-        return $user->can('restore_attendance');
+        return $authUser->can('ForceDeleteAny:Attendance');
     }
 
-    /**
-     * Determine whether the user can bulk restore.
-     */
-    public function restoreAny(User $user): bool
+    public function restoreAny(AuthUser $authUser): bool
     {
-        return $user->can('restore_any_attendance');
+        return $authUser->can('RestoreAny:Attendance');
     }
 
-    /**
-     * Determine whether the user can replicate.
-     */
-    public function replicate(User $user, Attendance $attendance): bool
+    public function replicate(AuthUser $authUser, Attendance $attendance): bool
     {
-        return $user->can('{{ Replicate }}');
+        return $authUser->can('Replicate:Attendance');
     }
 
-    /**
-     * Determine whether the user can reorder.
-     */
-    public function reorder(User $user): bool
+    public function reorder(AuthUser $authUser): bool
     {
-        return $user->can('{{ Reorder }}');
+        return $authUser->can('Reorder:Attendance');
     }
+
 }

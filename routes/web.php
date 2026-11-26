@@ -14,8 +14,10 @@ Route::get('/login', function () {
     return redirect('admin/login');
 })->name('login');
 
-Route::get('/admin/auth/google', [\App\Http\Controllers\SocialiteController::class, 'redirectToGoogle'])->name('auth.google');
-Route::get('/admin/auth/google/callback', [\App\Http\Controllers\SocialiteController::class, 'handleGoogleCallback'])->name('auth.google.callback');
+Route::get('/admin/profile-me', function () {
+    $sipetraUrl = rtrim(config('services.sipetra.base_url', 'https://bpsdemak.com'), '/') . '/account';
+    return redirect()->away($sipetraUrl);
+})->middleware(['auth']);
 
 Route::get('/auth/sipetra/redirect', [\App\Http\Controllers\Auth\SsoController::class, 'redirect'])->name('sipetra.login');
 Route::get('/auth/sipetra/callback', [\App\Http\Controllers\Auth\SsoController::class, 'callback']);

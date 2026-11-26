@@ -129,7 +129,7 @@
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-700/60">
                 @forelse($recap['items'] as $index => $item)
-                    <tr class="hover:bg-gray-50/70 dark:hover:bg-gray-700/30 transition-colors {{ $item['status'] === 'belum_datang' ? 'bg-rose-50/30 dark:bg-rose-950/20' : ($item['status'] === 'belum_pulang' ? 'bg-amber-50/30 dark:bg-amber-950/20' : '') }}">
+                    <tr wire:key="unattended-recap-{{ $item['id'] }}" class="hover:bg-gray-50/70 dark:hover:bg-gray-700/30 transition-colors {{ $item['status'] === 'belum_datang' ? 'bg-rose-50/30 dark:bg-rose-950/20' : ($item['status'] === 'belum_pulang' ? 'bg-amber-50/30 dark:bg-amber-950/20' : '') }}">
                         <td class="py-2.5 px-3 text-center text-xs text-gray-500 dark:text-gray-400">
                             {{ $index + 1 }}
                         </td>

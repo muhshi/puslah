@@ -2,6 +2,13 @@
 
 namespace App\Telegram\Handlers;
 
+use Throwable;
+use App\Services\PhotoWatermarkService;
+use SergiX44\Nutgram\Telegram\Properties\ChatAction;
+use App\Settings\SystemSettings;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+use App\Models\SharedWorkReport;
 use App\Models\DailyActivity;
 use App\Models\DailyActivityAttachment;
 use App\Models\SuratTugas;
@@ -10,7 +17,9 @@ use App\Models\User;
 use App\Services\DailyActivityAiService;
 use App\Services\ImageExifExtractorService;
 use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use SergiX44\Nutgram\Nutgram;
@@ -355,15 +364,73 @@ class DailyActivityTelegramHandler
                 'user_name' => $user->name,
                 'tanggal' => $activityDate->translatedFormat('d F Y'),
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning('AI Polish direct error: ' . $e->getMessage());
+        }
+
+        // Cek apakah pesan menyebutkan rentang tanggal multi-hari (misal: "13 s.d. 16 oktober", "13-16 okt")
+        $dateRange = $this->resolveActivityDateRange($rawText);
+        if ($dateRange) {
+            $period = CarbonPeriod::create($dateRange['start'], $dateRange['end']);
+            $createdDates = [];
+
+            DB::transaction(function () use ($period, $user, $rawText, $formalContent, $activeSt, $sharedReports, &$createdDates) {
+                foreach ($period as $dt) {
+                    if ($dt->isSaturday() || $dt->isSunday()) {
+                        continue;
+                    }
+
+                    $act = DailyActivity::create([
+                        'user_id' => $user->id,
+                        'surat_tugas_id' => $activeSt?->id,
+                        'shared_work_report_id' => $sharedReports->first()?->id,
+                        'activity_date' => $dt->toDateString(),
+                        'raw_content' => $rawText,
+                        'ai_formal_content' => $formalContent,
+                        'final_content' => $formalContent,
+                        'status' => 'submitted',
+                        'source' => 'telegram',
+                    ]);
+
+                    if ($sharedReports->isNotEmpty()) {
+                        $act->sharedWorkReports()->sync($sharedReports->pluck('id'));
+                    }
+
+                    $createdDates[] = $dt->translatedFormat('l, d M Y');
+                }
+            });
+
+            if (empty($createdDates)) {
+                $bot->sendMessage(
+                    text: "⚠️ *Rentang tanggal yang dimasukkan hanya mencakup hari libur (Sabtu/Minggu).*\nTidak ada kegiatan yang dicatat.",
+                    chat_id: $bot->chatId(),
+                    parse_mode: 'Markdown'
+                );
+                return;
+            }
+
+            $listStr = implode("\n• ", $createdDates);
+            $stBadge = $activeSt ? "\n🔖 *Terkait ST:* No. " . ($activeSt->nomor_surat_tugas ?: 'DRAFT') : "";
+            $wadahBadge = $sharedReports->isNotEmpty() ? "\n📁 *Wadah KIPAPP:* " . $sharedReports->pluck('title')->implode(', ') : "";
+
+            $bot->sendMessage(
+                text: "🗓️ *Laporan Rentang Multi-Hari Berhasil Dibuat!* 🚀\n\n" .
+                "📝 *Catatan:* \"{$rawText}\"\n" .
+                "✨ *Narasi AI:* \"{$formalContent}\"" .
+                $stBadge . $wadahBadge . "\n\n" .
+                "📅 *Tercatat untuk " . count($createdDates) . " hari kerja:*\n• {$listStr}\n\n" .
+                "✅ _Semua kegiatan berhasil dicatat di Puslah._",
+                chat_id: $bot->chatId(),
+                parse_mode: 'Markdown'
+            );
+            return;
         }
 
         // Cek jika ada foto/dokumen yang baru dikirim tanpa caption dalam 90 detik terakhir
         $recentActId = Cache::get("tg_recent_activity_{$user->id}");
         if ($recentActId) {
             $candidate = DailyActivity::find($recentActId);
-            if ($candidate && $candidate->created_at->diffInSeconds(now()) <= 90 && ($candidate->raw_content === 'Dokumentasi kegiatan' || str_starts_with($candidate->raw_content, 'Dokumen kegiatan:'))) {
+            if ($candidate && $candidate->created_at->diffInSeconds(now(), true) <= 90 && ($candidate->raw_content === 'Dokumentasi kegiatan' || str_starts_with($candidate->raw_content, 'Dokumen kegiatan:'))) {
                 $candidate->raw_content = $rawText;
                 $candidate->ai_formal_content = $formalContent;
                 $candidate->final_content = $formalContent;
@@ -378,11 +445,14 @@ class DailyActivityTelegramHandler
                 Cache::put("tg_recent_activity_{$user->id}", $candidate->id, 90);
 
                 $totalAtt = $candidate->attachments()->count();
+                $dateBadge = "\n📅 *Tanggal Kegiatan:* " . $candidate->activity_date->translatedFormat('l, d F Y') . (!$candidate->activity_date->isToday() ? " _(Backdate)_" : "");
+
                 $bot->sendMessage(
                     text: "📝 *Catatan Berhasil Ditambahkan ke Bukti Dukung!* 🚀\n\n" .
                     "📝 *Catatan:* \"{$rawText}\"\n" .
                     "✨ *Narasi AI:* \"{$formalContent}\"\n" .
-                    "🖼️ *Lampiran Terkait:* {$totalAtt} berkas\n\n" .
+                    "🖼️ *Lampiran Terkait:* {$totalAtt} berkas" .
+                    $dateBadge . "\n\n" .
                     "✅ _Kegiatan diperbarui otomatis di Puslah._",
                     chat_id: $bot->chatId(),
                     parse_mode: 'Markdown'
@@ -483,7 +553,7 @@ class DailyActivityTelegramHandler
         $downloaded = false;
         try {
             $downloaded = $bot->downloadFile($file, $fullPath);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning("Nutgram downloadFile error: " . $e->getMessage());
         }
 
@@ -521,7 +591,7 @@ class DailyActivityTelegramHandler
             try {
                 $albumLock = Cache::lock("tg_album_{$bot->chatId()}_{$mediaGroupId}", 30);
                 $albumLock->block(15);
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 Log::warning('Album lock warning: ' . $e->getMessage());
             }
         }
@@ -549,7 +619,7 @@ class DailyActivityTelegramHandler
                 $recentActId = Cache::get("tg_recent_activity_{$user->id}");
                 if ($recentActId) {
                     $candidate = DailyActivity::find($recentActId);
-                    if ($candidate && $candidate->created_at->diffInSeconds(now()) <= 90) {
+                    if ($candidate && $candidate->created_at->diffInSeconds(now(), true) <= 90) {
                         if (empty($caption) || $candidate->raw_content === 'Dokumentasi kegiatan' || str_starts_with($candidate->raw_content, 'Dokumen kegiatan:')) {
                             $activity = $candidate;
                         }
@@ -578,7 +648,7 @@ class DailyActivityTelegramHandler
                         ]);
                         $activity->ai_formal_content = $formalContent;
                         $activity->final_content = $formalContent;
-                    } catch (\Throwable $e) {
+                    } catch (Throwable $e) {
                         Log::warning('AI Polish album caption error: ' . $e->getMessage());
                         $activity->ai_formal_content = $caption;
                         $activity->final_content = $caption;
@@ -612,7 +682,7 @@ class DailyActivityTelegramHandler
                             'user_name' => $user->name,
                             'tanggal' => $activityDate->translatedFormat('d F Y'),
                         ]);
-                    } catch (\Throwable $e) {
+                    } catch (Throwable $e) {
                         Log::warning('AI Polish photo caption error: ' . $e->getMessage());
                     }
                 }
@@ -693,7 +763,7 @@ class DailyActivityTelegramHandler
             $watermarkSuccess = false;
             if ($shouldStamp) {
                 try {
-                    $watermarkService = app(\App\Services\PhotoWatermarkService::class);
+                    $watermarkService = app(PhotoWatermarkService::class);
                     $watermarkSuccess = $watermarkService->applyWatermark($fullPath, [
                         'latitude' => $latitude,
                         'longitude' => $longitude,
@@ -706,7 +776,7 @@ class DailyActivityTelegramHandler
                         clearstatcache(true, $fullPath);
                         $fileSize = filesize($fullPath);
                     }
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     Log::warning('Gagal membakar watermark foto telegram: ' . $e->getMessage());
                 }
             }
@@ -798,7 +868,7 @@ class DailyActivityTelegramHandler
                             parse_mode: 'Markdown'
                         );
                         $edited = true;
-                    } catch (\Throwable $e) {
+                    } catch (Throwable $e) {
                         Log::info("Nutgram editMessageText album note: " . $e->getMessage());
                     }
                 }
@@ -833,7 +903,7 @@ class DailyActivityTelegramHandler
             if ($albumLock) {
                 try {
                     $albumLock->release();
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     // Abaikan release exception
                 }
             }
@@ -883,7 +953,7 @@ class DailyActivityTelegramHandler
         $downloaded = false;
         try {
             $downloaded = $bot->downloadFile($file, $fullPath);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning("Nutgram download document error: " . $e->getMessage());
         }
 
@@ -915,7 +985,7 @@ class DailyActivityTelegramHandler
             try {
                 $albumLock = Cache::lock("tg_album_{$bot->chatId()}_{$mediaGroupId}", 30);
                 $albumLock->block(15);
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 Log::warning('Album document lock warning: ' . $e->getMessage());
             }
         }
@@ -944,7 +1014,7 @@ class DailyActivityTelegramHandler
                 $recentActId = Cache::get("tg_recent_activity_{$user->id}");
                 if ($recentActId) {
                     $candidate = DailyActivity::find($recentActId);
-                    if ($candidate && $candidate->created_at->diffInSeconds(now()) <= 90) {
+                    if ($candidate && $candidate->created_at->diffInSeconds(now(), true) <= 90) {
                         // Jika dokumen tidak ada caption ATAU candidate masih berstatus 'Dokumentasi kegiatan',
                         // gabungkan ke kegiatan yang sama!
                         if (empty($caption) || $candidate->raw_content === 'Dokumentasi kegiatan' || str_starts_with($candidate->raw_content, 'Dokumen kegiatan:')) {
@@ -970,7 +1040,7 @@ class DailyActivityTelegramHandler
                         ]);
                         $activity->ai_formal_content = $formalContent;
                         $activity->final_content = $formalContent;
-                    } catch (\Throwable $e) {
+                    } catch (Throwable $e) {
                         Log::warning('AI Polish doc caption error: ' . $e->getMessage());
                         $activity->ai_formal_content = $caption;
                         $activity->final_content = $caption;
@@ -1002,7 +1072,7 @@ class DailyActivityTelegramHandler
                             'user_name' => $user->name,
                             'tanggal' => $activityDate->translatedFormat('d F Y'),
                         ]);
-                    } catch (\Throwable $e) {
+                    } catch (Throwable $e) {
                         Log::warning('AI Polish doc error: ' . $e->getMessage());
                     }
                 }
@@ -1109,7 +1179,7 @@ class DailyActivityTelegramHandler
             if ($albumLock) {
                 try {
                     $albumLock->release();
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     // Abaikan release exception
                 }
             }
@@ -1128,7 +1198,7 @@ class DailyActivityTelegramHandler
         $voice = $msg->voice ?? $msg->audio;
         if (!$voice || empty($voice->file_id)) return;
 
-        $bot->sendChatAction(\SergiX44\Nutgram\Telegram\Properties\ChatAction::RECORD_VOICE);
+        $bot->sendChatAction(ChatAction::RECORD_VOICE);
 
         // Download file suara dari Telegram
         $file = $bot->getFile($voice->file_id);
@@ -1143,7 +1213,7 @@ class DailyActivityTelegramHandler
         $downloaded = false;
         try {
             $downloaded = $bot->downloadFile($file, $tempPath);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning("Voice downloadFile error: " . $e->getMessage());
         }
 
@@ -1221,7 +1291,7 @@ class DailyActivityTelegramHandler
                 chat_id: $bot->chatId(),
                 parse_mode: 'Markdown'
             );
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error("Voice processing error: " . $e->getMessage());
             $bot->sendMessage(
                 text: "⚠️ Terjadi kendala saat memproses rekaman suara dengan AI: " . $e->getMessage() . "\n\nSilakan kirimkan laporan dalam bentuk teks atau coba lagi.",
@@ -1275,7 +1345,7 @@ class DailyActivityTelegramHandler
                 chat_id: $bot->chatId(),
                 parse_mode: 'Markdown'
             );
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error('AI Polish Error via Telegram: ' . $e->getMessage());
             $bot->sendMessage(
                 text: "⚠️ Gagal memoles narasi dengan AI: " . $e->getMessage(),
@@ -1343,7 +1413,7 @@ class DailyActivityTelegramHandler
     public function getOfficeCoordinates(): array
     {
         try {
-            $settings = app(\App\Settings\SystemSettings::class);
+            $settings = app(SystemSettings::class);
             if (!empty($settings->default_office_lat) && !empty($settings->default_office_lng) && $settings->default_office_lat != 0) {
                 return [
                     'latitude' => round((float) $settings->default_office_lat, 8),
@@ -1351,7 +1421,7 @@ class DailyActivityTelegramHandler
                     'name' => $settings->default_office_name ?? 'BPS Kabupaten Demak',
                 ];
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // ignore
         }
 
@@ -1365,7 +1435,7 @@ class DailyActivityTelegramHandler
     /**
      * Deteksi dan kaitkan satu atau beberapa wadah KIPAPP berdasarkan semua hashtag (#wilkerstat, #inovasi, dsb).
      */
-    protected function resolveSharedWorkReports(User $user, string $text): \Illuminate\Support\Collection
+    protected function resolveSharedWorkReports(User $user, string $text): Collection
     {
         if (empty($text)) {
             return collect();
@@ -1374,10 +1444,10 @@ class DailyActivityTelegramHandler
         $reports = collect();
         if (preg_match_all('/#([a-zA-Z0-9_\-]+)/', $text, $matches)) {
             foreach ($matches[1] as $tag) {
-                $slug = \Illuminate\Support\Str::slug($tag);
+                $slug = Str::slug($tag);
                 if (empty($slug)) continue;
 
-                $found = \App\Models\SharedWorkReport::where('user_id', $user->id)
+                $found = SharedWorkReport::where('user_id', $user->id)
                     ->where('is_active', true)
                     ->where(function ($q) use ($slug) {
                         $q->where('tag_slug', $slug)
@@ -1398,16 +1468,89 @@ class DailyActivityTelegramHandler
     /**
      * Backward-compatible helper untuk mengambil wadah pertama.
      */
-    protected function resolveSharedWorkReport(User $user, string $text): ?\App\Models\SharedWorkReport
+    protected function resolveSharedWorkReport(User $user, string $text): ?SharedWorkReport
     {
         return $this->resolveSharedWorkReports($user, $text)->first();
     }
 
     /**
+     * Deteksi apakah teks menyebutkan rentang tanggal (misal: "13 s.d. 16 oktober", "13-16 okt", "28 okt s.d. 2 nov")
+     * @return array{start: Carbon, end: Carbon}|null
+     */
+    public function resolveActivityDateRange(string $text): ?array
+    {
+        $lower = strtolower(trim($text));
+
+        $monthMap = [
+            'januari' => 1, 'jan' => 1, 'january' => 1,
+            'februari' => 2, 'feb' => 2, 'february' => 2,
+            'maret' => 3, 'mar' => 3, 'march' => 3,
+            'april' => 4, 'apr' => 4,
+            'mei' => 5, 'may' => 5,
+            'juni' => 6, 'jun' => 6, 'june' => 6,
+            'juli' => 7, 'jul' => 7, 'july' => 7,
+            'agustus' => 8, 'agu' => 8, 'ags' => 8, 'agust' => 8, 'august' => 8, 'aug' => 8,
+            'september' => 9, 'sep' => 9, 'sept' => 9,
+            'oktober' => 10, 'okt' => 10, 'october' => 10, 'oct' => 10,
+            'november' => 11, 'nov' => 11, 'nopember' => 11, 'nop' => 11,
+            'desember' => 12, 'des' => 12, 'december' => 12, 'dec' => 12,
+        ];
+        $monthPattern = implode('|', array_keys($monthMap));
+
+        // 1. Rentang beda bulan: "28 oktober s.d. 2 november 2026", "28 okt - 2 nov"
+        if (preg_match('/(?:tgl\.?|tanggal)?\s*(\d{1,2})[\s\-\.\/]+(' . $monthPattern . ')(?:[\s\-\.\/]+(\d{4}))?\s*(?:-|s\/d|s\.d\.|sampai|sd|dan|&)\s*(?:tgl\.?|tanggal)?\s*(\d{1,2})[\s\-\.\/]+(' . $monthPattern . ')(?:[\s\-\.\/]+(\d{4}))?/i', $lower, $m)) {
+            $startDay = (int) $m[1];
+            $startMonth = $monthMap[strtolower($m[2])] ?? null;
+            $startYear = !empty($m[3]) ? (int) $m[3] : (!empty($m[6]) ? (int) $m[6] : (int) date('Y'));
+
+            $endDay = (int) $m[4];
+            $endMonth = $monthMap[strtolower($m[5])] ?? null;
+            $endYear = !empty($m[6]) ? (int) $m[6] : (int) date('Y');
+
+            if ($startMonth && $endMonth && checkdate($startMonth, $startDay, $startYear) && checkdate($endMonth, $endDay, $endYear)) {
+                $start = Carbon::createFromDate($startYear, $startMonth, $startDay)->startOfDay();
+                $end = Carbon::createFromDate($endYear, $endMonth, $endDay)->startOfDay();
+
+                if ($start->gt($end)) {
+                    [$start, $end] = [$end, $start];
+                }
+
+                $diffDays = (int) round($start->diffInDays($end, true));
+                if ($diffDays >= 1 && $diffDays <= 60) {
+                    return ['start' => $start, 'end' => $end];
+                }
+            }
+        }
+
+        // 2. Rentang satu bulan: "13 s.d. 16 oktober 2026", "13 - 16 oktober", "13 dan 14 okt", "13 sd 16 okt"
+        if (preg_match('/(?:tgl\.?|tanggal)?\s*(\d{1,2})\s*(?:-|s\/d|s\.d\.|sampai|sd|dan|&)\s*(?:tgl\.?|tanggal)?\s*(\d{1,2})[\s\-\.\/]+(' . $monthPattern . ')(?:[\s\-\.\/]+(\d{4}))?/i', $lower, $m)) {
+            $startDay = (int) $m[1];
+            $endDay = (int) $m[2];
+            $month = $monthMap[strtolower($m[3])] ?? null;
+            $year = !empty($m[4]) ? (int) $m[4] : (int) date('Y');
+
+            if ($month && checkdate($month, $startDay, $year) && checkdate($month, $endDay, $year)) {
+                $start = Carbon::createFromDate($year, $month, min($startDay, $endDay))->startOfDay();
+                $end = Carbon::createFromDate($year, $month, max($startDay, $endDay))->startOfDay();
+
+                $diffDays = (int) round($start->diffInDays($end, true));
+                if ($diffDays >= 1 && $diffDays <= 31) {
+                    return ['start' => $start, 'end' => $end];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Parse tanggal kegiatan secara cerdas (Natural Date Parsing):
      * - Mendukung kata relatif: "kemarin", "kemarin lusa", "X hari yang lalu"
-     * - Mendukung pola nama bulan Indo: "28 Oktober", "tgl 5 mei 2026", "28 okt"
+     * - Mendukung rentang tanggal: "13 dan 14 oktober", "13-14 okt"
+     * - Mendukung pola nama bulan Indo/Inggris: "28 Oktober", "tgl 5 mei 2026", "28 okt", "13-okt"
      * - Mendukung pola numerik: "28/10", "28-10-2026", "28.10.2026"
+     * - Mendukung pola hanya tanggal: "tgl 13", "tanggal 14"
+     * - Deteksi AI pintar dengan Gemini jika format bahasa alami belum tercover regex
      * - Fallback ke metadata EXIF foto jika foto diambil di hari lampau
      * - Default ke Carbon::today()
      */
@@ -1433,24 +1576,36 @@ class DailyActivityTelegramHandler
             }
         }
 
-        // 4. Pola Nama Bulan Indonesia
+        // 4. Pola Nama Bulan Indonesia & Inggris (Lengkap dan Singkatan)
         $monthMap = [
-            'januari' => 1, 'jan' => 1,
-            'februari' => 2, 'feb' => 2,
-            'maret' => 3, 'mar' => 3,
+            'januari' => 1, 'jan' => 1, 'january' => 1,
+            'februari' => 2, 'feb' => 2, 'february' => 2,
+            'maret' => 3, 'mar' => 3, 'march' => 3,
             'april' => 4, 'apr' => 4,
-            'mei' => 5,
-            'juni' => 6, 'jun' => 6,
-            'juli' => 7, 'jul' => 7,
-            'agustus' => 8, 'agu' => 8, 'ags' => 8,
-            'september' => 9, 'sep' => 9,
-            'oktober' => 10, 'okt' => 10,
-            'november' => 11, 'nov' => 11,
-            'desember' => 12, 'des' => 12,
+            'mei' => 5, 'may' => 5,
+            'juni' => 6, 'jun' => 6, 'june' => 6,
+            'juli' => 7, 'jul' => 7, 'july' => 7,
+            'agustus' => 8, 'agu' => 8, 'ags' => 8, 'agust' => 8, 'august' => 8, 'aug' => 8,
+            'september' => 9, 'sep' => 9, 'sept' => 9,
+            'oktober' => 10, 'okt' => 10, 'october' => 10, 'oct' => 10,
+            'november' => 11, 'nov' => 11, 'nopember' => 11, 'nop' => 11,
+            'desember' => 12, 'des' => 12, 'december' => 12, 'dec' => 12,
         ];
         $monthPattern = implode('|', array_keys($monthMap));
 
-        if (preg_match('/(?:tgl|tanggal)?\s*(\d{1,2})\s+(' . $monthPattern . ')(?:\s+(\d{4}))?/i', $lower, $m)) {
+        // 4a. Pola Rentang Tanggal: "13 dan 14 oktober", "13 - 14 oktober", "13 s/d 14 okt"
+        if (preg_match('/(?:tgl\.?|tanggal)?\s*(\d{1,2})\s*(?:-|s\/d|sampai|dan|&)\s*(\d{1,2})[\s\-\.\/]+(' . $monthPattern . ')(?:[\s\-\.\/]+(\d{4}))?/i', $lower, $m)) {
+            $day = (int) $m[1];
+            $month = $monthMap[strtolower($m[3])] ?? null;
+            $year = !empty($m[4]) ? (int) $m[4] : (int) date('Y');
+
+            if ($month && checkdate($month, $day, $year)) {
+                return Carbon::createFromDate($year, $month, $day)->startOfDay();
+            }
+        }
+
+        // 4b. Pola Tanggal + Bulan: "13 oktober", "tgl 13 okt", "13-okt", "13.oktober.2026", "tanggal: 14 oktober"
+        if (preg_match('/(?:tgl\.?|tanggal)?\s*(\d{1,2})[\s\-\.\/]+(' . $monthPattern . ')(?:[\s\-\.\/]+(\d{4}))?/i', $lower, $m)) {
             $day = (int) $m[1];
             $month = $monthMap[strtolower($m[2])] ?? null;
             $year = !empty($m[3]) ? (int) $m[3] : (int) date('Y');
@@ -1460,8 +1615,19 @@ class DailyActivityTelegramHandler
             }
         }
 
+        // 4c. Pola Terbalik: "oktober 13", "bulan oktober tgl 13"
+        if (preg_match('/(' . $monthPattern . ')[\s\-\.\/]+(?:tgl\.?|tanggal)?\s*(\d{1,2})(?:[\s\-\.\/]+(\d{4}))?/i', $lower, $m)) {
+            $day = (int) $m[2];
+            $month = $monthMap[strtolower($m[1])] ?? null;
+            $year = !empty($m[3]) ? (int) $m[3] : (int) date('Y');
+
+            if ($month && checkdate($month, $day, $year)) {
+                return Carbon::createFromDate($year, $month, $day)->startOfDay();
+            }
+        }
+
         // 5. Pola Numerik: "28/10", "28/10/2026", "28-10-2026", "28.10.2026"
-        if (preg_match('/(?:tgl|tanggal)?\s*(\d{1,2})[\/\-\.](\d{1,2})(?:[\/\-\.](\d{2,4}))?/i', $lower, $m)) {
+        if (preg_match('/(?:tgl\.?|tanggal)?\s*(\d{1,2})[\/\-\.](\d{1,2})(?:[\/\-\.](\d{2,4}))?/i', $lower, $m)) {
             $day = (int) $m[1];
             $month = (int) $m[2];
             $rawYear = !empty($m[3]) ? (int) $m[3] : (int) date('Y');
@@ -1472,7 +1638,30 @@ class DailyActivityTelegramHandler
             }
         }
 
-        // 6. Fallback EXIF metadata foto jika diambil sebelum hari ini (backdate foto asli)
+        // 5b. Pola Hanya Tanggal: "tgl 13", "tanggal 14"
+        if (preg_match('/\b(?:tgl\.?|tanggal)\s*(\d{1,2})\b/i', $lower, $m)) {
+            $day = (int) $m[1];
+            if ($day >= 1 && $day <= 31) {
+                $today = Carbon::today();
+                $targetMonth = ($day <= $today->day) ? $today->month : $today->copy()->subMonth()->month;
+                $targetYear = ($day <= $today->day) ? $today->year : $today->copy()->subMonth()->year;
+                if (checkdate($targetMonth, $day, $targetYear)) {
+                    return Carbon::createFromDate($targetYear, $targetMonth, $day)->startOfDay();
+                }
+            }
+        }
+
+        // 6. Coba deteksi cerdas dengan Gemini AI jika teks memiliki indikasi penyebutan waktu
+        if (!empty($lower) && preg_match('/(?:tgl|tanggal|bulan|hari|kemarin|lalu|senin|selasa|rabu|kamis|jumat|sabtu|minggu|\d{1,2})/i', $lower)) {
+            try {
+                $aiDate = app(DailyActivityAiService::class)->extractDateFromText($text);
+                if ($aiDate instanceof Carbon) {
+                    return $aiDate;
+                }
+            } catch (Throwable $e) {}
+        }
+
+        // 7. Fallback EXIF metadata foto jika diambil sebelum hari ini (backdate foto asli)
         if ($exifCapturedAt instanceof Carbon && $exifCapturedAt->lt(Carbon::today())) {
             return $exifCapturedAt->copy()->startOfDay();
         }

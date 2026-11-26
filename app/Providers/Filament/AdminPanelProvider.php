@@ -2,8 +2,10 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\Login;
+use Filament\Widgets\AccountWidget;
+use Filament\Widgets\FilamentInfoWidget;
 use App\Filament\Pages\Dashboard;
-use App\Filament\Pages\ProfileMe;
 use App\Filament\Widgets\CalendarWidget;
 use App\Http\Middleware\EnsureProfileComplete;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
@@ -19,7 +21,7 @@ use Filament\Support\Colors\Color;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
-use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
@@ -34,19 +36,15 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            ->viteTheme('resources/css/filament/admin/theme.css')
+            ->login(Login::class)
             ->databaseNotifications()
             ->authGuard('web')
-            ->registration()
             ->userMenuItems([
-                MenuItem::make()
-                    ->label('Profile')
-                    ->url(fn(): string => ProfileMe::getUrl())
-                    ->icon('heroicon-o-user-circle'),
-                MenuItem::make()
+                'profile' => MenuItem::make()
                     ->label('Profil & Password (SIPETRA)')
                     ->url(fn (): string => rtrim(config('services.sipetra.base_url', 'https://bpsdemak.com'), '/') . '/account')
-                    ->icon('heroicon-o-shield-check')
+                    ->icon('heroicon-o-user-circle')
                     ->openUrlInNewTab(),
                 MenuItem::make()
                     ->label('Sinkronkan Profil dari SIPETRA')
@@ -56,27 +54,26 @@ class AdminPanelProvider extends PanelProvider
                 'logout' => MenuItem::make()->label('Log out'),
             ])
             ->colors([
-                'primary' => Color::hex('#005596'), // BPS Blue
+                'primary' => Color::generateV3Palette('#005596'), // BPS Blue
                 'gray' => Color::Slate,
-                'info' => Color::hex('#03A9F4'),    // Light Blue
-                'success' => Color::hex('#6CBE45'), // BPS Green
-                'warning' => Color::hex('#F2911B'), // BPS Orange
+                'info' => Color::generateV3Palette('#03A9F4'),    // Light Blue
+                'success' => Color::generateV3Palette('#6CBE45'), // BPS Green
+                'warning' => Color::generateV3Palette('#F2911B'), // BPS Orange
                 'danger' => Color::Red,
             ])
             ->font('Inter')
             ->brandName('DINAMIT')
             ->brandLogoHeight('3rem')
-            ->favicon(asset('images/logo_bps.png'))
+            ->favicon(fn () => asset('images/logo_bps.png'))
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
                 Dashboard::class,
-                ProfileMe::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
-                Widgets\AccountWidget::class,
-                Widgets\FilamentInfoWidget::class,
+                AccountWidget::class,
+                FilamentInfoWidget::class,
                 CalendarWidget::class,
             ])
             ->middleware([
@@ -85,7 +82,7 @@ class AdminPanelProvider extends PanelProvider
                 StartSession::class,
                 AuthenticateSession::class,
                 ShareErrorsFromSession::class,
-                VerifyCsrfToken::class,
+                PreventRequestForgery::class,
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
@@ -94,6 +91,7 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
+            ->renderHook('panels::head.end', fn (): string => '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />')
             ->renderHook('panels::body.end', fn() => view('filament.fallback-scripts'))
             ->plugins([
                 FilamentShieldPlugin::make()
@@ -113,7 +111,6 @@ class AdminPanelProvider extends PanelProvider
                         'sm' => 2,
                     ]),
                 FilamentFullCalendarPlugin::make(),
-            ])
-            ->renderHook('panels::auth.login.form.after', fn() => view('auth.sso-button'));
+            ]);
     }
 }

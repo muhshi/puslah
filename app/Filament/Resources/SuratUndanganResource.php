@@ -8,44 +8,73 @@ use App\Models\SuratUndangan;
 use App\Models\Survey;
 use App\Models\User;
 use Carbon\Carbon;
-use Filament\Forms;
-use Filament\Forms\Components\Actions\Action;
-use Filament\Forms\Form;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
+use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
-use Filament\Tables;
+use Filament\Schemas\Components\Actions as SchemaActions;
+use Filament\Schemas\Components\Fieldset;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\HtmlString;
 
 class SuratUndanganResource extends Resource
 {
     protected static ?string $model = SuratUndangan::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-envelope';
-    protected static ?string $navigationGroup = 'Manajemen Dokumen';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-envelope';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Manajemen Dokumen';
+
     protected static ?string $navigationLabel = 'Surat Undangan';
+
     protected static ?string $modelLabel = 'Surat Undangan';
+
     protected static ?string $pluralModelLabel = 'Surat Undangan';
+
     protected static ?int $navigationSort = 2;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
         $defaultSigner = SuratUndangan::getDefaultSigner();
 
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Informasi Surat & Kop')
+        return $schema
+            ->components([
+                Section::make('Informasi Surat & Kop')
                     ->schema([
-                        Forms\Components\Select::make('kop_surat_id')
+                        Select::make('kop_surat_id')
                             ->label('Kop Surat')
                             ->options(fn () => KopSurat::active()->pluck('name', 'id'))
                             ->default(fn () => KopSurat::getDefaultKop()?->id)
                             ->required()
                             ->searchable(),
 
-                        Forms\Components\Select::make('survey_id')
-                            ->label('Kegiatan / Survei')
-                            ->relationship('survey', 'name')
+                        Select::make('survey_id')
+                            ->label('Kegiatan / Pelatihan')
+                            ->relationship(
+                                'survey',
+                                'name',
+                                fn (Builder $query) => $query->orderByDesc('is_active')->orderByDesc('created_at')
+                            )
+                            ->getOptionLabelFromRecordUsing(fn (Survey $record) => $record->selector_label)
                             ->searchable()
                             ->preload()
                             ->live()
@@ -62,19 +91,22 @@ class SuratUndanganResource extends Resource
                                             : ', bersama ini disampaikan beberapa hal sebagai berikut:';
                                         $set('paragraf_pembuka', "Menindaklanjuti {$dasar}{$suffix}");
                                         $set('agenda_acara', $survey->name);
+                                        if ($survey->lokasi) {
+                                            $set('agenda_tempat', $survey->lokasi);
+                                        }
                                         $set('peserta_ids', $survey->surveyUsers->pluck('user_id')->toArray());
                                     }
                                 }
                             }),
 
-                        Forms\Components\TextInput::make('nomor_surat')
+                        TextInput::make('nomor_surat')
                             ->label('Nomor Surat Undangan (Manual)')
                             ->placeholder('Contoh: B-012/33210/VS.220/2026')
                             ->required()
                             ->maxLength(255)
                             ->helperText('Diinput manual karena penomoran surat undangan berbeda dengan surat tugas.'),
 
-                        Forms\Components\Select::make('sifat')
+                        Select::make('sifat')
                             ->label('Sifat Surat')
                             ->options([
                                 'Biasa'   => 'Biasa',
@@ -85,25 +117,25 @@ class SuratUndanganResource extends Resource
                             ->default('Biasa')
                             ->required(),
 
-                        Forms\Components\TextInput::make('lampiran_teks')
+                        TextInput::make('lampiran_teks')
                             ->label('Lampiran')
                             ->default('1 (satu) set')
                             ->required()
                             ->maxLength(255),
 
-                        Forms\Components\DatePicker::make('tanggal_surat')
+                        DatePicker::make('tanggal_surat')
                             ->label('Tanggal Surat')
                             ->default(now())
                             ->required(),
 
-                        Forms\Components\TextInput::make('hal')
+                        TextInput::make('hal')
                             ->label('Hal / Perihal')
                             ->placeholder('Nama kegiatan / perihal undangan')
                             ->required()
                             ->maxLength(255)
                             ->columnSpanFull(),
 
-                        Forms\Components\Textarea::make('yth_teks')
+                        Textarea::make('yth_teks')
                             ->label('Tujuan Surat (Yth.)')
                             ->rows(4)
                             ->default("Yth. Peserta [Nama Kegiatan]\nBPS Kabupaten Demak\ndi\n     tempat")
@@ -111,16 +143,16 @@ class SuratUndanganResource extends Resource
                             ->columnSpanFull(),
                     ])->columns(2),
 
-                Forms\Components\Section::make('Isi Surat Undangan (Template & Word Processor)')
+                Section::make('Isi Surat Undangan (Template & Word Processor)')
                     ->schema([
-                        Forms\Components\Textarea::make('paragraf_pembuka')
+                        Textarea::make('paragraf_pembuka')
                             ->label('Paragraf Pembuka')
                             ->rows(2)
                             ->default('Menindaklanjuti [dasar surat], dengan ini kami mengharapkan kehadiran Saudara pada:')
                             ->helperText('Otomatis terisi saat memilih kegiatan; dapat disesuaikan langsung.')
                             ->columnSpanFull(),
 
-                        Forms\Components\Radio::make('tipe_isi')
+                        Radio::make('tipe_isi')
                             ->label('Pilihan Format Isi Undangan')
                             ->options([
                                 'opsi_1' => 'Opsi 1: Format Agenda / Rapat (Hari, Tanggal, Waktu, Tempat, Acara, Pakaian, Ket.)',
@@ -147,33 +179,33 @@ class SuratUndanganResource extends Resource
                             })
                             ->columnSpanFull(),
 
-                        Forms\Components\Fieldset::make('Generator Isian Opsi 1 (Agenda / Rapat)')
+                        Fieldset::make('Generator Isian Opsi 1 (Agenda / Rapat)')
                             ->schema([
-                                Forms\Components\TextInput::make('agenda_hari')
+                                TextInput::make('agenda_hari')
                                     ->label('Hari')
                                     ->placeholder('Contoh: Senin - Rabu')
                                     ->dehydrated(false),
-                                Forms\Components\TextInput::make('agenda_tanggal')
+                                TextInput::make('agenda_tanggal')
                                     ->label('Tanggal')
                                     ->placeholder('Contoh: 10 - 12 Juni 2026')
                                     ->dehydrated(false),
-                                Forms\Components\TextInput::make('agenda_waktu')
+                                TextInput::make('agenda_waktu')
                                     ->label('Waktu')
                                     ->placeholder('Contoh: Pukul 08.00 s.d. 16.00 WIB')
                                     ->dehydrated(false),
-                                Forms\Components\TextInput::make('agenda_tempat')
+                                TextInput::make('agenda_tempat')
                                     ->label('Tempat')
                                     ->placeholder('Contoh: Aula BPS Kabupaten Demak / Hotel ...')
                                     ->dehydrated(false),
-                                Forms\Components\TextInput::make('agenda_acara')
+                                TextInput::make('agenda_acara')
                                     ->label('Acara')
                                     ->placeholder('Contoh: Rapat Koordinasi / Pelatihan Petugas')
                                     ->dehydrated(false),
-                                Forms\Components\TextInput::make('agenda_pakaian')
+                                TextInput::make('agenda_pakaian')
                                     ->label('Pakaian')
                                     ->placeholder('Contoh: Batik / PSH / Bebas Rapi')
                                     ->dehydrated(false),
-                                Forms\Components\TextInput::make('agenda_keterangan')
+                                TextInput::make('agenda_keterangan')
                                     ->label('Keterangan')
                                     ->placeholder('Contoh: Hadir 15 menit sebelum acara dimulai')
                                     ->dehydrated(false)
@@ -183,7 +215,7 @@ class SuratUndanganResource extends Resource
                             ->visible(fn (Get $get) => $get('tipe_isi') === 'opsi_1')
                             ->columnSpanFull(),
 
-                        Forms\Components\Actions::make([
+                        SchemaActions::make([
                             Action::make('terapkan_template')
                                 ->label('Generate / Terapkan Template ke Editor Surat')
                                 ->icon('heroicon-o-sparkles')
@@ -210,12 +242,12 @@ class SuratUndanganResource extends Resource
                                         $set('isi_surat_html', $html);
                                     } elseif ($tipe === 'opsi_2') {
                                         $kegiatan = e($get('hal') ?: 'Kegiatan');
-                                        $html = "<ol>"
+                                        $html = '<ol>'
                                             . "<li>Seluruh peserta wajib mengikuti rangkaian {$kegiatan} sesuai jadwal terlampir (Lampiran 2).</li>"
-                                            . "<li>Peserta yang ditetapkan (Lampiran 1) wajib melakukan registrasi dan konfirmasi kehadiran sebelum pelaksanaan.</li>"
-                                            . "<li>Ketentuan pakaian selama kegiatan berlangsung adalah pakaian rapi/batik/PSH sesuai hari pelaksanaan.</li>"
-                                            . "<li>Materi dan tautan koordinasi dapat diakses melalui grup WhatsApp resmi kegiatan.</li>"
-                                            . "</ol>";
+                                            . '<li>Peserta yang ditetapkan (Lampiran 1) wajib melakukan registrasi dan konfirmasi kehadiran sebelum pelaksanaan.</li>'
+                                            . '<li>Ketentuan pakaian selama kegiatan berlangsung adalah pakaian rapi/batik/PSH sesuai hari pelaksanaan.</li>'
+                                            . '<li>Materi dan tautan koordinasi dapat diakses melalui grup WhatsApp resmi kegiatan.</li>'
+                                            . '</ol>';
                                         $set('isi_surat_html', $html);
                                     }
                                 }),
@@ -223,7 +255,7 @@ class SuratUndanganResource extends Resource
                             ->visible(fn (Get $get) => in_array($get('tipe_isi'), ['opsi_1', 'opsi_2']))
                             ->columnSpanFull(),
 
-                        Forms\Components\RichEditor::make('isi_surat_html')
+                        RichEditor::make('isi_surat_html')
                             ->label('Editor Isi Surat (Dapat Diedit Bebas)')
                             ->toolbarButtons([
                                 'bold',
@@ -239,14 +271,14 @@ class SuratUndanganResource extends Resource
                             ->columnSpanFull(),
                     ]),
 
-                Forms\Components\Section::make('Lampiran 1: Daftar Peserta')
+                Section::make('Lampiran 1: Daftar Peserta')
                     ->schema([
-                        Forms\Components\Toggle::make('sertakan_lampiran_peserta')
+                        Toggle::make('sertakan_lampiran_peserta')
                             ->label('Sertakan Lampiran 1 (Daftar Peserta)')
                             ->default(true)
                             ->live(),
 
-                        Forms\Components\Select::make('peserta_ids')
+                        Select::make('peserta_ids')
                             ->label('Pilih Peserta yang Dimasukkan ke Lampiran 1')
                             ->multiple()
                             ->searchable()
@@ -258,9 +290,9 @@ class SuratUndanganResource extends Resource
                                     if ($survey) {
                                         return $survey->surveyUsers->mapWithKeys(function ($su) use ($survey) {
                                             $name = $su->user?->profile?->full_name ?: ($su->user?->name ?: 'Peserta');
-                                            $role = $su->role ?: 'Peserta';
-                                            if ($survey->is_multiclass) {
-                                                $kelas = $su->class?->name ?: 'Tanpa Kelas';
+                                            $role = $su->role ?: ($su->role_pelatihan ?: 'Peserta');
+                                            if ($survey->is_multiclass || $survey->is_pelatihan) {
+                                                $kelas = $su->class?->name ?: ($su->kelas ?: 'Tanpa Kelas');
                                                 return [$su->user_id => "[{$kelas}] {$name} ({$role})"];
                                             }
                                             return [$su->user_id => "{$name} ({$role})"];
@@ -275,7 +307,7 @@ class SuratUndanganResource extends Resource
                             ->helperText('Kosongkan untuk menampilkan seluruh peserta kegiatan terpilih, atau pilih sebagian peserta saja.')
                             ->visible(fn (Get $get) => (bool) $get('sertakan_lampiran_peserta')),
 
-                        Forms\Components\CheckboxList::make('kolom_lampiran_peserta')
+                        CheckboxList::make('kolom_lampiran_peserta')
                             ->label('Kolom Tambahan Lampiran 1')
                             ->options([
                                 'nip'            => 'NIP',
@@ -290,14 +322,14 @@ class SuratUndanganResource extends Resource
                             ->visible(fn (Get $get) => (bool) $get('sertakan_lampiran_peserta')),
                     ]),
 
-                Forms\Components\Section::make('Lampiran 2: Jadwal Kegiatan')
+                Section::make('Lampiran 2: Jadwal Kegiatan')
                     ->schema([
-                        Forms\Components\Toggle::make('sertakan_lampiran_jadwal')
+                        Toggle::make('sertakan_lampiran_jadwal')
                             ->label('Sertakan Lampiran 2 (Jadwal Kegiatan)')
                             ->default(true)
                             ->live(),
 
-                        Forms\Components\Radio::make('mode_jadwal')
+                        Radio::make('mode_jadwal')
                             ->label('Metode Penyusunan Jadwal')
                             ->options([
                                 'builder' => 'Buat Jadwal Interaktif (Schedule Builder)',
@@ -308,7 +340,7 @@ class SuratUndanganResource extends Resource
                             ->live()
                             ->visible(fn (Get $get) => (bool) $get('sertakan_lampiran_jadwal')),
 
-                        Forms\Components\FileUpload::make('jadwal_image_path')
+                        FileUpload::make('jadwal_image_path')
                             ->label('Upload File Gambar Jadwal')
                             ->image()
                             ->disk('public')
@@ -316,20 +348,20 @@ class SuratUndanganResource extends Resource
                             ->helperText('Gambar akan ditempel proporsional di bawah judul Lampiran 2.')
                             ->visible(fn (Get $get) => (bool) $get('sertakan_lampiran_jadwal') && $get('mode_jadwal') === 'upload'),
 
-                        Forms\Components\Toggle::make('tampilkan_durasi_jadwal')
+                        Toggle::make('tampilkan_durasi_jadwal')
                             ->label('Tampilkan Kolom Durasi Otomatis (contoh: 0:30)')
                             ->default(true)
                             ->visible(fn (Get $get) => (bool) $get('sertakan_lampiran_jadwal') && $get('mode_jadwal') === 'builder'),
 
-                        Forms\Components\Repeater::make('schedules')
+                        Repeater::make('schedules')
                             ->label('Rincian Jadwal Kegiatan')
                             ->relationship('schedules')
                             ->schema([
-                                Forms\Components\TextInput::make('hari')
+                                TextInput::make('hari')
                                     ->label('Hari')
                                     ->placeholder('Senin')
                                     ->maxLength(50),
-                                Forms\Components\DatePicker::make('tanggal')
+                                DatePicker::make('tanggal')
                                     ->label('Tanggal')
                                     ->live()
                                     ->afterStateUpdated(function (Set $set, $state) {
@@ -337,25 +369,25 @@ class SuratUndanganResource extends Resource
                                             $set('hari', Carbon::parse($state)->locale('id')->translatedFormat('l'));
                                         }
                                     }),
-                                Forms\Components\TextInput::make('waktu_mulai')
+                                TextInput::make('waktu_mulai')
                                     ->label('Mulai')
                                     ->placeholder('08.00')
                                     ->required()
                                     ->maxLength(10),
-                                Forms\Components\TextInput::make('waktu_selesai')
+                                TextInput::make('waktu_selesai')
                                     ->label('Selesai')
                                     ->placeholder('08.30')
                                     ->required()
                                     ->maxLength(10),
-                                Forms\Components\TextInput::make('materi')
+                                TextInput::make('materi')
                                     ->label('Materi / Aktivitas')
                                     ->required()
                                     ->columnSpan(2),
-                                Forms\Components\TextInput::make('jp')
+                                TextInput::make('jp')
                                     ->label('JP')
                                     ->numeric()
                                     ->minValue(0),
-                                Forms\Components\Select::make('metode')
+                                Select::make('metode')
                                     ->label('Metode')
                                     ->options([
                                         'Synchronous'  => 'Synchronous',
@@ -364,7 +396,7 @@ class SuratUndanganResource extends Resource
                                         'Kelas'        => 'Kelas',
                                         'Mandiri'      => 'Mandiri',
                                     ]),
-                                Forms\Components\TextInput::make('keterangan')
+                                TextInput::make('keterangan')
                                     ->label('Keterangan / Narasumber')
                                     ->maxLength(255)
                                     ->columnSpan(2),
@@ -376,22 +408,22 @@ class SuratUndanganResource extends Resource
                             ->visible(fn (Get $get) => (bool) $get('sertakan_lampiran_jadwal') && $get('mode_jadwal') === 'builder'),
                     ]),
 
-                Forms\Components\Section::make('Penandatangan (Blok Tanda Tangan)')
+                Section::make('Penandatangan (Blok Tanda Tangan)')
                     ->collapsed()
                     ->schema([
-                        Forms\Components\TextInput::make('signer_name')
+                        TextInput::make('signer_name')
                             ->label('Nama Penandatangan')
                             ->default($defaultSigner['name'])
                             ->required(),
-                        Forms\Components\TextInput::make('signer_title')
+                        TextInput::make('signer_title')
                             ->label('Jabatan Penandatangan')
                             ->default($defaultSigner['title'])
                             ->required(),
-                        Forms\Components\TextInput::make('signer_city')
+                        TextInput::make('signer_city')
                             ->label('Kota')
                             ->default($defaultSigner['city'])
                             ->required(),
-                        Forms\Components\TextInput::make('signer_nip')
+                        TextInput::make('signer_nip')
                             ->label('NIP')
                             ->default($defaultSigner['nip']),
                     ])->columns(2),
@@ -402,45 +434,45 @@ class SuratUndanganResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('nomor_surat')
+                TextColumn::make('nomor_surat')
                     ->label('Nomor Surat')
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
 
-                Tables\Columns\TextColumn::make('hal')
+                TextColumn::make('hal')
                     ->label('Hal / Kegiatan')
                     ->searchable()
                     ->wrap()
                     ->limit(45),
 
-                Tables\Columns\TextColumn::make('survey.name')
+                TextColumn::make('survey.name')
                     ->label('Kegiatan')
                     ->badge()
                     ->color('info')
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('kopSurat.name')
+                TextColumn::make('kopSurat.name')
                     ->label('Kop Surat')
                     ->badge()
                     ->color('gray'),
 
-                Tables\Columns\TextColumn::make('tanggal_surat')
+                TextColumn::make('tanggal_surat')
                     ->label('Tanggal')
                     ->date('d M Y')
                     ->sortable(),
 
-                Tables\Columns\IconColumn::make('sertakan_lampiran_peserta')
+                IconColumn::make('sertakan_lampiran_peserta')
                     ->label('Lamp. Peserta')
                     ->boolean(),
 
-                Tables\Columns\IconColumn::make('sertakan_lampiran_jadwal')
+                IconColumn::make('sertakan_lampiran_jadwal')
                     ->label('Lamp. Jadwal')
                     ->boolean(),
             ])
             ->defaultSort('created_at', 'desc')
-            ->actions([
-                Tables\Actions\Action::make('preview_pdf')
+            ->recordActions([
+                Action::make('preview_pdf')
                     ->label('Preview')
                     ->icon('heroicon-o-eye')
                     ->color('info')
@@ -448,30 +480,30 @@ class SuratUndanganResource extends Resource
                     ->modalWidth('7xl')
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Tutup')
-                    ->modalContent(fn (SuratUndangan $record) => new \Illuminate\Support\HtmlString(
+                    ->modalContent(fn (SuratUndangan $record) => new HtmlString(
                         '<iframe src="' . route('surat-undangan.preview-pdf', $record) . '" style="width: 100%; height: 78vh; border: none;"></iframe>'
                     )),
 
-                Tables\Actions\Action::make('download_pdf')
+                Action::make('download_pdf')
                     ->label('PDF')
                     ->icon('heroicon-o-document-arrow-down')
                     ->color('danger')
                     ->url(fn (SuratUndangan $record) => route('surat-undangan.download-pdf', $record))
                     ->openUrlInNewTab(),
 
-                Tables\Actions\Action::make('download_docx')
+                Action::make('download_docx')
                     ->label('Word')
                     ->icon('heroicon-o-document-text')
                     ->color('primary')
                     ->url(fn (SuratUndangan $record) => route('surat-undangan.download-docx', $record))
                     ->openUrlInNewTab(),
 
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }

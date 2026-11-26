@@ -2,47 +2,67 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Fieldset;
+use Filament\Schemas\Components\Group;
+use Filament\Forms\Components\Select;
+use App\Models\Survey;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Actions;
+use Filament\Actions\Action;
+use App\Models\SurveyUser;
+use Filament\Notifications\Notification;
+use Filament\Forms\Components\ToggleButtons;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\Filter;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\AttendanceRuleResource\Pages\ListAttendanceRules;
+use App\Filament\Resources\AttendanceRuleResource\Pages\CreateAttendanceRule;
+use App\Filament\Resources\AttendanceRuleResource\Pages\EditAttendanceRule;
 use App\Filament\Resources\AttendanceRuleResource\Pages;
 use App\Filament\Resources\AttendanceRuleResource\RelationManagers;
 use App\Models\AttendanceRule;
 use App\Models\User;
-use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Forms\Get;
 use Filament\Resources\Resource;
-use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
 
 class AttendanceRuleResource extends Resource
 {
     protected static ?string $model = AttendanceRule::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
-    protected static ?string $navigationGroup = 'Manajemen Presensi';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-cog-6-tooth';
+    protected static string | \UnitEnum | null $navigationGroup = 'Manajemen Presensi';
     protected static ?string $navigationLabel = 'Aturan Presensi';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Section::make('Konfigurasi Aturan Presensi')
+        return $schema->components([
+            Section::make('Konfigurasi Aturan Presensi')
                 ->description('Tentukan hak akses presensi khusus (Work From Anywhere atau BANNED) untuk pegawai / peserta survei.')
                 ->icon('heroicon-o-shield-check')
                 ->schema([
 
                     // Fieldset 1: Target Survei & Pegawai
-                    Forms\Components\Fieldset::make('Target Survei & Pegawai')
+                    Fieldset::make('Target Survei & Pegawai')
                         ->schema([
                             // Kontainer Khusus Saat Create (Multiple User via Survei)
-                            Forms\Components\Group::make([
-                                Forms\Components\Select::make('survey_id')
+                            Group::make([
+                                Select::make('survey_id')
                                     ->label('Pilih Survei')
                                     ->placeholder('Pilih survei aktif yang memiliki aktivitas presensi...')
                                     ->prefixIcon('heroicon-m-clipboard-document-list')
                                     ->options(function () {
-                                        $surveys = \App\Models\Survey::query()
+                                        $surveys = Survey::query()
                                             ->where('is_active', true)
                                             ->withAttendanceActivity()
                                             ->orderByDesc('start_date')
@@ -50,7 +70,7 @@ class AttendanceRuleResource extends Resource
                                             ->get();
 
                                         if ($surveys->isEmpty()) {
-                                            $surveys = \App\Models\Survey::query()
+                                            $surveys = Survey::query()
                                                 ->where('is_active', true)
                                                 ->orderByDesc('start_date')
                                                 ->orderByDesc('id')
@@ -68,10 +88,10 @@ class AttendanceRuleResource extends Resource
                                     ->searchable()
                                     ->preload()
                                     ->live()
-                                    ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get) {
+                                    ->afterStateUpdated(function ($state, Set $set, Get $get) {
                                         $set('user_ids', []);
                                         if ($state) {
-                                            $survey = \App\Models\Survey::find($state);
+                                            $survey = Survey::find($state);
                                             if ($survey) {
                                                 if ($survey->start_date) {
                                                     $set('start_date', $survey->start_date->format('Y-m-d'));
@@ -92,24 +112,24 @@ class AttendanceRuleResource extends Resource
                                     ->helperText('Hanya menampilkan survei aktif yang anggotanya memiliki aktivitas presensi.')
                                     ->columnSpanFull(),
 
-                                Forms\Components\Actions::make([
-                                    Forms\Components\Actions\Action::make('selectAll')
+                                Actions::make([
+                                    Action::make('selectAll')
                                         ->label('Pilih Semua Peserta')
                                         ->icon('heroicon-m-check-badge')
                                         ->color('primary')
                                         ->button()
-                                        ->visible(fn (Forms\Get $get) => (bool) $get('survey_id'))
-                                        ->action(function (Forms\Set $set, Forms\Get $get) {
+                                        ->visible(fn (Get $get) => (bool) $get('survey_id'))
+                                        ->action(function (Set $set, Get $get) {
                                             $surveyId = $get('survey_id');
                                             if (! $surveyId) return;
 
-                                            $userIds = \App\Models\SurveyUser::where('survey_id', $surveyId)
+                                            $userIds = SurveyUser::where('survey_id', $surveyId)
                                                 ->pluck('user_id')
                                                 ->map(fn($id) => (int) $id)
                                                 ->toArray();
 
                                             if (empty($userIds)) {
-                                                \Filament\Notifications\Notification::make()
+                                                Notification::make()
                                                     ->title('Survei ini tidak memiliki peserta terdaftar.')
                                                     ->warning()
                                                     ->send();
@@ -118,30 +138,30 @@ class AttendanceRuleResource extends Resource
 
                                             $set('user_ids', $userIds);
 
-                                            \Filament\Notifications\Notification::make()
+                                            Notification::make()
                                                 ->title(count($userIds) . ' peserta survei berhasil dipilih.')
                                                 ->success()
                                                 ->send();
                                         }),
 
-                                    Forms\Components\Actions\Action::make('selectMitra')
+                                    Action::make('selectMitra')
                                         ->label('Hanya Mitra')
                                         ->icon('heroicon-m-user-group')
                                         ->color('info')
                                         ->button()
-                                        ->visible(fn (Forms\Get $get) => (bool) $get('survey_id'))
-                                        ->action(function (Forms\Set $set, Forms\Get $get) {
+                                        ->visible(fn (Get $get) => (bool) $get('survey_id'))
+                                        ->action(function (Set $set, Get $get) {
                                             $surveyId = $get('survey_id');
                                             if (! $surveyId) return;
 
-                                            $userIds = \App\Models\SurveyUser::where('survey_id', $surveyId)
+                                            $userIds = SurveyUser::where('survey_id', $surveyId)
                                                 ->whereHas('user.roles', fn($q) => $q->where('name', 'Mitra'))
                                                 ->pluck('user_id')
                                                 ->map(fn($id) => (int) $id)
                                                 ->toArray();
 
                                             if (empty($userIds)) {
-                                                \Filament\Notifications\Notification::make()
+                                                Notification::make()
                                                     ->title('Tidak ada peserta dengan role Mitra pada survei ini.')
                                                     ->warning()
                                                     ->send();
@@ -150,30 +170,30 @@ class AttendanceRuleResource extends Resource
 
                                             $set('user_ids', $userIds);
 
-                                            \Filament\Notifications\Notification::make()
+                                            Notification::make()
                                                 ->title(count($userIds) . ' peserta Mitra berhasil dipilih.')
                                                 ->info()
                                                 ->send();
                                         }),
 
-                                    Forms\Components\Actions\Action::make('selectOrganik')
+                                    Action::make('selectOrganik')
                                         ->label('Hanya Organik (BPS)')
                                         ->icon('heroicon-m-building-office-2')
                                         ->color('warning')
                                         ->button()
-                                        ->visible(fn (Forms\Get $get) => (bool) $get('survey_id'))
-                                        ->action(function (Forms\Set $set, Forms\Get $get) {
+                                        ->visible(fn (Get $get) => (bool) $get('survey_id'))
+                                        ->action(function (Set $set, Get $get) {
                                             $surveyId = $get('survey_id');
                                             if (! $surveyId) return;
 
-                                            $userIds = \App\Models\SurveyUser::where('survey_id', $surveyId)
+                                            $userIds = SurveyUser::where('survey_id', $surveyId)
                                                 ->whereHas('user.roles', fn($q) => $q->where('name', 'Organik'))
                                                 ->pluck('user_id')
                                                 ->map(fn($id) => (int) $id)
                                                 ->toArray();
 
                                             if (empty($userIds)) {
-                                                \Filament\Notifications\Notification::make()
+                                                Notification::make()
                                                     ->title('Tidak ada pegawai Organik pada survei ini.')
                                                     ->warning()
                                                     ->send();
@@ -182,41 +202,41 @@ class AttendanceRuleResource extends Resource
 
                                             $set('user_ids', $userIds);
 
-                                            \Filament\Notifications\Notification::make()
+                                            Notification::make()
                                                 ->title(count($userIds) . ' pegawai Organik berhasil dipilih.')
                                                 ->info()
                                                 ->send();
                                         }),
 
-                                    Forms\Components\Actions\Action::make('deselectAll')
+                                    Action::make('deselectAll')
                                         ->label('Kosongkan Pilihan')
                                         ->icon('heroicon-m-x-circle')
                                         ->color('gray')
                                         ->button()
-                                        ->visible(fn (Forms\Get $get) => (bool) $get('survey_id'))
-                                        ->action(function (Forms\Set $set) {
+                                        ->visible(fn (Get $get) => (bool) $get('survey_id'))
+                                        ->action(function (Set $set) {
                                             $set('user_ids', []);
                                         }),
                                 ])
                                 ->columnSpanFull(),
 
-                                Forms\Components\Select::make('user_ids')
+                                Select::make('user_ids')
                                     ->label('Daftar Pegawai / Peserta Survei')
-                                    ->placeholder(fn (Forms\Get $get) => $get('survey_id') ? 'Pilih peserta satu per satu atau gunakan tombol aksi di atas...' : 'Pilih survei terlebih dahulu...')
+                                    ->placeholder(fn (Get $get) => $get('survey_id') ? 'Pilih peserta satu per satu atau gunakan tombol aksi di atas...' : 'Pilih survei terlebih dahulu...')
                                     ->prefixIcon('heroicon-m-users')
                                     ->multiple()
                                     ->searchable()
                                     ->preload()
                                     ->live()
                                     ->required()
-                                    ->disabled(fn (Forms\Get $get) => ! $get('survey_id'))
-                                    ->options(function (Forms\Get $get) {
+                                    ->disabled(fn (Get $get) => ! $get('survey_id'))
+                                    ->options(function (Get $get) {
                                         $surveyId = $get('survey_id');
                                         if (! $surveyId) {
                                             return [];
                                         }
 
-                                        return \App\Models\SurveyUser::where('survey_id', $surveyId)
+                                        return SurveyUser::where('survey_id', $surveyId)
                                             ->with(['user.profile', 'user.roles'])
                                             ->get()
                                             ->mapWithKeys(function ($su) {
@@ -237,13 +257,13 @@ class AttendanceRuleResource extends Resource
                                     ->validationMessages([
                                         'required' => 'Pilih minimal satu pegawai untuk menerapkan aturan presensi.',
                                     ])
-                                    ->helperText(function (Forms\Get $get) {
+                                    ->helperText(function (Get $get) {
                                         $surveyId = $get('survey_id');
                                         if (! $surveyId) {
                                             return 'Pilih survei di atas terlebih dahulu.';
                                         }
                                         $selectedCount = count($get('user_ids') ?? []);
-                                        $totalPeserta = \App\Models\SurveyUser::where('survey_id', $surveyId)->count();
+                                        $totalPeserta = SurveyUser::where('survey_id', $surveyId)->count();
                                         return "Terpilih: {$selectedCount} dari total {$totalPeserta} peserta survei. Anda dapat memilih satu per satu atau menggunakan tombol aksi di atas.";
                                     })
                                     ->columnSpanFull(),
@@ -252,7 +272,7 @@ class AttendanceRuleResource extends Resource
                             ->columnSpanFull(),
 
                             // Kontainer Khusus Saat Edit (Single Record)
-                            Forms\Components\Select::make('user_id')
+                            Select::make('user_id')
                                 ->label('Pegawai')
                                 ->prefixIcon('heroicon-m-user')
                                 ->options(User::query()->orderBy('name')->pluck('name', 'id'))
@@ -267,9 +287,9 @@ class AttendanceRuleResource extends Resource
                         ->columnSpanFull(),
 
                     // Fieldset 2: Detail Aturan & Periode
-                    Forms\Components\Fieldset::make('Detail Aturan & Periode')
+                    Fieldset::make('Detail Aturan & Periode')
                         ->schema([
-                            Forms\Components\ToggleButtons::make('type')
+                            ToggleButtons::make('type')
                                 ->label('Tipe Aturan')
                                 ->options([
                                     'WFA' => 'WFA (Work From Anywhere)',
@@ -290,15 +310,15 @@ class AttendanceRuleResource extends Resource
                                 ->required()
                                 ->columnSpanFull(),
 
-                            Forms\Components\Group::make([
-                                Forms\Components\DatePicker::make('start_date')
+                            Group::make([
+                                DatePicker::make('start_date')
                                     ->label('Tanggal Mulai')
                                     ->prefixIcon('heroicon-m-calendar')
                                     ->native(false)
                                     ->displayFormat('Y-m-d')
                                     ->required(),
 
-                                Forms\Components\DatePicker::make('end_date')
+                                DatePicker::make('end_date')
                                     ->label('Tanggal Selesai')
                                     ->prefixIcon('heroicon-m-calendar')
                                     ->native(false)
@@ -309,17 +329,17 @@ class AttendanceRuleResource extends Resource
                             ->columns(2)
                             ->columnSpanFull(),
 
-                            Forms\Components\TextInput::make('radius_override_m')
+                            TextInput::make('radius_override_m')
                                 ->label('Radius Override (Meter)')
                                 ->prefixIcon('heroicon-m-map-pin')
                                 ->numeric()
                                 ->minValue(1)
                                 ->placeholder('Biarkan kosong jika mengikuti radius default kantor')
                                 ->helperText('Khusus tipe WFA jika ingin membatasi radius presensi tertentu dalam meter.')
-                                ->visible(fn (Forms\Get $get) => $get('type') === 'WFA')
+                                ->visible(fn (Get $get) => $get('type') === 'WFA')
                                 ->columnSpanFull(),
 
-                            Forms\Components\Textarea::make('reason')
+                            Textarea::make('reason')
                                 ->label('Alasan / Keterangan')
                                 ->rows(3)
                                 ->placeholder('Tuliskan alasan pemberian aturan WFA/BANNED...')
@@ -341,9 +361,9 @@ class AttendanceRuleResource extends Resource
                 }
             })
             ->columns([
-                Tables\Columns\TextColumn::make('user.name')
+                TextColumn::make('user.name')
                     ->label('User')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('type')
+                TextColumn::make('type')
                     ->label('Tipe')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
@@ -351,19 +371,19 @@ class AttendanceRuleResource extends Resource
                         'BANNED' => 'danger',
                         default => 'gray',
                     }),
-                Tables\Columns\TextColumn::make('start_date')->label('Mulai')->date()->sortable(),
-                Tables\Columns\TextColumn::make('end_date')->label('Selesai')->date()->sortable(),
-                Tables\Columns\TextColumn::make('radius_override_m')
+                TextColumn::make('start_date')->label('Mulai')->date()->sortable(),
+                TextColumn::make('end_date')->label('Selesai')->date()->sortable(),
+                TextColumn::make('radius_override_m')
                     ->label('Radius')
                     ->formatStateUsing(fn ($state) => $state ? "{$state} m" : '-')
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('reason')
+                TextColumn::make('reason')
                     ->label('Alasan')
                     ->limit(35)
                     ->tooltip(fn ($state) => $state)
                     ->toggleable(),
-                Tables\Columns\TextColumn::make('approver.name')->label('Approved By')->toggleable(),
-                Tables\Columns\TextColumn::make('status')
+                TextColumn::make('approver.name')->label('Approved By')->toggleable(),
+                TextColumn::make('status')
                     ->label('Status')
                     ->badge()
                     ->getStateUsing(function (AttendanceRule $r) {
@@ -382,22 +402,22 @@ class AttendanceRuleResource extends Resource
                     }),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('type')
+                SelectFilter::make('type')
                     ->label('Tipe')->options(['WFA' => 'WFA', 'BANNED' => 'BANNED']),
-                Tables\Filters\Filter::make('active_today')->label('Aktif Hari Ini')
+                Filter::make('active_today')->label('Aktif Hari Ini')
                     ->query(fn($q) => $q->whereDate('start_date', '<=', now('Asia/Jakarta')->toDateString())
                         ->whereDate('end_date', '>=', now('Asia/Jakarta')->toDateString())),
-                Tables\Filters\Filter::make('upcoming')->label('Akan Datang')
+                Filter::make('upcoming')->label('Akan Datang')
                     ->query(fn($q) => $q->whereDate('start_date', '>', now('Asia/Jakarta')->toDateString())),
-                Tables\Filters\Filter::make('past')->label('Sudah Lewat')
+                Filter::make('past')->label('Sudah Lewat')
                     ->query(fn($q) => $q->whereDate('end_date', '<', now('Asia/Jakarta')->toDateString())),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+            ->recordActions([
+                EditAction::make(),
+                DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                DeleteBulkAction::make(),
             ])
             ->defaultSort('start_date', 'desc');
     }
@@ -412,9 +432,9 @@ class AttendanceRuleResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListAttendanceRules::route('/'),
-            'create' => Pages\CreateAttendanceRule::route('/create'),
-            'edit' => Pages\EditAttendanceRule::route('/{record}/edit'),
+            'index' => ListAttendanceRules::route('/'),
+            'create' => CreateAttendanceRule::route('/create'),
+            'edit' => EditAttendanceRule::route('/{record}/edit'),
         ];
     }
 }

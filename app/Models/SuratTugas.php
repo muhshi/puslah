@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -56,17 +59,17 @@ class SuratTugas extends Model
         return $this->nomor_surat;
     }
 
-    public function sppd(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function sppd(): HasOne
     {
         return $this->hasOne(Sppd::class);
     }
 
-    public function laporanPerjalananDinas(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function laporanPerjalananDinas(): HasMany
     {
         return $this->hasMany(LaporanPerjalananDinas::class);
     }
 
-    public function dailyActivities(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function dailyActivities(): HasMany
     {
         return $this->hasMany(DailyActivity::class);
     }
@@ -102,7 +105,7 @@ class SuratTugas extends Model
 
     public function survey(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Survey::class);
+        return $this->belongsTo(Survey::class);
     }
 
     /**
@@ -244,7 +247,7 @@ class SuratTugas extends Model
         for ($i = 1; $i <= $maxUrut; $i++) {
             if (isset($existingMap[$i])) {
                 // Number exists, update current reference month
-                $date = \Carbon\Carbon::parse($existingMap[$i])->locale('id');
+                $date = Carbon::parse($existingMap[$i])->locale('id');
                 $currentMonthName = $date->translatedFormat('F');
             } elseif (!isset($blockedMap[$i])) {
                 // Number missing and not blocked, assign to current reference month
@@ -257,7 +260,23 @@ class SuratTugas extends Model
             $missingByMonth[$month] = self::formatSkippedNumbers($numbers);
         }
 
-        return $missingByMonth;
+        return self::sortMonthsChronologically($missingByMonth);
+    }
+
+    /**
+     * Sort month-keyed array in chronological Indonesian month order.
+     */
+    public static function sortMonthsChronologically(array $byMonth): array
+    {
+        $monthOrder = [
+            'Januari' => 1, 'Februari' => 2, 'Maret' => 3, 'April' => 4,
+            'Mei' => 5, 'Juni' => 6, 'Juli' => 7, 'Agustus' => 8,
+            'September' => 9, 'Oktober' => 10, 'November' => 11, 'Desember' => 12,
+        ];
+
+        uksort($byMonth, fn ($a, $b) => ($monthOrder[$a] ?? 99) <=> ($monthOrder[$b] ?? 99));
+
+        return $byMonth;
     }
 
     /**
@@ -276,8 +295,8 @@ class SuratTugas extends Model
             return null;
         }
 
-        $mulai = \Carbon\Carbon::parse($waktuMulai)->startOfDay();
-        $selesai = \Carbon\Carbon::parse($waktuSelesai)->endOfDay();
+        $mulai = Carbon::parse($waktuMulai)->startOfDay();
+        $selesai = Carbon::parse($waktuSelesai)->endOfDay();
 
         return self::with('survey')
             ->where('user_id', $userId)
@@ -307,13 +326,14 @@ class SuratTugas extends Model
      */
     public static function formatOverlapMessage(string $userName, self $overlap): string
     {
-        $surveyName = $overlap->survey?->name ?? 'Survei';
-        $tglMulai = $overlap->waktu_mulai ? \Carbon\Carbon::parse($overlap->waktu_mulai)->translatedFormat('d F Y') : '-';
-        $tglSelesai = $overlap->waktu_selesai ? \Carbon\Carbon::parse($overlap->waktu_selesai)->translatedFormat('d F Y') : '-';
+        $jenis = $overlap->survey?->is_pelatihan ? 'pelatihan' : 'survei';
+        $surveyName = $overlap->survey?->name ?? 'Kegiatan';
+        $tglMulai = $overlap->waktu_mulai ? Carbon::parse($overlap->waktu_mulai)->translatedFormat('d F Y') : '-';
+        $tglSelesai = $overlap->waktu_selesai ? Carbon::parse($overlap->waktu_selesai)->translatedFormat('d F Y') : '-';
         $rentang = ($tglMulai === $tglSelesai) ? $tglMulai : "{$tglMulai} s/d {$tglSelesai}";
         $nomor = $overlap->nomor_surat ? " ({$overlap->nomor_surat})" : '';
 
-        return "Pegawai {$userName} sudah memiliki Surat Tugas{$nomor} untuk survei '{$surveyName}' di rentang tanggal {$rentang}.";
+        return "Pegawai {$userName} sudah memiliki Surat Tugas{$nomor} untuk {$jenis} '{$surveyName}' di rentang tanggal {$rentang}.";
     }
 }
 
