@@ -286,10 +286,13 @@
                     </tr>
                     <tr>
                         @foreach($dates as $d)
-                            @php
-                                $dFormatted = is_object($d) ? $d->translatedFormat('d/m/Y') : (string)$d;
-                            @endphp
-                            <th style="font-size: 7.5pt;">{{ $dFormatted }}</th>
+                            <th style="font-size: 7.5pt; line-height: 1.15;">
+                                @if(is_object($d))
+                                    {{ $d->translatedFormat('d F') }}<br>{{ $d->translatedFormat('Y') }}
+                                @else
+                                    {{ $d }}
+                                @endif
+                            </th>
                         @endforeach
                     </tr>
                 @endif

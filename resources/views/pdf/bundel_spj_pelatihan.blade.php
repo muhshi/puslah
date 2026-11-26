@@ -195,13 +195,13 @@
             <thead>
                 <tr>
                     <th rowspan="2" style="width: 5%;">No.</th>
-                    <th rowspan="2" style="width: 28%;">Nama Peserta</th>
-                    <th rowspan="2" style="width: 22%;">Asal / Instansi</th>
+                    <th rowspan="2" style="width: 27%;">Nama Peserta</th>
+                    <th rowspan="2" style="width: 21%;">Asal / Instansi</th>
                     <th rowspan="2" style="width: 11%;">Peran</th>
                     @if (! $isMultiDay)
-                        <th colspan="2" style="width: 34%;">Tanda Tangan</th>
+                        <th colspan="2" style="width: 36%;">Tanda Tangan</th>
                     @else
-                        <th colspan="{{ $dateCount }}" style="width: 34%;">Tanda Tangan Kehadiran</th>
+                        <th colspan="{{ $dateCount }}" style="width: 36%;">Tanda Tangan Kehadiran</th>
                     @endif
                 </tr>
                 <tr>
@@ -210,7 +210,13 @@
                         <th>Genap</th>
                     @else
                         @foreach ($dates as $d)
-                            <th>{{ is_object($d) ? $d->translatedFormat('d/m') : $d }}</th>
+                            <th style="font-size: 7.5pt; line-height: 1.15;">
+                                @if (is_object($d))
+                                    {{ $d->translatedFormat('d F') }}<br>{{ $d->translatedFormat('Y') }}
+                                @else
+                                    {{ $d }}
+                                @endif
+                            </th>
                         @endforeach
                     @endif
                 </tr>
@@ -270,13 +276,13 @@
             <thead>
                 <tr>
                     <th rowspan="2" style="width: 6%;">No.</th>
-                    <th rowspan="2" style="width: 30%;">Nama Instruktur Daerah</th>
-                    <th rowspan="2" style="width: 20%;">NIP</th>
-                    <th rowspan="2" style="width: 18%;">Jabatan / Instansi</th>
+                    <th rowspan="2" style="width: 28%;">Nama Instruktur Daerah</th>
+                    <th rowspan="2" style="width: 18%;">NIP</th>
+                    <th rowspan="2" style="width: 16%;">Jabatan / Instansi</th>
                     @if (! $isMultiDay)
-                        <th colspan="2" style="width: 26%;">Tanda Tangan</th>
+                        <th colspan="2" style="width: 32%;">Tanda Tangan</th>
                     @else
-                        <th colspan="{{ $dateCount }}" style="width: 26%;">Tanda Tangan Kehadiran</th>
+                        <th colspan="{{ $dateCount }}" style="width: 32%;">Tanda Tangan Kehadiran</th>
                     @endif
                 </tr>
                 <tr>
@@ -285,7 +291,13 @@
                         <th>Genap</th>
                     @else
                         @foreach ($dates as $d)
-                            <th>{{ is_object($d) ? $d->translatedFormat('d/m') : $d }}</th>
+                            <th style="font-size: 7.5pt; line-height: 1.15;">
+                                @if (is_object($d))
+                                    {{ $d->translatedFormat('d F') }}<br>{{ $d->translatedFormat('Y') }}
+                                @else
+                                    {{ $d }}
+                                @endif
+                            </th>
                         @endforeach
                     @endif
                 </tr>
