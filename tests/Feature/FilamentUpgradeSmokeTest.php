@@ -35,6 +35,8 @@ use App\Filament\Widgets\TodayAttendanceStats;
 use App\Filament\Widgets\TodayPresencePie;
 use App\Livewire\AttendanceUnattendedRecap;
 use App\Livewire\Presensi;
+use App\Models\SuratTugas;
+use App\Models\Survey;
 use App\Models\User;
 use App\Settings\SystemSettings;
 use Filament\Facades\Filament;
@@ -189,5 +191,58 @@ class FilamentUpgradeSmokeTest extends TestCase
                 $this->fail("Livewire widget {$widget} failed: {$e->getMessage()}");
             }
         }
+    }
+
+    public function test_generate_sppd_table_action_validates_nomor_sppd_cleanly(): void
+    {
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        $this->actingAs($this->superAdmin);
+
+        $survey = Survey::create([
+            'name' => 'Survei Test SPPD',
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->addDays(5)->toDateString(),
+            'is_active' => true,
+        ]);
+
+        $suratTugas = SuratTugas::create([
+            'user_id' => $this->superAdmin->id,
+            'survey_id' => $survey->id,
+            'nomor_surat' => 'B-0001/33210/KP.650/2026',
+            'nomor_urut' => 1,
+            'kode_klasifikasi' => 'KP.650',
+            'jabatan' => 'Statistisi',
+            'keperluan' => 'Pengawasan Lapangan',
+            'tempat_tugas' => 'Demak',
+            'tanggal' => now()->toDateString(),
+            'waktu_mulai' => now(),
+            'waktu_selesai' => now()->addHours(4),
+            'signer_name' => 'Kepala BPS',
+            'signer_nip' => '198001012005011001',
+            'signer_title' => 'Kepala',
+            'signer_city' => 'Demak',
+            'status' => 'approved',
+        ]);
+
+        Livewire::test(ListSuratTugas::class)
+            ->callTableAction('generate_sppd', $suratTugas, data: [
+                'nomor_sppd' => 'B-1192/33210/SE2026/KP.650/2026',
+                'nomor_urut_sppd' => 1192,
+                'kode_klasifikasi_sppd' => 'KP.650',
+                'tahun_sppd' => 2026,
+                'tingkat_perjalanan_dinas' => 'C',
+                'alat_angkutan' => 'Kendaraan Pribadi',
+                'mak' => '054.01.GG.2902.006.005.A.524113',
+                'biaya_transport' => 170000,
+                'maksud_perjalanan' => 'Transport lokal dalam rangka Pengawasan Lapangan',
+                'tempat_berangkat' => 'Demak',
+                'tempat_tujuan' => 'Demak',
+            ])
+            ->assertHasNoTableActionErrors();
+
+        $this->assertDatabaseHas('sppds', [
+            'surat_tugas_id' => $suratTugas->id,
+            'nomor_sppd' => 'B-1192/33210/SE2026/KP.650/2026',
+        ]);
     }
 }

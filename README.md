@@ -55,6 +55,8 @@ composer dev
 ## Changelog
 
 ### 2026-11-26
+- **Perbaikan Validasi `unique()` SPPD di Surat Tugas (`SuratTugasResource`):**
+  - Menambahkan `ignoreRecord: false` pada `TextInput::make('nomor_sppd')->unique(...)` di aksi modal **Buat SPPD** (`generate_sppd`) dan form resource agar Filament 5 tidak menyisipkan klausa `surat_tugas.id <> ...` ke query tabel `sppds`.
 - **Penghapusan Gelar Akademik Pejabat & PDF Pernyataan Riil / Tidak Kendaraan Dinas:**
   - **Normalisasi Nama Pejabat Tanpa Gelar (`OfficialSettingsSyncService`, `SystemSettingsPage`, `PelatihanSpjDataBuilder`):** Menambahkan `stripAcademicTitles()` agar nama **Kepala BPS**, **PPK**, **Bendahara**, dan **Kasubag Umum / Penanggung Jawab** tersimpan dan tercetak bersih tanpa gelar (mis. `Khomarudin`, `Sulaeman`, `Khusnul Khotimah`), beserta dukungan `pangkat_golongan` penyelenggara pada SPJ.
   - **2 Dokumen PDF Resmi Pelatihan (`pernyataan_riil_pelatihan.blade.php`, `pernyataan_tidak_kendaraan_pelatihan.blade.php`, `PelatihanUndanganService`, `PelatihanResource`):** Menambahkan generator PDF siap cetak untuk **Pernyataan Pengeluaran Riil (+ Lampiran Rincian Peserta)** dan **Surat Pernyataan Tidak Menggunakan Kendaraan Dinas (+ Lampiran Peserta)** lengkap dengan menu cetak di aksi baris maupun halaman edit `PelatihanResource`, serta memperbaiki pengisian kolom tanda tangan zig-zag pada `LampiranRiilSheet`.

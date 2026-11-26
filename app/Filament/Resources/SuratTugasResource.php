@@ -244,7 +244,7 @@ class SuratTugasResource extends Resource
                         TextInput::make('nomor_sppd')
                             ->required()
                             ->maxLength(255)
-                            ->unique(table: 'sppds', column: 'nomor_sppd', ignorable: fn (?SuratTugas $record) => $record?->sppd)
+                            ->unique(table: 'sppds', column: 'nomor_sppd', ignoreRecord: false, ignorable: fn (?SuratTugas $record) => $record?->sppd)
                             ->default(function () {
                                 $settings = app(SystemSettings::class);
                                 $prefix = $settings->surat_prefix ?? 'B';
@@ -468,7 +468,7 @@ class SuratTugasResource extends Resource
                             ->label('Nomor SPPD')
                             ->required()
                             ->maxLength(255)
-                            ->unique('sppds', 'nomor_sppd')
+                            ->unique(table: 'sppds', column: 'nomor_sppd', ignoreRecord: false)
                             ->default(function (SuratTugas $record) {
                                 $settings = app(SystemSettings::class);
                                 $prefix = $settings->surat_prefix ?? 'B';
