@@ -152,8 +152,7 @@ class PelatihanUndanganService
         $indaName = $data['first_inda']['nama'] ?? ($data['penyelenggara']['name'] ?? '');
         $indaNip = $data['first_inda']['nip'] ?? ($data['penyelenggara']['nip'] ?? '');
 
-        /** @var DomPdfInstance $pdf */
-        $pdf = Pdf::loadView('pdf.daftar_hadir_pelatihan', [
+        return $this->loadProtectedPdf('pdf.daftar_hadir_pelatihan', [
             'survey' => $survey,
             'classes' => $data['attendance_classes'],
             'dates' => $data['dates'],
@@ -162,7 +161,40 @@ class PelatihanUndanganService
             'inda_name' => $indaName,
             'inda_nip' => $indaNip,
             'logoBase64' => $logoBase64,
-        ])->setPaper('a4', 'portrait');
+        ]);
+    }
+
+    /**
+     * Render DomPDF instance for Pernyataan Pengeluaran Riil (+ Lampiran).
+     */
+    public function renderPernyataanRiilPdf(Survey $survey): DomPdfInstance
+    {
+        return $this->loadProtectedPdf('pdf.pernyataan_riil_pelatihan', [
+            'survey' => $survey,
+            'data' => $this->dataBuilder->build($survey),
+        ]);
+    }
+
+    /**
+     * Render DomPDF instance for Surat Pernyataan Tidak Menggunakan Kendaraan Dinas (+ Lampiran).
+     */
+    public function renderPernyataanTidakKendaraanPdf(Survey $survey): DomPdfInstance
+    {
+        return $this->loadProtectedPdf('pdf.pernyataan_tidak_kendaraan_pelatihan', [
+            'survey' => $survey,
+            'data' => $this->dataBuilder->build($survey),
+        ]);
+    }
+
+    /**
+     * Load a DomPDF A4 portrait document and apply optional print-only PDF protection.
+     *
+     * @param  array<string, mixed>  $viewData
+     */
+    private function loadProtectedPdf(string $view, array $viewData): DomPdfInstance
+    {
+        /** @var DomPdfInstance $pdf */
+        $pdf = Pdf::loadView($view, $viewData)->setPaper('a4', 'portrait');
 
         if (! empty($this->settings->pdf_master_password)) {
             $pdf->setEncryption('', $this->settings->pdf_master_password, ['print']);

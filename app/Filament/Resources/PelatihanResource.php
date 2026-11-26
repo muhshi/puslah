@@ -245,6 +245,24 @@ class PelatihanResource extends Resource
                             'Daftar_Hadir_'.Str::slug($record->name ?: 'Pelatihan').'.pdf',
                             ['Content-Type' => 'application/pdf']
                         )),
+
+                    Action::make('cetakPernyataanRiil')
+                        ->label('Cetak Pernyataan Riil (PDF)')
+                        ->icon('heroicon-o-document-check')
+                        ->action(fn (Survey $record) => response()->streamDownload(
+                            fn () => print (app(PelatihanUndanganService::class)->renderPernyataanRiilPdf($record)->output()),
+                            'Pernyataan_Riil_'.Str::slug($record->name ?: 'Pelatihan').'.pdf',
+                            ['Content-Type' => 'application/pdf']
+                        )),
+
+                    Action::make('cetakPernyataanTidakKendaraan')
+                        ->label('Cetak Surat Pernyataan Tdk Kendaraan (PDF)')
+                        ->icon('heroicon-o-truck')
+                        ->action(fn (Survey $record) => response()->streamDownload(
+                            fn () => print (app(PelatihanUndanganService::class)->renderPernyataanTidakKendaraanPdf($record)->output()),
+                            'Surat_Pernyataan_Tidak_Kendaraan_'.Str::slug($record->name ?: 'Pelatihan').'.pdf',
+                            ['Content-Type' => 'application/pdf']
+                        )),
                 ])
                     ->label('Dokumen Pelatihan')
                     ->icon('heroicon-m-arrow-down-tray')

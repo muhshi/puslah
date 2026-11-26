@@ -53,6 +53,11 @@ class PelatihanDocumentsTest extends TestCase
     protected function createPelatihanFixture(bool $includeAtk = false): array
     {
         // 1. Officials
+        app(SystemSettings::class)->fill([
+            'cert_signer_name' => 'Khomarudin, S.ST',
+            'cert_signer_nip' => '197512091999011001',
+        ])->save();
+
         $ppk = User::factory()->create(['name' => 'Sulaeman PPK']);
         $ppk->profile->update([
             'full_name' => 'Sulaeman, S.Stat',
@@ -220,10 +225,10 @@ class PelatihanDocumentsTest extends TestCase
         // 2. Surat Tugas resolution
         $this->assertEquals('B-0456/33210/KP.650/2026', $data['nomor_surat_tugas']);
 
-        // 3. Officials resolution
-        $this->assertEquals('Sulaeman, S.Stat', $data['ppk']['name']);
-        $this->assertEquals('Khusnul Khotimah, S.Stat', $data['bendahara']['name']);
-        $this->assertEquals('Ahmad Fauzi, S.Tr.Stat', $data['penyelenggara']['name']);
+        // 3. Officials resolution (stripped academic titles)
+        $this->assertEquals('Sulaeman', $data['ppk']['name']);
+        $this->assertEquals('Khusnul Khotimah', $data['bendahara']['name']);
+        $this->assertEquals('Ahmad Fauzi', $data['penyelenggara']['name']);
 
         // 4. Classes grouping
         // all_classes should contain Kelas A and Kelas B
@@ -278,6 +283,8 @@ class PelatihanDocumentsTest extends TestCase
         $this->assertNotEmpty($xml);
         $this->assertStringContainsString('Undangan Pelatihan Petugas Sensus Ekonomi 2026', $xml);
         $this->assertStringNotContainsString('Undangan Pelatihan Pelatihan', $xml);
+        $this->assertStringContainsString('Khomarudin', $xml);
+        $this->assertStringNotContainsString('Khomarudin, S.ST', $xml);
         $this->assertStringContainsString('Budi Santoso', $xml);
         $this->assertStringContainsString('Siti Aminah', $xml);
         $this->assertStringContainsString('Joko Widodo', $xml);
@@ -299,6 +306,37 @@ class PelatihanDocumentsTest extends TestCase
         $output = $pdf->output();
         $this->assertStringStartsWith('%PDF-', $output);
         $this->assertGreaterThan(500, strlen($output));
+    }
+
+    public function test_render_pernyataan_riil_and_tidak_kendaraan_pdfs_generate_valid_streams(): void
+    {
+        $fixture = $this->createPelatihanFixture(includeAtk: false);
+        /** @var Survey $survey */
+        $survey = $fixture['survey'];
+
+        $service = app(PelatihanUndanganService::class);
+
+        $riilPdf = $service->renderPernyataanRiilPdf($survey)->output();
+        $this->assertStringStartsWith('%PDF-', $riilPdf);
+        $this->assertGreaterThan(500, strlen($riilPdf));
+
+        $tidakKendaraanPdf = $service->renderPernyataanTidakKendaraanPdf($survey)->output();
+        $this->assertStringStartsWith('%PDF-', $tidakKendaraanPdf);
+        $this->assertGreaterThan(500, strlen($tidakKendaraanPdf));
+
+        // Verify HTML view renders clean official names without academic titles
+        $data = app(PelatihanSpjDataBuilder::class)->build($survey);
+        $riilHtml = view('pdf.pernyataan_riil_pelatihan', ['survey' => $survey, 'data' => $data])->render();
+        $this->assertStringContainsString('PERNYATAAN PENGELUARAN RIIL', $riilHtml);
+        $this->assertStringContainsString('Sulaeman', $riilHtml);
+        $this->assertStringContainsString('Khomarudin', $riilHtml);
+        $this->assertStringNotContainsString('Sulaeman, S.Stat', $riilHtml);
+        $this->assertStringNotContainsString('Khomarudin, S.ST', $riilHtml);
+
+        $tdkHtml = view('pdf.pernyataan_tidak_kendaraan_pelatihan', ['survey' => $survey, 'data' => $data])->render();
+        $this->assertStringContainsString('SURAT PERNYATAAN', $tdkHtml);
+        $this->assertStringContainsString('tidak menggunakan kendaraan dinas', $tdkHtml);
+        $this->assertStringContainsString('B-0456/33210/KP.650/2026', $tdkHtml);
     }
 
     public function test_pelatihan_spj_export_generates_valid_xlsx_with_8_sheets_when_atk_false(): void
@@ -435,13 +473,15 @@ class PelatihanDocumentsTest extends TestCase
     {
         $settings = app(SystemSettings::class);
         $settings->fill([
-            'ppk_name' => 'Drs. PPK Pengaturan',
+            'cert_signer_name' => 'Khomarudin, S.ST',
+            'cert_signer_nip' => '197512091999011001',
+            'ppk_name' => 'Sulaeman, S.Stat',
             'ppk_nip' => '197001011995011001',
             'ppk_title' => 'Pejabat Pembuat Komitmen',
-            'bendahara_name' => 'Sri Bendahara Pengaturan',
+            'bendahara_name' => 'Khusnul Khotimah, A.Md, S.Stat.',
             'bendahara_nip' => '198002022005012002',
             'bendahara_title' => 'Bendahara Pengeluaran',
-            'kasubag_umum_name' => 'Hadi Kasubag Pengaturan',
+            'kasubag_umum_name' => 'Ahmad Fauzi, S.Tr.Stat',
             'kasubag_umum_nip' => '197903032004011003',
             'kasubag_umum_title' => 'Kepala Subbagian Umum',
         ])->save();
@@ -461,15 +501,16 @@ class PelatihanDocumentsTest extends TestCase
 
         $data = app(PelatihanSpjDataBuilder::class)->build($survey);
 
-        $this->assertSame('Drs. PPK Pengaturan', $data['ppk']['name']);
+        $this->assertSame('Khomarudin', $data['kepala']['name']);
+        $this->assertSame('Sulaeman', $data['ppk']['name']);
         $this->assertSame('197001011995011001', $data['ppk']['nip']);
         $this->assertSame('Pejabat Pembuat Komitmen', $data['ppk']['title']);
 
-        $this->assertSame('Sri Bendahara Pengaturan', $data['bendahara']['name']);
+        $this->assertSame('Khusnul Khotimah', $data['bendahara']['name']);
         $this->assertSame('198002022005012002', $data['bendahara']['nip']);
         $this->assertSame('Bendahara Pengeluaran', $data['bendahara']['title']);
 
-        $this->assertSame('Hadi Kasubag Pengaturan', $data['penyelenggara']['name']);
+        $this->assertSame('Ahmad Fauzi', $data['penyelenggara']['name']);
         $this->assertSame('197903032004011003', $data['penyelenggara']['nip']);
         $this->assertSame('Kepala Subbagian Umum', $data['penyelenggara']['title']);
     }

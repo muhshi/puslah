@@ -365,7 +365,7 @@ class SystemSettingsPage extends Page implements HasForms
                     ->live()
                     ->afterStateUpdated(function (Set $set, $state) use ($nameField, $nipField): void {
                         if ($state && ($user = User::with('profile')->find($state))) {
-                            $set($nameField, $user->profile?->full_name ?: $user->name);
+                            $set($nameField, OfficialSettingsSyncService::stripAcademicTitles($user->profile?->full_name ?: $user->name));
                             $set($nipField, $user->profile?->nip ?: '-');
                         }
                     })

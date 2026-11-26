@@ -67,8 +67,13 @@ class PelatihanSpjDataBuilder
         $sipetraData = $this->sipetraService->fetchForUsers($users);
 
         // 4. Officials Resolution (SystemSettings as primary SSOT, with legacy per-survey fallback)
-        $kepalaName = $this->settings->cert_signer_name ?: 'Khomarudin, S.ST';
-        $kepalaNip = $this->settings->cert_signer_nip ?: '197512091999011001';
+        $rawKepalaName = $this->settings->cert_signer_name;
+        $kepalaName = (filled($rawKepalaName) && trim($rawKepalaName) !== '-')
+            ? OfficialSettingsSyncService::stripAcademicTitles($rawKepalaName)
+            : 'Khomarudin';
+        $kepalaNip = (filled($this->settings->cert_signer_nip) && trim($this->settings->cert_signer_nip) !== '-')
+            ? $this->settings->cert_signer_nip
+            : '197512091999011001';
         $kepalaTitle = $this->settings->cert_signer_title ?: 'Kepala Badan Pusat Statistik Kabupaten Demak';
 
         [$ppkName, $ppkNip, $ppkTitle] = $this->resolveOfficial(
@@ -97,6 +102,11 @@ class PelatihanSpjDataBuilder
             fallbackTitle: $survey->penyelenggara?->profile?->jabatan ?: 'Kepala Subbagian Umum',
             defaultTitle: 'Kepala Subbagian Umum',
         );
+
+        $penyelenggaraUser = ! empty($this->settings->kasubag_umum_user_id)
+            ? User::with('profile')->find($this->settings->kasubag_umum_user_id)
+            : $survey->penyelenggara;
+        $penyelenggaraPangkat = $penyelenggaraUser?->profile?->pangkat_golongan ?: '-';
 
         // 5. Participants processing
         $allClassesRaw = [];
@@ -245,6 +255,7 @@ class PelatihanSpjDataBuilder
                 'name' => $penyelenggaraName,
                 'nip' => $penyelenggaraNip,
                 'title' => $penyelenggaraTitle,
+                'pangkat_golongan' => $penyelenggaraPangkat,
             ],
             'all_classes' => $allClasses,
             'attendance_classes' => $attendanceClasses,
@@ -282,7 +293,7 @@ class PelatihanSpjDataBuilder
     ): array {
         if (filled($settingName) && trim($settingName) !== '-') {
             return [
-                $settingName,
+                OfficialSettingsSyncService::stripAcademicTitles($settingName),
                 filled($settingNip) ? $settingNip : '-',
                 filled($settingTitle) ? $settingTitle : $defaultTitle,
             ];
@@ -290,7 +301,7 @@ class PelatihanSpjDataBuilder
 
         if ($fallbackUser) {
             return [
-                $fallbackUser->profile?->full_name ?: $fallbackUser->name,
+                OfficialSettingsSyncService::stripAcademicTitles($fallbackUser->profile?->full_name ?: $fallbackUser->name),
                 $fallbackUser->profile?->nip ?: '-',
                 $fallbackTitle,
             ];

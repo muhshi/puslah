@@ -70,16 +70,16 @@ it('resolves user profile details for kepala, ppk, and bendahara while keeping l
         'kasubag_umum_user_id' => $kasubag->id,
     ]);
 
-    expect($payload['cert_signer_name'])->toBe('Khomarudin, S.ST')
+    expect($payload['cert_signer_name'])->toBe('Khomarudin')
         ->and($payload['cert_signer_nip'])->toBe('197512091999011001')
         ->and($payload['cert_signer_title'])->toBe('Kepala Badan Pusat Statistik Kabupaten Demak')
-        ->and($payload['ppk_name'])->toBe('Sulaeman, S.Stat')
+        ->and($payload['ppk_name'])->toBe('Sulaeman')
         ->and($payload['ppk_nip'])->toBe('198204012006041015')
         ->and($payload['ppk_title'])->toBe('Pejabat Pembuat Komitmen')
-        ->and($payload['bendahara_name'])->toBe('Khusnul Khotimah, S.Stat')
+        ->and($payload['bendahara_name'])->toBe('Khusnul Khotimah')
         ->and($payload['bendahara_nip'])->toBe('198610252009022009')
         ->and($payload['bendahara_title'])->toBe('Bendahara Pengeluaran')
-        ->and($payload['kasubag_umum_name'])->toBe('Ahmad Fauzi, S.Tr.Stat')
+        ->and($payload['kasubag_umum_name'])->toBe('Ahmad Fauzi')
         ->and($payload['kasubag_umum_nip'])->toBe('199001012012011002')
         ->and($payload['kasubag_umum_title'])->toBe('Kepala Subbagian Umum');
 });
@@ -144,9 +144,9 @@ it('feeds synced settings seamlessly into SppdService and SuratTugas without bre
         'nomor_urut_sppd' => 1,
     ]);
 
-    expect($st->signer_name)->toBe('Khomarudin, S.ST')
+    expect($st->signer_name)->toBe('Khomarudin')
         ->and($st->signer_nip)->toBe('197512091999011001')
-        ->and($sppd->ppk_name)->toBe('Sulaeman, S.Stat')
+        ->and($sppd->ppk_name)->toBe('Sulaeman')
         ->and($sppd->ppk_nip)->toBe('198204012006041015');
 });
 
@@ -187,13 +187,13 @@ it('renders and saves SystemSettingsPage with official user dropdowns via Livewi
 
     $settings = app(SystemSettings::class);
     expect($settings->kepala_user_id)->toBe($kepala->id)
-        ->and($settings->cert_signer_name)->toBe('Khomarudin, S.ST')
+        ->and($settings->cert_signer_name)->toBe('Khomarudin')
         ->and($settings->cert_signer_nip)->toBe('197512091999011001')
         ->and($settings->ppk_user_id)->toBe($ppk->id)
-        ->and($settings->ppk_name)->toBe('Sulaeman, S.Stat')
+        ->and($settings->ppk_name)->toBe('Sulaeman')
         ->and($settings->bendahara_user_id)->toBe($bendahara->id)
-        ->and($settings->bendahara_name)->toBe('Khusnul Khotimah, S.Stat')
+        ->and($settings->bendahara_name)->toBe('Khusnul Khotimah')
         ->and($settings->kasubag_umum_user_id)->toBe($kasubag->id)
-        ->and($settings->kasubag_umum_name)->toBe('Ahmad Fauzi, S.Tr.Stat')
+        ->and($settings->kasubag_umum_name)->toBe('Ahmad Fauzi')
         ->and($settings->kasubag_umum_nip)->toBe('199001012012011002');
 });

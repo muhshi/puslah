@@ -57,7 +57,7 @@ class OfficialSettingsSyncService
                 continue;
             }
 
-            $state[$target['name']] = $user->profile?->full_name ?: $user->name;
+            $state[$target['name']] = self::stripAcademicTitles($user->profile?->full_name ?: $user->name);
             $state[$target['nip']] = $user->profile?->nip ?: '-';
 
             if (empty($state[$target['title']])) {
@@ -67,6 +67,21 @@ class OfficialSettingsSyncService
         }
 
         return $state;
+    }
+
+    /**
+     * Strip trailing comma-separated academic degrees/titles from an official's name.
+     */
+    public static function stripAcademicTitles(?string $name): string
+    {
+        $clean = trim((string) $name);
+        if ($clean === '' || $clean === '-') {
+            return $clean ?: '-';
+        }
+
+        $withoutSuffix = preg_replace('/\s*,.*$/', '', $clean);
+
+        return trim((string) $withoutSuffix) ?: $clean;
     }
 
     /**

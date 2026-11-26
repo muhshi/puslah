@@ -44,6 +44,24 @@ class EditPelatihan extends EditRecord
                         'Daftar_Hadir_'.Str::slug($this->record->name ?: 'Pelatihan').'.pdf',
                         ['Content-Type' => 'application/pdf']
                     )),
+
+                Action::make('cetakPernyataanRiilHeader')
+                    ->label('Cetak Pernyataan Riil (PDF)')
+                    ->icon('heroicon-o-document-check')
+                    ->action(fn () => response()->streamDownload(
+                        fn () => print (app(PelatihanUndanganService::class)->renderPernyataanRiilPdf($this->record)->output()),
+                        'Pernyataan_Riil_'.Str::slug($this->record->name ?: 'Pelatihan').'.pdf',
+                        ['Content-Type' => 'application/pdf']
+                    )),
+
+                Action::make('cetakPernyataanTidakKendaraanHeader')
+                    ->label('Cetak Surat Pernyataan Tdk Kendaraan (PDF)')
+                    ->icon('heroicon-o-truck')
+                    ->action(fn () => response()->streamDownload(
+                        fn () => print (app(PelatihanUndanganService::class)->renderPernyataanTidakKendaraanPdf($this->record)->output()),
+                        'Surat_Pernyataan_Tidak_Kendaraan_'.Str::slug($this->record->name ?: 'Pelatihan').'.pdf',
+                        ['Content-Type' => 'application/pdf']
+                    )),
             ])
                 ->label('Dokumen Pelatihan')
                 ->icon('heroicon-m-arrow-down-tray')

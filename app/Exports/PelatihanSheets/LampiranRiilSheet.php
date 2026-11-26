@@ -72,7 +72,6 @@ class LampiranRiilSheet implements WithEvents, WithTitle
                     $sheet->setCellValue("B{$rowIdx}", $row['nama']);
                     $sheet->setCellValueExplicit("C{$rowIdx}", (string) $row['nik_or_nip'], DataType::TYPE_STRING);
                     $sheet->setCellValue("D{$rowIdx}", $row['asal']);
-                    $sheet->setCellValue("G{$rowIdx}", $row['tujuan']);
                     $sheet->setCellValue("E{$rowIdx}", $row['tujuan']);
                     $sheet->setCellValue("F{$rowIdx}", $row['transport']);
 
