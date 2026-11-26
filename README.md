@@ -55,6 +55,8 @@ composer dev
 ## Changelog
 
 ### 2026-11-26
+- **Perbaikan Logo BPS & QR Code Tidak Muncul di PDF (`config/dompdf.php`):**
+  - Menambahkan protokol `'data://' => ['rules' => []]` (beserta `'artifactPathValidation' => null`) ke `allowed_protocols` pada `config/dompdf.php` agar DomPDF 3.x mengizinkan rendering gambar `data:image/png;base64,...` (Logo BPS) dan `data:image/svg+xml;base64,...` (QR Code verifikasi) pada PDF Surat Tugas maupun dokumen PDF lainnya, disertai test regresi `SuratTugasPdfTest`.
 - **Perbaikan Validasi `unique()` SPPD di Surat Tugas (`SuratTugasResource`):**
   - Menambahkan `ignoreRecord: false` pada `TextInput::make('nomor_sppd')->unique(...)` di aksi modal **Buat SPPD** (`generate_sppd`) dan form resource agar Filament 5 tidak menyisipkan klausa `surat_tugas.id <> ...` ke query tabel `sppds`.
 - **Penghapusan Gelar Akademik Pejabat & PDF Pernyataan Riil / Tidak Kendaraan Dinas:**
