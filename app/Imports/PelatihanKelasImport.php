@@ -17,9 +17,14 @@ class PelatihanKelasImport implements WithMultipleSheets
 
     public int $created = 0;
 
+    public int $updated = 0;
+
     public int $skipped = 0;
 
     public int $failed = 0;
+
+    /** @var array<int, string> */
+    public array $errors = [];
 
     protected SipetraUserDataService $sipetraService;
 
@@ -42,7 +47,7 @@ class PelatihanKelasImport implements WithMultipleSheets
 
                 public function onRow(Row $row): void
                 {
-                    $this->parent->processRow($row->toArray());
+                    $this->parent->processRow($row->toArray(), $row->getIndex());
                 }
             },
         ];
@@ -53,7 +58,7 @@ class PelatihanKelasImport implements WithMultipleSheets
      *
      * @param  array<string, mixed>  $data
      */
-    public function processRow(array $data): void
+    public function processRow(array $data, int $rowNumber = 0): void
     {
         try {
             $id = $this->cleanString($data['id'] ?? $data['survey_user_id'] ?? null);
@@ -65,13 +70,13 @@ class PelatihanKelasImport implements WithMultipleSheets
             $asal = $this->cleanString($data['asal'] ?? null);
             $tujuan = $this->cleanString($data['tujuan'] ?? null);
 
-            // Completely blank trailing rows in Excel should be ignored silently
+            // Completely blank trailing rows (even if pre-numbered with "No") should be ignored silently
             if ($id === null && $email === null && $nikNip === null && $nama === null && $role === null && $kelas === null) {
                 return;
             }
 
             if ($id !== null) {
-                // Ensure participant belongs to this survey for data integrity and tenant isolation
+                // Backwards compatibility if an older exported file carries internal survey_user ID
                 $surveyUser = SurveyUser::where('survey_id', $this->survey->id)->find($id);
                 if (! $surveyUser) {
                     $this->skipped++;
@@ -84,13 +89,16 @@ class PelatihanKelasImport implements WithMultipleSheets
                 return;
             }
 
-            $user = $this->resolveUser($email, $nikNip, $nama);
+            [$user, $errorReason] = $this->resolveUser($email, $nikNip, $nama);
             if (! $user) {
+                $prefix = $rowNumber > 0 ? "Baris {$rowNumber}: " : '';
+                $this->errors[] = $prefix.$errorReason;
                 $this->failed++;
 
                 return;
             }
 
+            // Deduplicate: if user was already added via web UI or appeared earlier in Excel, update instead of duplicating
             $existing = SurveyUser::where('survey_id', $this->survey->id)
                 ->where('user_id', $user->id)
                 ->first();
@@ -117,6 +125,8 @@ class PelatihanKelasImport implements WithMultipleSheets
             $this->created++;
             $this->success++;
         } catch (\Throwable $e) {
+            $prefix = $rowNumber > 0 ? "Baris {$rowNumber}: " : '';
+            $this->errors[] = $prefix.$e->getMessage();
             $this->failed++;
         }
     }
@@ -137,10 +147,16 @@ class PelatihanKelasImport implements WithMultipleSheets
         }
 
         $surveyUser->update($updates);
+        $this->updated++;
         $this->success++;
     }
 
-    private function resolveUser(?string $email, ?string $nikNip, ?string $nama): ?User
+    /**
+     * Resolve user uniquely by email, NIP/old_nip, or unambiguous exact name.
+     *
+     * @return array{0: ?User, 1: ?string}
+     */
+    private function resolveUser(?string $email, ?string $nikNip, ?string $nama): array
     {
         if ($email !== null && $email !== '-') {
             $byEmail = User::with(['profile', 'roles'])
@@ -148,8 +164,10 @@ class PelatihanKelasImport implements WithMultipleSheets
                 ->first();
 
             if ($byEmail) {
-                return $byEmail;
+                return [$byEmail, null];
             }
+
+            return [null, "Email '{$email}' tidak ditemukan di daftar user."];
         }
 
         if ($nikNip !== null && $nikNip !== '-') {
@@ -160,7 +178,11 @@ class PelatihanKelasImport implements WithMultipleSheets
                 ->get();
 
             if ($byIdentity->count() === 1) {
-                return $byIdentity->first();
+                return [$byIdentity->first(), null];
+            }
+
+            if ($byIdentity->count() > 1) {
+                return [null, "NIP '{$nikNip}' cocok dengan lebih dari 1 user; isi kolom Email."];
             }
         }
 
@@ -173,13 +195,18 @@ class PelatihanKelasImport implements WithMultipleSheets
                 })
                 ->get();
 
-            // Only enroll by name when unambiguous so duplicate-name Mitra are never mismatched
             if ($byName->count() === 1) {
-                return $byName->first();
+                return [$byName->first(), null];
             }
+
+            if ($byName->count() > 1) {
+                return [null, "Nama '{$nama}' dimiliki {$byName->count()} user berbeda; wajib isi kolom Email."];
+            }
+
+            return [null, "Nama '{$nama}' tidak ditemukan di daftar user."];
         }
 
-        return null;
+        return [null, 'Kolom Email/Nama kosong.'];
     }
 
     /**

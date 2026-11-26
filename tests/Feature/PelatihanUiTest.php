@@ -313,24 +313,24 @@ class PelatihanUiTest extends TestCase
             'tujuan' => 'Semarang',
         ]);
 
-        // Test Export
+        // Test Export uses visual 'No' (1, 2, ...) instead of internal DB ID
         $export = new PelatihanKelasTemplateExport($pelatihan);
         $headings = $export->headings();
-        $this->assertSame(['ID', 'Nama', 'Email', 'Role (PPL/PML/Inda/Panitia)', 'Kelas', 'Asal', 'Tujuan'], $headings);
+        $this->assertSame(['No', 'Nama', 'Email', 'Role (PPL/PML/Inda/Panitia)', 'Kelas', 'Asal', 'Tujuan'], $headings);
 
         $collection = $export->collection();
         $this->assertCount(2, $collection);
-        $this->assertSame($su1->id, $collection[0]['id']);
+        $this->assertSame(1, $collection[0]['no']);
         $this->assertSame('Dewi Sartika', $collection[0]['nama']);
+        $this->assertSame('dewi@example.com', $collection[0]['email']);
 
-        // Test Import using actual Excel file
+        // Test Import using actual Excel file (using 'No' + Email, plus backwards-compatible legacy 'ID' tenant check)
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->fromArray([
-            ['ID', 'Nama', 'Email', 'Role (PPL/PML/Inda/Panitia)', 'Kelas', 'Asal', 'Tujuan'],
-            [$su1->id, 'Dewi Sartika', 'dewi@example.com', 'Panitia', 'Kelas C', 'Guntur', 'Yogyakarta'],
-            [$su2->id, 'Ahmad Dahlan', 'ahmad@example.com', 'Inda', 'Kelas B', 'Sayung', 'Solo'],
-            [$suOther->id, 'User Luar', 'luar@example.com', 'Panitia', 'Kelas D', 'Kudus', 'Semarang'],
+            ['No', 'Nama', 'Email', 'Role (PPL/PML/Inda/Panitia)', 'Kelas', 'Asal', 'Tujuan'],
+            [1, 'Dewi Sartika', 'dewi@example.com', 'Panitia', 'Kelas C', 'Guntur', 'Yogyakarta'],
+            [2, 'Ahmad Dahlan', 'ahmad@example.com', 'Inda', 'Kelas B', 'Sayung', 'Solo'],
         ]);
 
         $filePath = tempnam(sys_get_temp_dir(), 'test_import_').'.xlsx';
@@ -342,9 +342,11 @@ class PelatihanUiTest extends TestCase
         @unlink($filePath);
 
         $this->assertSame(2, $import->success);
-        $this->assertSame(1, $import->skipped);
+        $this->assertSame(2, $import->updated);
+        $this->assertSame(0, $import->created);
 
-        // Assert updates in database
+        // Assert updates in database (no duplicate survey_users created)
+        $this->assertSame(2, SurveyUser::where('survey_id', $pelatihan->id)->count());
         $su1->refresh();
         $this->assertSame('Panitia', $su1->role_pelatihan);
         $this->assertSame('Kelas C', $su1->kelas);
@@ -356,6 +358,21 @@ class PelatihanUiTest extends TestCase
         $this->assertSame('Kelas B', $su2->kelas);
         $this->assertSame('Sayung', $su2->asal);
         $this->assertSame('Solo', $su2->tujuan);
+
+        // Legacy ID column tenant isolation still skips foreign survey_user IDs
+        $legacySpreadsheet = new Spreadsheet;
+        $legacySpreadsheet->getActiveSheet()->fromArray([
+            ['ID', 'Nama', 'Email', 'Role (PPL/PML/Inda/Panitia)', 'Kelas', 'Asal', 'Tujuan'],
+            [$suOther->id, 'User Luar', 'luar@example.com', 'Panitia', 'Kelas D', 'Kudus', 'Semarang'],
+        ]);
+        $legacyPath = tempnam(sys_get_temp_dir(), 'test_legacy_import_').'.xlsx';
+        (new Xlsx($legacySpreadsheet))->save($legacyPath);
+        $legacyImport = new PelatihanKelasImport($pelatihan);
+        Excel::import($legacyImport, $legacyPath);
+        @unlink($legacyPath);
+
+        $this->assertSame(0, $legacyImport->success);
+        $this->assertSame(1, $legacyImport->skipped);
 
         // Assert suOther was NOT modified
         $suOther->refresh();
@@ -589,25 +606,40 @@ class PelatihanUiTest extends TestCase
         $this->assertContains('inda@bps.test', $refEmails);
         $this->assertNotEmpty(Excel::raw($workbook, \Maatwebsite\Excel\Excel::XLSX));
 
-        // 2. Direct Excel template import (without selecting participants beforehand!)
+        // 2. Direct Excel template import (without selecting participants beforehand & using visual 'No')
+        // Pre-enroll $alreadyAdded via web UI, then include them in Excel too -> must update cleanly with zero duplicates!
+        $alreadyAdded = User::factory()->create(['name' => 'Peserta Web', 'email' => 'peserta.web@mitra.test']);
+        $alreadyAdded->assignRole('Mitra');
+        SurveyUser::create([
+            'survey_id' => $pelatihan->id,
+            'user_id' => $alreadyAdded->id,
+            'status' => 'registered',
+            'role_pelatihan' => 'PPL',
+            'kelas' => 'Kelas A',
+            'asal' => 'Demak',
+            'tujuan' => 'Semarang',
+        ]);
+
         $spreadsheet = new Spreadsheet;
         $sheet1 = $spreadsheet->getActiveSheet();
         $sheet1->setTitle('Pembagian Kelas');
         $sheet1->fromArray([
-            ['ID', 'Nama', 'Email', 'Role (PPL/PML/Inda/Panitia)', 'Kelas', 'Asal', 'Tujuan'],
-            // Row 1: blank ID, match duplicate Mitra cleanly by email; blank Asal/Tujuan -> smart defaults
-            [null, 'Ahmad Fauzi', 'fauzi.mranggen@mitra.test', 'PPL', 'Kelas B', null, null],
-            // Row 2: blank ID + blank email + ambiguous duplicate name -> must fail instead of guessing
-            [null, 'Ahmad Fauzi', null, 'PPL', 'Kelas A', 'Demak', 'Semarang'],
-            // Row 3: completely blank trailing row -> silently ignored
-            [null, null, null, null, null, null, null],
+            ['No', 'Nama', 'Email', 'Role (PPL/PML/Inda/Panitia)', 'Kelas', 'Asal', 'Tujuan'],
+            // Row 2: new participant matched uniquely by email despite identical name; blank Asal/Tujuan -> smart defaults
+            [1, 'Ahmad Fauzi', 'fauzi.mranggen@mitra.test', 'PPL', 'Kelas B', null, null],
+            // Row 3: same user already added via web UI -> updates existing row without creating duplicate
+            [2, 'Peserta Web', 'peserta.web@mitra.test', 'PML', 'Kelas C', null, null],
+            // Row 4: blank email + ambiguous duplicate name -> must fail with clear reason
+            [3, 'Ahmad Fauzi', null, 'PPL', 'Kelas A', 'Demak', 'Semarang'],
+            // Row 5: pre-numbered blank row -> silently ignored
+            [4, null, null, null, null, null, null],
         ]);
 
         // Add Sheet 2 reference sheet to ensure multi-sheet workbook import ignores Sheet 2
         $sheet2 = $spreadsheet->createSheet();
         $sheet2->setTitle('Referensi Mitra & Pegawai');
         $sheet2->fromArray([
-            ['Nama', 'Email (Copy ke Sheet Pembagian Kelas)', 'Role Sistem', 'NIK / NIP', 'Kecamatan', 'Jabatan'],
+            ['Nama', 'Email (Copy ke Sheet Pembagian Kelas)', 'Role Sistem', 'NIK / NIP', 'Kecamatan / Asal', 'Jabatan'],
             ['Inda Dewi', 'inda@bps.test', 'Organik', '-', '-', 'Statistisi'],
         ]);
 
@@ -619,8 +651,11 @@ class PelatihanUiTest extends TestCase
         @unlink($filePath);
 
         $this->assertSame(1, $import->created);
-        $this->assertSame(1, $import->success);
+        $this->assertSame(1, $import->updated);
+        $this->assertSame(2, $import->success);
         $this->assertSame(1, $import->failed); // Ambiguous name-only row
+        $this->assertNotEmpty($import->errors);
+        $this->assertStringContainsString('wajib isi kolom Email', $import->errors[0]);
 
         $enrolled = SurveyUser::where('survey_id', $pelatihan->id)->where('user_id', $mitraB->id)->first();
         $this->assertNotNull($enrolled);
@@ -628,6 +663,12 @@ class PelatihanUiTest extends TestCase
         $this->assertSame('Kelas B', $enrolled->kelas);
         $this->assertSame('Mranggen', $enrolled->asal);
         $this->assertSame('Semarang', $enrolled->tujuan);
+
+        // Already-enrolled web participant updated cleanly with no duplicate row
+        $this->assertSame(1, SurveyUser::where('survey_id', $pelatihan->id)->where('user_id', $alreadyAdded->id)->count());
+        $webParticipant = SurveyUser::where('survey_id', $pelatihan->id)->where('user_id', $alreadyAdded->id)->first();
+        $this->assertSame('PML', $webParticipant->role_pelatihan);
+        $this->assertSame('Kelas C', $webParticipant->kelas);
 
         // Verify Mitra A and Sheet 2 Organik were NOT enrolled
         $this->assertDatabaseMissing('survey_users', ['survey_id' => $pelatihan->id, 'user_id' => $mitraA->id]);

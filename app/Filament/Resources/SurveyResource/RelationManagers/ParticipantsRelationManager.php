@@ -297,7 +297,7 @@ class ParticipantsRelationManager extends RelationManager
                     ->icon('heroicon-o-arrow-up-tray')
                     ->color('primary')
                     ->visible($isPelatihan)
-                    ->modalDescription('Tidak perlu memilih peserta satu per satu terlebih dahulu. Download template Excel (berisi sheet Pembagian Kelas + sheet Referensi Mitra & Pegawai lengkap dengan Email & Kecamatan), isi Email/Nama bersama Role & Kelas, lalu upload kembali di sini untuk mendaftarkan peserta sekaligus membagi kelas.')
+                    ->modalDescription('Tidak perlu memilih peserta satu per satu & tidak perlu hafal ID. Download template Excel (kolom No cukup diisi angka urut, lalu isi/copy Email dari sheet Referensi Mitra & Pegawai beserta Role & Kelas). Jika peserta sudah pernah ditambahkan via web, datanya otomatis diperbarui tanpa duplikat.')
                     ->schema([
                         FileUpload::make('file')
                             ->label('File Excel Format Kelas')
@@ -327,11 +327,26 @@ class ParticipantsRelationManager extends RelationManager
                         // Cleanup temporary uploaded file
                         Storage::disk('local')->delete($data['file']);
 
-                        Notification::make()
+                        $summary = "Berhasil: {$import->success} (Baru: {$import->created}, Diperbarui: {$import->updated}), Dilewati: {$import->skipped}, Gagal: {$import->failed}";
+                        if (! empty($import->errors)) {
+                            $detail = implode(' | ', array_slice($import->errors, 0, 3));
+                            if (count($import->errors) > 3) {
+                                $detail .= ' (+'.(count($import->errors) - 3).' lainnya)';
+                            }
+                            $summary .= "\nCatatan: {$detail}";
+                        }
+
+                        $notification = Notification::make()
                             ->title('Import Pembagian Kelas Selesai')
-                            ->body("Berhasil: {$import->success} (Peserta baru: {$import->created}), Dilewati: {$import->skipped}, Gagal: {$import->failed}")
-                            ->success()
-                            ->send();
+                            ->body($summary);
+
+                        if ($import->failed > 0) {
+                            $notification->warning();
+                        } else {
+                            $notification->success();
+                        }
+
+                        $notification->send();
                     }),
             ])
             ->recordActions([
