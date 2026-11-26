@@ -20,56 +20,36 @@
             page-break-after: always;
         }
 
-        /* KOP SURAT */
+        /* KOP SURAT (Hanya Logo BPS Kiri + Logo Kanan, tanpa teks tengah) */
         .kop-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 2px;
+            margin-bottom: 4px;
         }
         .kop-table td {
             vertical-align: middle;
             padding: 0;
         }
         .kop-left {
-            width: 85px;
+            width: 75%;
             text-align: left;
         }
         .kop-left img {
-            width: 80px;
+            max-width: 100%;
+            max-height: 75px;
             height: auto;
         }
-        .kop-center {
-            text-align: center;
-        }
-        .kop-instansi {
-            font-size: 15pt;
-            font-weight: bold;
-            letter-spacing: 0.5px;
-            margin: 0;
-            text-transform: uppercase;
-        }
-        .kop-unit {
-            font-size: 13pt;
-            font-weight: bold;
-            margin: 0;
-            text-transform: uppercase;
-        }
-        .kop-alamat {
-            font-size: 8.5pt;
-            margin: 2px 0 0 0;
-            line-height: 1.25;
-        }
         .kop-right {
-            width: 95px;
+            width: 25%;
             text-align: right;
         }
         .kop-right img {
-            max-width: 90px;
-            max-height: 60px;
+            max-width: 125px;
+            max-height: 55px;
             height: auto;
         }
         .kop-line {
-            border-top: 2.5px solid #000;
+            border-top: 2px solid #000;
             border-bottom: 1px solid #000;
             height: 2px;
             margin: 4px 0 16px 0;
@@ -220,11 +200,6 @@
                 @if(!empty($logoBpsBase64))
                     <img src="{{ $logoBpsBase64 }}" alt="Logo BPS">
                 @endif
-            </td>
-            <td class="kop-center">
-                <div class="kop-instansi">BADAN PUSAT STATISTIK</div>
-                <div class="kop-unit">KABUPATEN DEMAK</div>
-                <div class="kop-alamat">{!! nl2br(e($kopSurat->instansi_teks ?? "Jl. Sultan Hadiwijaya No. 23 Demak Telp/Fax : (0291) 685445\nHomepage: http://demakkab.bps.go.id, E-mail : bps3321@bps.go.id")) !!}</div>
             </td>
             <td class="kop-right">
                 @if(!empty($logoSecondaryBase64))

@@ -30,17 +30,19 @@ class SuratUndanganDocxService
         $phpWord->setDefaultFontName('Times New Roman');
         $phpWord->setDefaultFontSize(11);
 
-        // Section Style (Folio / F4, Margin 2cm)
+        // Section Style (Folio / F4, Margin 2cm, header halaman 1 berbeda)
         $sectionStyle = [
             'paperSize'    => 'Folio',
-            'marginTop'    => 1134, // ~2cm
+            'marginTop'    => 1700,
             'marginBottom' => 1134,
             'marginLeft'   => 1134,
             'marginRight'  => 1134,
+            'headerHeight' => 450,
+            'differentFirstPageHeaderFooter' => true,
         ];
         $section = $phpWord->addSection($sectionStyle);
 
-        // 1. KOP SURAT
+        // 1. KOP SURAT (di Header Halaman 1: hanya logo BPS lebar + logo kanan + borderline)
         $this->addKopSurat($section, $suratUndangan);
 
         // 2. META HEADER (Nomor, Sifat, Lampiran, Hal, Tanggal)
@@ -76,40 +78,31 @@ class SuratUndanganDocxService
         $logoKiri = $this->resolveImagePath($kopSurat?->logo_kiri_path ?: 'images/kop/logo_bps_header.png');
         $logoKanan = $kopSurat?->logo_kanan_path ? $this->resolveImagePath($kopSurat->logo_kanan_path) : null;
 
-        $kopTable = $section->addTable(['alignment' => JcTable::CENTER, 'width' => 100 * 50]);
+        // Taruh Kop Surat di Header Halaman Pertama (sesuai template kop berakhlak.docx / kop se26.docx)
+        $header = $section->addHeader('first');
+
+        $kopTable = $header->addTable(['alignment' => JcTable::CENTER, 'width' => 100 * 50]);
         $kopTable->addRow();
 
-        // Logo Kiri
-        $cLeft = $kopTable->addCell(1600, ['valign' => VerticalJc::CENTER]);
+        // Logo BPS Lebar di Kiri (sudah memuat nama instansi & alamat di dalam gambar)
+        $cLeft = $kopTable->addCell(7500, ['valign' => VerticalJc::CENTER]);
         if ($logoKiri && file_exists($logoKiri)) {
-            $cLeft->addImage($logoKiri, ['width' => 68, 'height' => 52, 'alignment' => Jc::START]);
+            $cLeft->addImage($logoKiri, ['width' => 360, 'height' => 63, 'alignment' => Jc::START]);
         }
 
-        // Teks Kop Tengah
-        $cCenter = $kopTable->addCell(6800, ['valign' => VerticalJc::CENTER]);
-        $cCenter->addText('BADAN PUSAT STATISTIK', ['bold' => true, 'size' => 14], ['alignment' => Jc::CENTER, 'spaceAfter' => 20]);
-        $cCenter->addText('KABUPATEN DEMAK', ['bold' => true, 'size' => 12], ['alignment' => Jc::CENTER, 'spaceAfter' => 40]);
-
-        $alamat = $kopSurat?->instansi_teks ?: "Jl. Sultan Hadiwijaya No. 23 Demak Telp/Fax : (0291) 685445\nHomepage: http://demakkab.bps.go.id, E-mail : bps3321@bps.go.id";
-        $alamatLines = explode("\n", $alamat);
-        foreach ($alamatLines as $line) {
-            $cCenter->addText(trim($line), ['size' => 8.5], ['alignment' => Jc::CENTER, 'spaceAfter' => 10]);
-        }
-
-        // Logo Kanan
-        $cRight = $kopTable->addCell(1600, ['valign' => VerticalJc::CENTER]);
+        // Logo Pendamping di Kanan (BerAKHLAK / SE2026)
+        $cRight = $kopTable->addCell(2500, ['valign' => VerticalJc::CENTER]);
         if ($logoKanan && file_exists($logoKanan)) {
-            $cRight->addImage($logoKanan, ['width' => 75, 'height' => 42, 'alignment' => Jc::END]);
+            $cRight->addImage($logoKanan, ['width' => 115, 'height' => 44, 'alignment' => Jc::END]);
         }
 
-        // Garis Pembatas Kop
-        $section->addLine([
+        // Garis Pembatas Kop (Borderline)
+        $header->addLine([
             'weight' => 2,
-            'width'  => 550,
+            'width'  => 495,
             'height' => 0,
             'color'  => '000000',
         ]);
-        $section->addTextBreak(1);
     }
 
     protected function addMetaHeader($section, SuratUndangan $suratUndangan): void

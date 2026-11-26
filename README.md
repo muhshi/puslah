@@ -56,7 +56,10 @@ composer dev
 
 ### 2026-11-26
 - **Modul Generator Surat Undangan Kegiatan & Kop Surat Dinamis (`SuratUndanganResource`, `KopSuratResource`)**:
-  - **Manajemen Kop Surat Dinamis (`KopSuratResource`, `KopSuratSeeder`):** Menyediakan 2 kop bawaan resmi (**Kop BerAKHLAK (Default)** dan **Kop SE2026**) dengan logo asli yang diekstrak dari dokumen Word, serta fitur CRUD untuk upload kop baru, edit, dan toggle aktif/nonaktif.
+  - **Manajemen Kop Surat Dinamis Berbasis Template DOCX (`KopSuratResource`, `KopSurat`, `KopSuratSeeder`):**
+    - Menyediakan 2 kop bawaan resmi (**Kop BerAKHLAK (Default)** dan **Kop SE2026**) dari file template Word (`.docx`) yang bagian Header-nya sudah berisi logo BPS + nama instansi/alamat di dalam gambar + logo pendamping beserta borderline.
+    - Kop surat pada PDF maupun DOCX hanya menampilkan logo BPS lebar di kiri dan logo pendamping (BerAKHLAK/SE2026) di kanan tanpa teks tambahan di tengah.
+    - Form `KopSuratResource` hanya menerima upload file `.docx` (tanpa editor teks kop); untuk mengubah kop, user mengunggah ulang file `.docx` baru dan sistem otomatis mengekstrak logo header untuk keperluan render PDF/DOCX.
   - **Generator Surat Undangan (`SuratUndanganResource`, `SurveyResource`):**
     - Tombol aksi cepat **Undangan** langsung dari baris kegiatan di `SurveyResource` untuk pre-fill data kegiatan, tujuan (`Yth. Peserta [Nama Kegiatan] \n BPS Kabupaten Demak \n di tempat`), paragraf pembuka (`Menindaklanjuti [dasar surat]...`), dan daftar peserta.
     - Input manual nomor surat undangan, sifat surat, lampiran default `1 (satu) set`, perihal, dan tanggal surat.

@@ -4,12 +4,12 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\KopSuratResource\Pages;
 use App\Models\KopSurat;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
@@ -19,6 +19,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Storage;
 
 class KopSuratResource extends Resource
 {
@@ -40,35 +41,27 @@ class KopSuratResource extends Resource
     {
         return $schema
             ->components([
-                Section::make('Informasi Kop Surat')
+                Section::make('Template Kop Surat (.docx)')
+                    ->description('Kop surat menggunakan file Word (.docx) yang sudah memiliki Header & Borderline resmi. Kop tidak dapat diedit teksnya melalui aplikasi; untuk mengubah kop, silakan upload ulang file .docx baru.')
                     ->schema([
                         TextInput::make('name')
                             ->label('Nama Kop Surat')
                             ->placeholder('Contoh: Kop SE2026 / Kop BerAKHLAK')
                             ->required()
-                            ->maxLength(255),
-
-                        Textarea::make('instansi_teks')
-                            ->label('Teks Alamat & Kontak Kop')
-                            ->rows(3)
-                            ->default("Jl. Sultan Hadiwijaya No. 23 Demak Telp/Fax : (0291) 685445\nHomepage: http://demakkab.bps.go.id, E-mail : bps3321@bps.go.id")
-                            ->required()
+                            ->maxLength(255)
                             ->columnSpanFull(),
 
-                        FileUpload::make('logo_kiri_path')
-                            ->label('Logo Kiri (Logo BPS)')
-                            ->image()
+                        FileUpload::make('template_docx_path')
+                            ->label('File Template Word Kop Surat (.docx)')
+                            ->acceptedFileTypes([
+                                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                            ])
                             ->disk('public')
                             ->directory('kop-surat')
-                            ->default('images/kop/logo_bps_header.png')
-                            ->helperText('Kosongkan untuk memakai logo BPS default.'),
-
-                        FileUpload::make('logo_kanan_path')
-                            ->label('Logo Kanan (Opsional: BerAKHLAK / SE2026 / Lainnya)')
-                            ->image()
-                            ->disk('public')
-                            ->directory('kop-surat')
-                            ->helperText('Upload gambar PNG/JPG untuk logo di pojok kanan atas kop surat.'),
+                            ->preserveFilenames()
+                            ->required()
+                            ->helperText('Upload file .docx yang bagian Header-nya sudah berisi logo BPS + logo pendamping (SE2026 / BerAKHLAK / lainnya) beserta garis pembatas.')
+                            ->columnSpanFull(),
 
                         Toggle::make('is_active')
                             ->label('Aktif (Tampilkan di pilihan generator surat)')
@@ -91,10 +84,11 @@ class KopSuratResource extends Resource
                     ->sortable()
                     ->weight('bold'),
 
-                TextColumn::make('instansi_teks')
-                    ->label('Alamat / Kontak')
-                    ->limit(50)
-                    ->wrap(),
+                TextColumn::make('template_docx_path')
+                    ->label('File Template (.docx)')
+                    ->formatStateUsing(fn (?string $state) => $state ? basename($state) : '-')
+                    ->badge()
+                    ->color('info'),
 
                 ToggleColumn::make('is_active')
                     ->label('Aktif'),
@@ -109,7 +103,14 @@ class KopSuratResource extends Resource
                     ->sortable(),
             ])
             ->recordActions([
-                EditAction::make(),
+                Action::make('download_template')
+                    ->label('Unduh DOCX')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('gray')
+                    ->visible(fn (KopSurat $record) => ! empty($record->template_docx_path) && Storage::disk('public')->exists($record->template_docx_path))
+                    ->action(fn (KopSurat $record) => Storage::disk('public')->download($record->template_docx_path)),
+                EditAction::make()
+                    ->label('Upload Ulang / Edit'),
                 DeleteAction::make(),
             ])
             ->toolbarActions([
