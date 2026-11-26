@@ -56,7 +56,7 @@ class SurveyResource extends Resource
                     ->label('Nama Kegiatan')
                     ->required()
                     ->maxLength(255)
-                    ->withProperCase(),
+                    // ->withProperCase(),
                 Select::make('jenis_kegiatan')
                     ->label('Jenis Kegiatan')
                     ->options([
@@ -76,12 +76,12 @@ class SurveyResource extends Resource
                     ->required(),
                 Textarea::make('tujuan')
                     ->label('Tujuan Kegiatan')
-                    ->withProperCase()
+                    // ->withProperCase()
                     ->columnSpanFull(),
                 Textarea::make('dasar_surat')
                     ->label('Dasar Surat')
                     ->placeholder('Contoh: DIPA BPS Kabupaten Demak Tahun Anggaran 2026...')
-                    ->withProperCase()
+                    // ->withProperCase()
                     ->required()
                     ->columnSpanFull(),
                 DatePicker::make('start_date')
@@ -200,7 +200,7 @@ class SurveyResource extends Resource
                             ->label('Nama Kegiatan')
                             ->required()
                             ->maxLength(255)
-                            ->withProperCase()
+                            // // ->withProperCase()  (removed)
                             ->default(fn (Survey $record) => 'Copy of ' . $record->name),
                         Select::make('jenis_kegiatan')
                             ->label('Jenis Kegiatan')
@@ -214,13 +214,13 @@ class SurveyResource extends Resource
                             ->required(),
                         Textarea::make('tujuan')
                             ->label('Tujuan Kegiatan')
-                            ->withProperCase()
+                            // // ->withProperCase()  (removed)
                             ->default(fn (Survey $record) => $record->tujuan)
                             ->columnSpanFull(),
                         Textarea::make('dasar_surat')
                             ->label('Dasar Surat')
                             ->required()
-                            ->withProperCase()
+                            // // ->withProperCase()  (removed)
                             ->default(fn (Survey $record) => $record->dasar_surat)
                             ->columnSpanFull(),
                         DatePicker::make('start_date')

@@ -66,6 +66,6 @@ class AppServiceProvider extends ServiceProvider
         };
 
         $registerProperCaseAction(\Filament\Forms\Components\TextInput::class);
-        // $registerProperCaseAction(\Filament\Forms\Components\Textarea::class); // Textarea lacks suffixAction
+                // $registerProperCaseAction(\Filament\Forms\Components\Textarea::class); // Textarea lacks suffixAction
     }
 }
