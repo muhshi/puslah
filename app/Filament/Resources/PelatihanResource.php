@@ -125,37 +125,27 @@ class PelatihanResource extends Resource
                 Section::make('Anggaran DIPA & Translok')
                     ->description('Pembebanan anggaran DIPA dan tarif standar transportasi serta uang harian')
                     ->schema([
-                        TextInput::make('program')
-                            ->label('Program')
-                            ->default('PROGRAM PENYEDIAAN DAN PELAYANAN INFORMASI STATISTIK (054.01.GG)')
+                        self::dipaInput('program', 'Program')
                             ->columnSpanFull(),
-                        TextInput::make('kegiatan_dipa')
-                            ->label('Kegiatan DIPA')
-                            ->default('PENYEDIAAN DAN PENGEMBANGAN STATISTIK HARGA (2903)'),
-                        TextInput::make('klasifikasi_ro')
-                            ->label('Klasifikasi RO (KRO)')
-                            ->default('DATA DAN INFORMASI PUBLIK (2903.BMA)'),
-                        TextInput::make('rincian_output')
-                            ->label('Rincian Output (RO)')
-                            ->default('PUBLIKASI/LAPORAN SPKRT (2903.BMA.007)'),
-                        TextInput::make('komponen')
-                            ->label('Komponen')
-                            ->default('PERSIAPAN (2903.BMA.009.051A)'),
-                        TextInput::make('mak')
-                            ->label('Mata Anggaran Keluaran (MAK)')
-                            ->default('BELANJA PERJALANAN DINAS DALAM KOTA (524113)')
+                        self::dipaInput('kegiatan_dipa', 'Kegiatan DIPA'),
+                        self::dipaInput('klasifikasi_ro', 'Klasifikasi RO (KRO)'),
+                        self::dipaInput('rincian_output', 'Rincian Output (RO)'),
+                        self::dipaInput('komponen', 'Komponen'),
+                        self::dipaInput('mak', 'Mata Anggaran Keluaran (MAK)')
                             ->required(),
                         TextInput::make('biaya_transport')
                             ->label('Biaya Transportasi Standar (Rp)')
                             ->numeric()
                             ->prefix('Rp')
                             ->default(100000)
+                            ->afterStateHydrated(fn (TextInput $component, mixed $state) => filled($state) ? null : $component->state(100000))
                             ->required(),
                         TextInput::make('biaya_uang_harian')
                             ->label('Uang Harian Standar (Rp/hari)')
                             ->numeric()
                             ->prefix('Rp')
                             ->default(130000)
+                            ->afterStateHydrated(fn (TextInput $component, mixed $state) => filled($state) ? null : $component->state(130000))
                             ->required(),
                     ])
                     ->columns(2)
@@ -429,5 +419,23 @@ class PelatihanResource extends Resource
             'create' => CreatePelatihan::route('/create'),
             'edit' => EditPelatihan::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * Build a DIPA text input that auto-populates the standard Pelatihan default
+     * on both Create and Edit when the stored value is empty (or legacy bare MAK).
+     */
+    private static function dipaInput(string $name, string $label): TextInput
+    {
+        $default = Survey::DEFAULT_PELATIHAN_DIPA[$name];
+
+        return TextInput::make($name)
+            ->label($label)
+            ->default($default)
+            ->afterStateHydrated(function (TextInput $component, ?string $state) use ($name, $default): void {
+                if (blank($state) || ($name === 'mak' && trim($state) === '524113')) {
+                    $component->state($default);
+                }
+            });
     }
 }

@@ -280,12 +280,14 @@ class PelatihanSpjDataBuilder
             'grand_total' => $grandTotal,
             'terbilang' => $terbilang,
             'dipa' => [
-                'program' => $survey->program ?: 'PROGRAM PENYEDIAAN DAN PELAYANAN INFORMASI STATISTIK (054.01.GG)',
-                'kegiatan' => $survey->kegiatan_dipa ?: 'PENYEDIAAN DAN PENGEMBANGAN STATISTIK HARGA (2903)',
-                'klasifikasi_ro' => $survey->klasifikasi_ro ?: 'DATA DAN INFORMASI PUBLIK (2903.BMA)',
-                'rincian_output' => $survey->rincian_output ?: 'PUBLIKASI/LAPORAN SPKRT (2903.BMA.007)',
-                'komponen' => $survey->komponen ?: 'PERSIAPAN (2903.BMA.009.051A)',
-                'mak' => $survey->mak ?: 'BELANJA PERJALANAN DINAS DALAM KOTA (524113)',
+                'program' => $survey->program ?: Survey::DEFAULT_PELATIHAN_DIPA['program'],
+                'kegiatan' => $survey->kegiatan_dipa ?: Survey::DEFAULT_PELATIHAN_DIPA['kegiatan_dipa'],
+                'klasifikasi_ro' => $survey->klasifikasi_ro ?: Survey::DEFAULT_PELATIHAN_DIPA['klasifikasi_ro'],
+                'rincian_output' => $survey->rincian_output ?: Survey::DEFAULT_PELATIHAN_DIPA['rincian_output'],
+                'komponen' => $survey->komponen ?: Survey::DEFAULT_PELATIHAN_DIPA['komponen'],
+                'mak' => (blank($survey->mak) || trim($survey->mak) === '524113')
+                    ? Survey::DEFAULT_PELATIHAN_DIPA['mak']
+                    : $survey->mak,
             ],
             'atk_items' => $survey->atk_items ?: ['Totebag', 'Pulpen', 'Pensil 2B', 'Penghapus 2 buah', 'Rautan 1 buah', 'Blocknote'],
             'include_atk' => (bool) $survey->include_atk,

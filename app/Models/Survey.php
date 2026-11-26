@@ -17,6 +17,16 @@ class Survey extends Model
 {
     use HasFactory, LogsActivity, SoftDeletes;
 
+    /** @var array<string, string> */
+    public const DEFAULT_PELATIHAN_DIPA = [
+        'program' => 'PROGRAM PENYEDIAAN DAN PELAYANAN INFORMASI STATISTIK (054.01.GG)',
+        'kegiatan_dipa' => 'PENYEDIAAN DAN PENGEMBANGAN STATISTIK HARGA (2903)',
+        'klasifikasi_ro' => 'DATA DAN INFORMASI PUBLIK (2903.BMA)',
+        'rincian_output' => 'PUBLIKASI/LAPORAN SPKRT (2903.BMA.007)',
+        'komponen' => 'PERSIAPAN (2903.BMA.009.051A)',
+        'mak' => 'BELANJA PERJALANAN DINAS DALAM KOTA (524113)',
+    ];
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()->logUnguarded();

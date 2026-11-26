@@ -486,4 +486,46 @@ class PelatihanUiTest extends TestCase
                 SuratTugasResource::getUrl('create-bulk', ['survey_id' => $pelatihan->id])
             );
     }
+
+    public function test_edit_pelatihan_auto_fills_empty_and_legacy_dipa_defaults_without_overwriting_custom_values(): void
+    {
+        $legacyPelatihan = Survey::create([
+            'name' => 'Pelatihan SPKRT Legacy Null DIPA',
+            'dasar_surat' => 'DIPA BPS Demak 2026',
+            'start_date' => '2026-11-24',
+            'end_date' => '2026-11-25',
+            'lokasi' => 'Hotel Semarang',
+            'kota_kegiatan' => 'Semarang',
+            'is_pelatihan' => true,
+            'is_active' => true,
+            'mak' => '524113',
+        ]);
+
+        // 1. Opening Edit on legacy/null DIPA record auto-populates all 6 DIPA fields + tarif
+        Livewire::test(EditPelatihan::class, ['record' => $legacyPelatihan->getRouteKey()])
+            ->assertSet('data.program', Survey::DEFAULT_PELATIHAN_DIPA['program'])
+            ->assertSet('data.kegiatan_dipa', Survey::DEFAULT_PELATIHAN_DIPA['kegiatan_dipa'])
+            ->assertSet('data.klasifikasi_ro', Survey::DEFAULT_PELATIHAN_DIPA['klasifikasi_ro'])
+            ->assertSet('data.rincian_output', Survey::DEFAULT_PELATIHAN_DIPA['rincian_output'])
+            ->assertSet('data.komponen', Survey::DEFAULT_PELATIHAN_DIPA['komponen'])
+            ->assertSet('data.mak', Survey::DEFAULT_PELATIHAN_DIPA['mak'])
+            ->assertSet('data.biaya_transport', 100000)
+            ->assertSet('data.biaya_uang_harian', 130000)
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $legacyPelatihan->refresh();
+        $this->assertSame(Survey::DEFAULT_PELATIHAN_DIPA['program'], $legacyPelatihan->program);
+        $this->assertSame(Survey::DEFAULT_PELATIHAN_DIPA['mak'], $legacyPelatihan->mak);
+
+        // 2. Editing to custom values preserves custom values on subsequent Edit load
+        $legacyPelatihan->update([
+            'program' => 'PROGRAM CUSTOM (054.01.XX)',
+            'mak' => 'BELANJA BAHAN (521211)',
+        ]);
+
+        Livewire::test(EditPelatihan::class, ['record' => $legacyPelatihan->getRouteKey()])
+            ->assertSet('data.program', 'PROGRAM CUSTOM (054.01.XX)')
+            ->assertSet('data.mak', 'BELANJA BAHAN (521211)');
+    }
 }
