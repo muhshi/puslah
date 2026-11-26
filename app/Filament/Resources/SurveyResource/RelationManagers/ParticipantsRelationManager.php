@@ -13,7 +13,6 @@ use App\Services\CertificateIssuanceService;
 use App\Services\SipetraUserDataService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
-use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -198,8 +197,6 @@ class ParticipantsRelationManager extends RelationManager
                     ->visible($isPelatihan),
             ])
             ->headerActions([
-                CreateAction::make()->label('Tambah Peserta'),
-
                 Action::make('massAdd')
                     ->label('Tambah Peserta (Banyak)')
                     ->icon('heroicon-o-user-plus')

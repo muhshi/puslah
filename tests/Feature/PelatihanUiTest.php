@@ -589,6 +589,7 @@ class PelatihanUiTest extends TestCase
             'ownerRecord' => $pelatihan,
             'pageClass' => EditPelatihan::class,
         ])
+            ->assertTableActionDoesNotExist('create')
             ->assertTableActionExists('massAdd')
             ->assertTableActionExists('exportKelasTemplate')
             ->assertTableActionExists('importKelas');
