@@ -120,6 +120,8 @@ class LampiranLpdSheet implements WithEvents, WithTitle
                 $sheet->getColumnDimension('F')->setWidth(18);
                 $sheet->getColumnDimension('G')->setWidth(15);
                 $sheet->getColumnDimension('H')->setWidth(15);
+
+                $this->applyPrintSetup($sheet, true);
             },
         ];
     }

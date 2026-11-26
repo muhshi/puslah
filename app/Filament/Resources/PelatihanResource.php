@@ -20,6 +20,7 @@ use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -224,17 +225,42 @@ class PelatihanResource extends Resource
             ])
             ->recordActions([
                 ActionGroup::make([
+                    Action::make('cetakBundelSpjPdf')
+                        ->label('Cetak Bundel SPJ Kelas (PDF)')
+                        ->icon('heroicon-o-document-duplicate')
+                        ->schema(function (Survey $record): array {
+                            $classes = app(PelatihanUndanganService::class)->getAvailableClasses($record);
+                            if (count($classes) <= 1) {
+                                return [];
+                            }
+
+                            $options = ['__ALL_ZIP__' => 'Semua Kelas (ZIP: 1 PDF per Kelas)'];
+                            foreach ($classes as $kelas) {
+                                $options[$kelas] = "{$kelas} (1 PDF Lengkap)";
+                            }
+
+                            return [
+                                Select::make('kelas')
+                                    ->label('Pilih Kelas yang Dicetak')
+                                    ->options($options)
+                                    ->default('__ALL_ZIP__')
+                                    ->required(),
+                            ];
+                        })
+                        ->action(fn (Survey $record, array $data) => app(PelatihanUndanganService::class)
+                            ->downloadBundelSpjKelas($record, $data['kelas'] ?? null)),
+
                     Action::make('downloadUndangan')
                         ->label('Download Undangan (.docx)')
                         ->icon('heroicon-o-document-text')
                         ->action(fn (Survey $record) => app(PelatihanUndanganService::class)->downloadUndanganWord($record)),
 
                     Action::make('downloadSpj')
-                        ->label('Download Paket SPJ (.xlsx)')
+                        ->label('Download Rekap SPJ (.xlsx)')
                         ->icon('heroicon-o-table-cells')
                         ->action(fn (Survey $record) => Excel::download(
                             new PelatihanSpjExport($record),
-                            'Paket_SPJ_'.Str::slug($record->name ?: 'Pelatihan').'.xlsx'
+                            'Rekap_SPJ_'.Str::slug($record->name ?: 'Pelatihan').'.xlsx'
                         )),
 
                     Action::make('cetakDaftarHadir')

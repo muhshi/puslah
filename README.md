@@ -55,6 +55,9 @@ composer dev
 ## Changelog
 
 ### 2026-11-26
+- **Bundel SPJ 1 PDF per Kelas & Perapian Rekap Excel (`bundel_spj_pelatihan.blade.php`, `PelatihanSpjExport`, `PelatihanUndanganService`):**
+  - Menambahkan aksi **Cetak Bundel SPJ Kelas (PDF)** di tabel dan halaman edit `PelatihanResource` yang menggabungkan Daftar Hadir, Daftar Hadir INDA, Bukti Penerimaan Uang, Lampiran LPD, Tanda Terima ATK, serta Pernyataan Pengeluaran Riil & Surat Pernyataan Tidak Menggunakan Kendaraan Dinas per individu dalam 1 file PDF utuh A4 Portrait per kelas (langsung PDF untuk 1 kelas, atau pilihan kelas tertentu / ZIP 1 PDF per kelas bila multi-kelas).
+  - Menyederhanakan `PelatihanSpjExport` (Excel) fokus pada rekap (**4 sheet** standar / **5 sheet** dengan ATK) dengan menghapus sheet duplikat pernyataan riil & kendaraan serta menambahkan `applyPrintSetup()` (`A4`, `FitToWidth = 1`, Landscape otomatis pada tabel lebar) di `SpjSheetHelper`.
 - **Perbaikan Logo BPS & QR Code Tidak Muncul di PDF (`config/dompdf.php`):**
   - Menambahkan protokol `'data://' => ['rules' => []]` (beserta `'artifactPathValidation' => null`) ke `allowed_protocols` pada `config/dompdf.php` agar DomPDF 3.x mengizinkan rendering gambar `data:image/png;base64,...` (Logo BPS) dan `data:image/svg+xml;base64,...` (QR Code verifikasi) pada PDF Surat Tugas maupun dokumen PDF lainnya, disertai test regresi `SuratTugasPdfTest`.
 - **Perbaikan Validasi `unique()` SPPD di Surat Tugas (`SuratTugasResource`):**

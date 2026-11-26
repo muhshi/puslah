@@ -150,6 +150,8 @@ class DaftarHadirIndaSheet implements WithEvents, WithTitle
                         $sheet->getColumnDimension(Coordinate::stringFromColumnIndex(5 + $dIdx))->setWidth(15);
                     }
                 }
+
+                $this->applyPrintSetup($sheet, $dateCount > 3);
             },
         ];
     }

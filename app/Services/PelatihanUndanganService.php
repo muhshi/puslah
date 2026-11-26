@@ -7,10 +7,10 @@ use App\Settings\SystemSettings;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Barryvdh\DomPDF\PDF as DomPdfInstance;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use PhpOffice\PhpWord\TemplateProcessor;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use ZipArchive;
 
 class PelatihanUndanganService
 {
@@ -140,15 +140,6 @@ class PelatihanUndanganService
     {
         $data = $this->dataBuilder->build($survey);
 
-        $logoBase64 = Cache::remember('logo_bps_static_base64', 86400, function () {
-            $logoPath = public_path('images/logo_bps.png');
-            if (file_exists($logoPath)) {
-                return 'data:image/png;base64,'.base64_encode(file_get_contents($logoPath));
-            }
-
-            return null;
-        });
-
         $indaName = $data['first_inda']['nama'] ?? ($data['penyelenggara']['name'] ?? '');
         $indaNip = $data['first_inda']['nip'] ?? ($data['penyelenggara']['nip'] ?? '');
 
@@ -160,12 +151,12 @@ class PelatihanUndanganService
             'periode' => $data['periode'],
             'inda_name' => $indaName,
             'inda_nip' => $indaNip,
-            'logoBase64' => $logoBase64,
+            'logoBase64' => $this->getLogoBase64(),
         ]);
     }
 
     /**
-     * Render DomPDF instance for Pernyataan Pengeluaran Riil (+ Lampiran).
+     * Render DomPDF instance for Pernyataan Pengeluaran Riil (per individu).
      */
     public function renderPernyataanRiilPdf(Survey $survey): DomPdfInstance
     {
@@ -176,7 +167,7 @@ class PelatihanUndanganService
     }
 
     /**
-     * Render DomPDF instance for Surat Pernyataan Tidak Menggunakan Kendaraan Dinas (+ Lampiran).
+     * Render DomPDF instance for Surat Pernyataan Tidak Menggunakan Kendaraan Dinas (per individu).
      */
     public function renderPernyataanTidakKendaraanPdf(Survey $survey): DomPdfInstance
     {
@@ -184,6 +175,123 @@ class PelatihanUndanganService
             'survey' => $survey,
             'data' => $this->dataBuilder->build($survey),
         ]);
+    }
+
+    /**
+     * Return sorted unique class names present in the Pelatihan.
+     *
+     * @return array<int, string>
+     */
+    public function getAvailableClasses(Survey $survey): array
+    {
+        $classes = $survey->surveyUsers()
+            ->pluck('kelas')
+            ->map(fn (?string $kelas) => filled($kelas) ? trim($kelas) : 'Kelas A')
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($classes === []) {
+            return ['Kelas A'];
+        }
+
+        usort($classes, 'strnatcasecmp');
+
+        return $classes;
+    }
+
+    /**
+     * Render 1 complete SPJ PDF bundle for a specific class (or all participants when $kelas is null).
+     */
+    public function renderBundelSpjKelasPdf(Survey $survey, ?string $kelas = null): DomPdfInstance
+    {
+        $data = $this->dataBuilder->build($survey);
+
+        $kelasLabel = filled($kelas) ? trim($kelas) : ($this->getAvailableClasses($survey)[0] ?? 'Kelas A');
+
+        $classPaymentRows = array_values(array_filter(
+            $data['payment_rows'] ?? [],
+            fn (array $row): bool => $kelas === null || strcasecmp((string) ($row['kelas'] ?? 'Kelas A'), $kelasLabel) === 0
+        ));
+
+        $attendanceGroup = collect($data['attendance_classes'] ?? [])
+            ->first(fn (array $group): bool => strcasecmp((string) ($group['kelas_nama'] ?? ''), $kelasLabel) === 0);
+
+        $classAttendanceRows = $attendanceGroup['rows'] ?? $classPaymentRows;
+
+        $classGrandTotal = (int) array_sum(array_column($classPaymentRows, 'total'));
+        $classTerbilang = SppdService::terbilang($classGrandTotal).' rupiah';
+
+        return $this->loadProtectedPdf('pdf.bundel_spj_pelatihan', [
+            'survey' => $survey,
+            'data' => $data,
+            'kelasNama' => $kelasLabel,
+            'classAttendanceRows' => $classAttendanceRows,
+            'classPaymentRows' => $classPaymentRows,
+            'classGrandTotal' => $classGrandTotal,
+            'classTerbilang' => $classTerbilang,
+            'logoBase64' => $this->getLogoBase64(),
+        ]);
+    }
+
+    /**
+     * Download 1 bundled PDF directly (single class) or a ZIP archive containing 1 complete PDF per class.
+     */
+    public function downloadBundelSpjKelas(Survey $survey, ?string $selectedKelas = null): BinaryFileResponse
+    {
+        $classes = $this->getAvailableClasses($survey);
+        $slug = Str::slug($survey->name ?: 'Pelatihan');
+
+        if (filled($selectedKelas) && $selectedKelas !== '__ALL_ZIP__') {
+            $targetClasses = [$selectedKelas];
+        } else {
+            $targetClasses = $classes;
+        }
+
+        if (count($targetClasses) <= 1) {
+            $kelas = $targetClasses[0] ?? 'Kelas A';
+            $pdfOutput = $this->renderBundelSpjKelasPdf($survey, $kelas)->output();
+            $tempPdf = tempnam(sys_get_temp_dir(), 'bundel_spj_').'.pdf';
+            file_put_contents($tempPdf, $pdfOutput);
+
+            $filename = "Bundel_SPJ_{$slug}_".Str::slug($kelas).'.pdf';
+
+            return response()->download($tempPdf, $filename, [
+                'Content-Type' => 'application/pdf',
+            ])->deleteFileAfterSend(true);
+        }
+
+        $zipPath = tempnam(sys_get_temp_dir(), 'bundel_spj_zip_').'.zip';
+        $zip = new ZipArchive;
+        $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+
+        foreach ($targetClasses as $kelas) {
+            $pdfOutput = $this->renderBundelSpjKelasPdf($survey, $kelas)->output();
+            $entryName = "Bundel_SPJ_{$slug}_".Str::slug($kelas).'.pdf';
+            $zip->addFromString($entryName, $pdfOutput);
+        }
+
+        $zip->close();
+
+        return response()->download($zipPath, "Bundel_SPJ_Per_Kelas_{$slug}.zip", [
+            'Content-Type' => 'application/zip',
+        ])->deleteFileAfterSend(true);
+    }
+
+    private ?string $cachedLogoBase64 = null;
+
+    private function getLogoBase64(): ?string
+    {
+        if ($this->cachedLogoBase64 !== null) {
+            return $this->cachedLogoBase64;
+        }
+
+        $logoPath = public_path('images/logo_bps.png');
+        if (file_exists($logoPath)) {
+            return $this->cachedLogoBase64 = 'data:image/png;base64,'.base64_encode(file_get_contents($logoPath));
+        }
+
+        return null;
     }
 
     /**
