@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Exports\PelatihanSpjExport;
+use App\Filament\Pages\LembarKerjaPenilaian;
 use App\Filament\Resources\PelatihanResource\Pages\CreatePelatihan;
 use App\Filament\Resources\PelatihanResource\Pages\EditPelatihan;
 use App\Filament\Resources\PelatihanResource\Pages\ListPelatihans;
@@ -379,6 +380,12 @@ class PelatihanResource extends Resource
                             ->success()
                             ->send();
                     }),
+
+                Action::make('lkPenilaian')
+                    ->label('LK Penilaian')
+                    ->icon('heroicon-o-clipboard-document-check')
+                    ->color('warning')
+                    ->url(fn (Survey $record): string => LembarKerjaPenilaian::getUrl(['survey_id' => $record->id])),
 
                 Action::make('buat_surat_undangan')
                     ->label('Surat Undangan')

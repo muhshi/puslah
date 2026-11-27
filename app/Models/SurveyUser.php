@@ -21,6 +21,8 @@ class SurveyUser extends Pivot
         'registered_at',
         'status',
         'score',
+        'nilai_komponen',
+        'is_lulus',
         'notes',
         'role_pelatihan',
         'kelas',
@@ -32,6 +34,8 @@ class SurveyUser extends Pivot
 
     protected $casts = [
         'registered_at' => 'datetime',
+        'nilai_komponen' => 'array',
+        'is_lulus' => 'boolean',
         'transport_override' => 'integer',
         'uang_harian_override' => 'integer',
     ];

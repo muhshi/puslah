@@ -27,6 +27,14 @@ class Survey extends Model
         'mak' => 'BELANJA PERJALANAN DINAS DALAM KOTA (524113)',
     ];
 
+    /** @var array<int, array{key: string, label: string, weight: int|float, required?: bool}> */
+    public const DEFAULT_PENILAIAN_WEIGHTS = [
+        ['key' => 'pre_test', 'label' => 'Pre Test', 'weight' => 8, 'required' => true],
+        ['key' => 'post_test', 'label' => 'Post Test', 'weight' => 8, 'required' => true],
+        ['key' => 'pendalaman', 'label' => 'Pendalaman', 'weight' => 64, 'required' => false],
+        ['key' => 'sikap_perilaku', 'label' => 'Sikap Perilaku', 'weight' => 20, 'required' => false],
+    ];
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()->logUnguarded();
@@ -64,6 +72,7 @@ class Survey extends Model
         'bendahara_user_id',
         'include_atk',
         'atk_items',
+        'penilaian_weights',
     ];
 
     public function getDescriptionAttribute(): ?string
@@ -88,6 +97,7 @@ class Survey extends Model
         'biaya_uang_harian' => 'integer',
         'include_atk' => 'boolean',
         'atk_items' => 'array',
+        'penilaian_weights' => 'array',
     ];
 
     public function participants(): BelongsToMany

@@ -55,6 +55,10 @@ composer dev
 ## Changelog
 
 ### 2026-11-27
+- **Lembar Kerja Penilaian Peserta Pelatihan (`LembarKerjaPenilaian`, `PelatihanPenilaianService`, `PelatihanResource`):**
+  - Menambahkan halaman baru **LK Penilaian Peserta** di bawah grup *Manajemen Kegiatan* (serta tombol shortcut **LK Penilaian** di tabel `PelatihanResource`) yang tersinkron langsung dengan peserta pelatihan (`survey_users`).
+  - Memisahkan daftar peserta yang dinilai (`PPL`, `PML`) dari penanggung jawab kelas (`Inda`, `Panitia` / Manajer Kelas), dengan dukungan filter per kelas.
+  - Mendukung pengaturan komponen nilai & bobot kustom (total 100%, default: *Pre Test* 8%, *Post Test* 8%, *Pendalaman* 64%, *Sikap Perilaku* 20%), input nilai inline di web, **Download Template LK (.xlsx)** multi-sheet per kelas lengkap dengan rumus nilai akhir, **Import Nilai dari LK (.xlsx)** kembali ke sistem, serta **Export Platform Lain (.xlsx)** dengan 7 kolom baku (`nip_nik`, `nama`, `instansi`, `alamat`, `tipe_peserta`, `nilai`, `is_lulus`).
 - **Perbaikan Surat Undangan, Lampiran, Jadwal UI/UX, & Multiclass (`SuratUndanganResource`, `SurveyResource`, `SuratUndanganPdfService`, `SuratUndanganDocxService`):**
   - **UI/UX Form Berbasis Tab (`SuratUndanganResource`):** Menata ulang form Surat Undangan ke dalam 4 tab terfokus (*Surat Utama*, *Lampiran 1: Daftar Peserta*, *Lampiran 2: Jadwal Kegiatan*, *Penandatangan*) serta menyederhanakan layout Repeater jadwal menjadi 4 kolom yang collapsible dengan `itemLabel` dinamis.
   - **Sorting Peserta, Kelas, & Role Prioritas (`SuratUndanganPdfService`, `SuratUndangan`):** Mengurutkan kelas secara natural (`strnatcasecmp`) dan mengurutkan peserta berdasarkan urutan prioritas role yang dapat dikustomisasi (`urutan_role_peserta`, default `PPL`, `PML`, `Inda`, `Panitia`), lalu diurutkan berdasarkan abjad nama.
