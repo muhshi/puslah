@@ -35,6 +35,7 @@ class SuratUndangan extends Model
         'isi_surat_html',
         'sertakan_lampiran_peserta',
         'kolom_lampiran_peserta',
+        'urutan_role_peserta',
         'peserta_ids',
         'sertakan_lampiran_jadwal',
         'mode_jadwal',
@@ -56,6 +57,7 @@ class SuratUndangan extends Model
         'sertakan_lampiran_jadwal' => 'boolean',
         'tampilkan_durasi_jadwal' => 'boolean',
         'kolom_lampiran_peserta' => 'array',
+        'urutan_role_peserta' => 'array',
         'peserta_ids' => 'array',
     ];
 

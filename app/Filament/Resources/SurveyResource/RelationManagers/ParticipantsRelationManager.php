@@ -61,7 +61,7 @@ class ParticipantsRelationManager extends RelationManager
         ];
 
         $owner = $this->getOwnerRecord();
-        if ($owner && $owner->is_multiclass) {
+        if ($owner && $owner->is_multiclass && ($owner->is_pelatihan || $owner->jenis_kegiatan === 'pelatihan')) {
             foreach ($owner->classes()->orderBy('name')->get() as $class) {
                 $tabs['class_' . $class->id] = Tab::make($class->name)
                     ->badge($class->surveyUsers()->count())
@@ -78,7 +78,8 @@ class ParticipantsRelationManager extends RelationManager
     public function form(Schema $schema): Schema
     {
         $isPelatihan = fn ($livewire) => (bool) ($livewire?->getOwnerRecord()?->is_pelatihan ?? false);
-        $isMulticlass = fn ($livewire) => (bool) ($livewire?->getOwnerRecord()?->is_multiclass ?? false);
+        $isMulticlass = fn ($livewire) => (bool) ($livewire?->getOwnerRecord()?->is_multiclass ?? false)
+            && (($livewire?->getOwnerRecord()?->is_pelatihan ?? false) || ($livewire?->getOwnerRecord()?->jenis_kegiatan === 'pelatihan'));
 
         return $schema->components([
             Select::make('user_id')
@@ -180,7 +181,8 @@ class ParticipantsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         $isPelatihan = fn ($livewire) => (bool) ($livewire?->getOwnerRecord()?->is_pelatihan ?? false);
-        $isMulticlass = fn ($livewire) => (bool) ($livewire?->getOwnerRecord()?->is_multiclass ?? false);
+        $isMulticlass = fn ($livewire) => (bool) ($livewire?->getOwnerRecord()?->is_multiclass ?? false)
+            && (($livewire?->getOwnerRecord()?->is_pelatihan ?? false) || ($livewire?->getOwnerRecord()?->jenis_kegiatan === 'pelatihan'));
 
         return $table
             ->recordTitleAttribute('id')

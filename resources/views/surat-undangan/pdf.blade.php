@@ -155,7 +155,7 @@
             text-align: center;
             font-weight: bold;
             font-size: 12pt;
-            margin: 15px 0 20px 0;
+            margin: 8px 0 20px 0;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             line-height: 1.35;
@@ -168,6 +168,8 @@
             border-collapse: collapse;
             margin-bottom: 16px;
             font-size: 9.5pt;
+            table-layout: fixed;
+            word-wrap: break-word;
         }
         .data-table th, .data-table td {
             border: 1px solid #000;
@@ -242,7 +244,7 @@
                     <tr>
                         <td>Hal</td>
                         <td>:</td>
-                        <td style="font-weight: bold;">{{ $suratUndangan->hal }}</td>
+                        <td>{{ $suratUndangan->hal }}</td>
                     </tr>
                 </table>
             </td>
@@ -297,7 +299,10 @@
         <div class="lampiran-ref">
             <table class="lampiran-ref-table">
                 <tr>
-                    <td colspan="3" style="font-weight: bold;">Lampiran 1 Surat Kepala BPS Kabupaten Demak</td>
+                    <td colspan="3" style="font-weight: bold;">Lampiran 1</td>
+                </tr>
+                <tr>
+                    <td colspan="3">Surat Kepala BPS Kabupaten Demak</td>
                 </tr>
                 <tr>
                     <td style="width: 55px;">Nomor</td>
@@ -311,6 +316,7 @@
                 </tr>
             </table>
         </div>
+        <div style="clear: both; height: 24px;"></div>
 
         <div class="lampiran-title">
             DAFTAR PESERTA {{ strtoupper($suratUndangan->survey->name ?? $suratUndangan->hal) }}<br>
@@ -318,13 +324,10 @@
         </div>
 
         @php
-            $cols = $suratUndangan->kolom_lampiran_peserta ?? ['nip', 'asal_kecamatan', 'sobat_id', 'email'];
-            $colCount = 3
-                + (in_array('nip', $cols) ? 1 : 0)
-                + (in_array('asal_kecamatan', $cols) ? 1 : 0)
-                + (in_array('sobat_id', $cols) ? 1 : 0)
-                + (in_array('email', $cols) ? 1 : 0)
-                + (in_array('no_hp', $cols) ? 1 : 0);
+            $rawCols = $suratUndangan->kolom_lampiran_peserta ?? ['asal_peserta'];
+            $allowedExtras = ['nip', 'asal_peserta', 'asal_kecamatan', 'sobat_id', 'email', 'no_hp'];
+            $cols = array_slice(array_values(array_intersect($allowedExtras, $rawCols)), 0, 2);
+            $colCount = 3 + count($cols);
         @endphp
 
         @foreach($pesertaPerKelas as $namaKelas => $pesertaList)
@@ -343,9 +346,12 @@
                         <th style="width: 35px;">No</th>
                         <th>Nama Peserta</th>
                         @if(in_array('nip', $cols))
-                            <th style="width: 120px;">NIP</th>
+                            <th style="width: 115px;">NIP</th>
                         @endif
-                        <th>Bertugas Sebagai</th>
+                        <th style="width: 120px;">Bertugas Sebagai</th>
+                        @if(in_array('asal_peserta', $cols))
+                            <th>Asal</th>
+                        @endif
                         @if(in_array('asal_kecamatan', $cols))
                             <th>Asal Kecamatan / Alamat</th>
                         @endif
@@ -369,6 +375,9 @@
                                 <td class="text-center">{{ $p['nip'] ?: '-' }}</td>
                             @endif
                             <td class="text-center">{{ $p['jabatan'] }}</td>
+                            @if(in_array('asal_peserta', $cols))
+                                <td class="text-left">{{ $p['asal_peserta'] ?: '-' }}</td>
+                            @endif
                             @if(in_array('asal_kecamatan', $cols))
                                 <td class="text-left">{{ $p['asal_kecamatan'] ?: '-' }}</td>
                             @endif
@@ -401,7 +410,10 @@
         <div class="lampiran-ref">
             <table class="lampiran-ref-table">
                 <tr>
-                    <td colspan="3" style="font-weight: bold;">Lampiran 2 Surat Kepala BPS Kabupaten Demak</td>
+                    <td colspan="3" style="font-weight: bold;">Lampiran 2</td>
+                </tr>
+                <tr>
+                    <td colspan="3">Surat Kepala BPS Kabupaten Demak</td>
                 </tr>
                 <tr>
                     <td style="width: 55px;">Nomor</td>
@@ -415,6 +427,7 @@
                 </tr>
             </table>
         </div>
+        <div style="clear: both; height: 24px;"></div>
 
         <div class="lampiran-title">
             JADWAL {{ strtoupper($suratUndangan->survey->name ?? $suratUndangan->hal) }}<br>

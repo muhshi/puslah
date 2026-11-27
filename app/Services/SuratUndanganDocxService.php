@@ -131,7 +131,7 @@ class SuratUndanganDocxService
         $innerTable->addRow();
         $innerTable->addCell(1200)->addText('Hal');
         $innerTable->addCell(200)->addText(':');
-        $innerTable->addCell(4800)->addText($suratUndangan->hal, ['bold' => true]);
+        $innerTable->addCell(4800)->addText($suratUndangan->hal);
 
         $cRight = $table->addCell(3800, ['valign' => VerticalJc::TOP]);
         $city = $suratUndangan->signer_city ?: 'Demak';
@@ -197,15 +197,33 @@ class SuratUndanganDocxService
         $cTtd->addText($suratUndangan->signer_name ?: 'Kepala BPS Demak', [], ['alignment' => Jc::CENTER]);
     }
 
+    protected function addLampiranHeader($section, string $title, SuratUndangan $suratUndangan): void
+    {
+        $wrapper = $section->addTable(['alignment' => JcTable::CENTER, 'width' => 100 * 50]);
+        $wrapper->addRow();
+        $wrapper->addCell(4800); // spacer kiri
+        $c = $wrapper->addCell(5100, ['valign' => VerticalJc::TOP]);
+
+        $c->addText($title, ['bold' => true], ['spaceAfter' => 20]);
+        $c->addText('Surat Kepala BPS Kabupaten Demak', [], ['spaceAfter' => 20]);
+
+        $meta = $c->addTable();
+        $meta->addRow();
+        $meta->addCell(950)->addText('Nomor', [], ['spaceAfter' => 20]);
+        $meta->addCell(180)->addText(':', [], ['spaceAfter' => 20]);
+        $meta->addCell(3970)->addText($suratUndangan->nomor_surat, [], ['spaceAfter' => 20]);
+
+        $meta->addRow();
+        $meta->addCell(950)->addText('Tanggal', [], ['spaceAfter' => 20]);
+        $meta->addCell(180)->addText(':', [], ['spaceAfter' => 20]);
+        $meta->addCell(3970)->addText($suratUndangan->formatted_tanggal, [], ['spaceAfter' => 20]);
+
+        $section->addTextBreak(2);
+    }
+
     protected function addLampiranPeserta($section, SuratUndangan $suratUndangan): void
     {
-        // Rujukan pojok kanan atas
-        $refTable = $section->addTable(['alignment' => JcTable::END]);
-        $refTable->addRow();
-        $c = $refTable->addCell(5500);
-        $c->addText('Lampiran 1 Surat Kepala BPS Kabupaten Demak', ['bold' => true], ['alignment' => Jc::END, 'spaceAfter' => 20]);
-        $c->addText('Nomor : ' . $suratUndangan->nomor_surat, [], ['alignment' => Jc::END, 'spaceAfter' => 20]);
-        $c->addText('Tanggal : ' . $suratUndangan->formatted_tanggal, [], ['alignment' => Jc::END, 'spaceAfter' => 40]);
+        $this->addLampiranHeader($section, 'Lampiran 1', $suratUndangan);
 
         // Judul Lampiran
         $kegiatan = strtoupper($suratUndangan->survey->name ?? $suratUndangan->hal);
@@ -215,72 +233,82 @@ class SuratUndanganDocxService
 
         $pesertaPerKelas = $this->pdfService->resolvePesertaData($suratUndangan);
         $isMultiClass = count($pesertaPerKelas) > 1 || (count($pesertaPerKelas) === 1 && !isset($pesertaPerKelas['Peserta']));
-        $cols = $suratUndangan->kolom_lampiran_peserta ?? ['nip', 'asal_kecamatan', 'sobat_id', 'email'];
+        $cols = $suratUndangan->kolom_lampiran_peserta ?? ['asal_peserta'];
+
+        // Build active columns with weights so total width strictly fits 9900 twips (Folio width minus margins)
+        $optionalDefs = [
+            'nip'            => ['label' => 'NIP', 'key' => 'nip', 'weight' => 22, 'align' => Jc::CENTER],
+            'asal_peserta'   => ['label' => 'Asal', 'key' => 'asal_peserta', 'weight' => 20, 'align' => Jc::START],
+            'asal_kecamatan' => ['label' => 'Asal Kecamatan / Alamat', 'key' => 'asal_kecamatan', 'weight' => 22, 'align' => Jc::START],
+            'sobat_id'       => ['label' => 'Sobat ID', 'key' => 'sobat_id', 'weight' => 16, 'align' => Jc::CENTER],
+            'email'          => ['label' => 'Email', 'key' => 'email', 'weight' => 24, 'align' => Jc::START],
+            'no_hp'          => ['label' => 'No HP / Kontak', 'key' => 'no_hp', 'weight' => 18, 'align' => Jc::CENTER],
+        ];
+
+        $activeExtras = [];
+        foreach ($optionalDefs as $colKey => $def) {
+            if (in_array($colKey, $cols, true)) {
+                $activeExtras[] = $def;
+            }
+        }
+        $activeExtras = array_slice($activeExtras, 0, 2);
+
+        $noWidth = 550;
+        $remainingWidth = 9900 - $noWidth;
+        $baseColumns = [
+            ['label' => 'Nama Peserta', 'key' => 'nama', 'weight' => 34, 'align' => Jc::START, 'bold' => true],
+            ['label' => 'Bertugas Sebagai', 'key' => 'jabatan', 'weight' => 22, 'align' => Jc::CENTER, 'bold' => false],
+        ];
+        foreach ($activeExtras as $extra) {
+            $baseColumns[] = $extra + ['bold' => false];
+        }
+
+        $totalWeight = array_sum(array_column($baseColumns, 'weight'));
+        $allocated = 0;
+        foreach ($baseColumns as $idx => &$colDef) {
+            if ($idx === count($baseColumns) - 1) {
+                $colDef['width'] = $remainingWidth - $allocated;
+            } else {
+                $colDef['width'] = (int) round(($colDef['weight'] / $totalWeight) * $remainingWidth);
+                $allocated += $colDef['width'];
+            }
+        }
+        unset($colDef);
+
+        $colCount = 1 + count($baseColumns);
 
         $tableStyle = [
             'borderSize'  => 6,
             'borderColor' => '000000',
             'alignment'   => JcTable::CENTER,
+            'layout'      => \PhpOffice\PhpWord\Style\Table::LAYOUT_FIXED,
         ];
         $headerStyle = ['bgColor' => 'F2F2F2'];
 
         foreach ($pesertaPerKelas as $namaKelas => $pesertaList) {
             $table = $section->addTable($tableStyle);
 
-            $colCount = 3 // No, Nama, Jabatan
-                + (in_array('nip', $cols) ? 1 : 0)
-                + (in_array('asal_kecamatan', $cols) ? 1 : 0)
-                + (in_array('sobat_id', $cols) ? 1 : 0)
-                + (in_array('email', $cols) ? 1 : 0)
-                + (in_array('no_hp', $cols) ? 1 : 0);
-
             if ($isMultiClass) {
                 $table->addRow();
-                $table->addCell(10000, ['gridSpan' => $colCount, 'bgColor' => 'E6E6E6'])
+                $table->addCell(9900, ['gridSpan' => $colCount, 'bgColor' => 'E6E6E6'])
                     ->addText('KELAS: ' . strtoupper($namaKelas), ['bold' => true], ['alignment' => Jc::START]);
             }
 
             // Header Tabel
             $table->addRow();
-            $table->addCell(600, $headerStyle)->addText('No', ['bold' => true], ['alignment' => Jc::CENTER]);
-            $table->addCell(2800, $headerStyle)->addText('Nama Peserta', ['bold' => true], ['alignment' => Jc::CENTER]);
-            if (in_array('nip', $cols)) {
-                $table->addCell(1800, $headerStyle)->addText('NIP', ['bold' => true], ['alignment' => Jc::CENTER]);
-            }
-            $table->addCell(2000, $headerStyle)->addText('Bertugas Sebagai', ['bold' => true], ['alignment' => Jc::CENTER]);
-            if (in_array('asal_kecamatan', $cols)) {
-                $table->addCell(2000, $headerStyle)->addText('Asal Kecamatan / Alamat', ['bold' => true], ['alignment' => Jc::CENTER]);
-            }
-            if (in_array('sobat_id', $cols)) {
-                $table->addCell(1400, $headerStyle)->addText('Sobat ID', ['bold' => true], ['alignment' => Jc::CENTER]);
-            }
-            if (in_array('email', $cols)) {
-                $table->addCell(2200, $headerStyle)->addText('Email', ['bold' => true], ['alignment' => Jc::CENTER]);
-            }
-            if (in_array('no_hp', $cols)) {
-                $table->addCell(1600, $headerStyle)->addText('No HP / Kontak', ['bold' => true], ['alignment' => Jc::CENTER]);
+            $table->addCell($noWidth, $headerStyle)->addText('No', ['bold' => true], ['alignment' => Jc::CENTER]);
+            foreach ($baseColumns as $colDef) {
+                $table->addCell($colDef['width'], $headerStyle)->addText($colDef['label'], ['bold' => true], ['alignment' => Jc::CENTER]);
             }
 
             // Body Tabel
             foreach ($pesertaList as $idx => $p) {
                 $table->addRow();
-                $table->addCell(600)->addText((string)($idx + 1), [], ['alignment' => Jc::CENTER]);
-                $table->addCell(2800)->addText($p['nama'], ['bold' => true]);
-                if (in_array('nip', $cols)) {
-                    $table->addCell(1800)->addText($p['nip'] ?: '-', [], ['alignment' => Jc::CENTER]);
-                }
-                $table->addCell(2000)->addText($p['jabatan'], [], ['alignment' => Jc::CENTER]);
-                if (in_array('asal_kecamatan', $cols)) {
-                    $table->addCell(2000)->addText($p['asal_kecamatan'] ?: '-');
-                }
-                if (in_array('sobat_id', $cols)) {
-                    $table->addCell(1400)->addText($p['sobat_id'] ?: '-', [], ['alignment' => Jc::CENTER]);
-                }
-                if (in_array('email', $cols)) {
-                    $table->addCell(2200)->addText($p['email'] ?: '-');
-                }
-                if (in_array('no_hp', $cols)) {
-                    $table->addCell(1600)->addText($p['no_hp'] ?: '-', [], ['alignment' => Jc::CENTER]);
+                $table->addCell($noWidth)->addText((string) ($idx + 1), [], ['alignment' => Jc::CENTER]);
+                foreach ($baseColumns as $colDef) {
+                    $val = $p[$colDef['key']] ?? '-';
+                    $fontStyle = !empty($colDef['bold']) ? ['bold' => true] : [];
+                    $table->addCell($colDef['width'])->addText($val ?: '-', $fontStyle, ['alignment' => $colDef['align']]);
                 }
             }
 
@@ -290,13 +318,7 @@ class SuratUndanganDocxService
 
     protected function addLampiranJadwal($section, SuratUndangan $suratUndangan): void
     {
-        // Rujukan pojok kanan atas
-        $refTable = $section->addTable(['alignment' => JcTable::END]);
-        $refTable->addRow();
-        $c = $refTable->addCell(5500);
-        $c->addText('Lampiran 2 Surat Kepala BPS Kabupaten Demak', ['bold' => true], ['alignment' => Jc::END, 'spaceAfter' => 20]);
-        $c->addText('Nomor : ' . $suratUndangan->nomor_surat, [], ['alignment' => Jc::END, 'spaceAfter' => 20]);
-        $c->addText('Tanggal : ' . $suratUndangan->formatted_tanggal, [], ['alignment' => Jc::END, 'spaceAfter' => 40]);
+        $this->addLampiranHeader($section, 'Lampiran 2', $suratUndangan);
 
         // Judul Lampiran
         $kegiatan = strtoupper($suratUndangan->survey->name ?? $suratUndangan->hal);
@@ -319,42 +341,51 @@ class SuratUndanganDocxService
                 'borderSize'  => 6,
                 'borderColor' => '000000',
                 'alignment'   => JcTable::CENTER,
+                'layout'      => \PhpOffice\PhpWord\Style\Table::LAYOUT_FIXED,
             ];
             $headerStyle = ['bgColor' => 'F2F2F2'];
+            $showDurasi = (bool) $suratUndangan->tampilkan_durasi_jadwal;
+
+            $wNo = 550;
+            $wWaktu = $showDurasi ? 1650 : 1750;
+            $wDurasi = 950;
+            $wMateri = $showDurasi ? 3850 : 4550;
+            $wJp = 650;
+            $wKet = $showDurasi ? 2250 : 2400;
 
             foreach ($schedulesByDay as $dayLabel => $items) {
                 $table = $section->addTable($tableStyle);
 
                 // Group Day
-                $gridSpan = $suratUndangan->tampilkan_durasi_jadwal ? 6 : 5;
+                $gridSpan = $showDurasi ? 6 : 5;
                 $table->addRow();
-                $table->addCell(10000, ['gridSpan' => $gridSpan, 'bgColor' => 'E6E6E6'])
+                $table->addCell(9900, ['gridSpan' => $gridSpan, 'bgColor' => 'E6E6E6'])
                     ->addText('HARI / TANGGAL: ' . strtoupper($dayLabel), ['bold' => true], ['alignment' => Jc::START]);
 
                 // Header
                 $table->addRow();
-                $table->addCell(600, $headerStyle)->addText('No', ['bold' => true], ['alignment' => Jc::CENTER]);
-                $table->addCell(1800, $headerStyle)->addText('Waktu (WIB)', ['bold' => true], ['alignment' => Jc::CENTER]);
-                if ($suratUndangan->tampilkan_durasi_jadwal) {
-                    $table->addCell(1100, $headerStyle)->addText('Durasi', ['bold' => true], ['alignment' => Jc::CENTER]);
+                $table->addCell($wNo, $headerStyle)->addText('No', ['bold' => true], ['alignment' => Jc::CENTER]);
+                $table->addCell($wWaktu, $headerStyle)->addText('Waktu (WIB)', ['bold' => true], ['alignment' => Jc::CENTER]);
+                if ($showDurasi) {
+                    $table->addCell($wDurasi, $headerStyle)->addText('Durasi', ['bold' => true], ['alignment' => Jc::CENTER]);
                 }
-                $table->addCell(3800, $headerStyle)->addText('Materi / Aktivitas', ['bold' => true], ['alignment' => Jc::CENTER]);
-                $table->addCell(700, $headerStyle)->addText('JP', ['bold' => true], ['alignment' => Jc::CENTER]);
-                $table->addCell(2000, $headerStyle)->addText('Metode / Ket.', ['bold' => true], ['alignment' => Jc::CENTER]);
+                $table->addCell($wMateri, $headerStyle)->addText('Materi / Aktivitas', ['bold' => true], ['alignment' => Jc::CENTER]);
+                $table->addCell($wJp, $headerStyle)->addText('JP', ['bold' => true], ['alignment' => Jc::CENTER]);
+                $table->addCell($wKet, $headerStyle)->addText('Metode / Ket.', ['bold' => true], ['alignment' => Jc::CENTER]);
 
                 // Rows
                 foreach ($items as $idx => $item) {
                     $table->addRow();
-                    $table->addCell(600)->addText((string)($idx + 1), [], ['alignment' => Jc::CENTER]);
+                    $table->addCell($wNo)->addText((string)($idx + 1), [], ['alignment' => Jc::CENTER]);
                     $waktuStr = ($item->waktu_mulai ?: '') . ' - ' . ($item->waktu_selesai ?: '');
-                    $table->addCell(1800)->addText($waktuStr, [], ['alignment' => Jc::CENTER]);
-                    if ($suratUndangan->tampilkan_durasi_jadwal) {
-                        $table->addCell(1100)->addText($item->formatted_duration, [], ['alignment' => Jc::CENTER]);
+                    $table->addCell($wWaktu)->addText($waktuStr, [], ['alignment' => Jc::CENTER]);
+                    if ($showDurasi) {
+                        $table->addCell($wDurasi)->addText($item->formatted_duration, [], ['alignment' => Jc::CENTER]);
                     }
-                    $table->addCell(3800)->addText($item->materi, ['bold' => true]);
-                    $table->addCell(700)->addText($item->jp ? (string)$item->jp : '-', [], ['alignment' => Jc::CENTER]);
+                    $table->addCell($wMateri)->addText($item->materi, ['bold' => true]);
+                    $table->addCell($wJp)->addText($item->jp ? (string)$item->jp : '-', [], ['alignment' => Jc::CENTER]);
                     $ketStr = $item->metode ? ($item->keterangan ? "{$item->metode} ({$item->keterangan})" : $item->metode) : ($item->keterangan ?: '-');
-                    $table->addCell(2000)->addText($ketStr, [], ['alignment' => Jc::CENTER]);
+                    $table->addCell($wKet)->addText($ketStr, [], ['alignment' => Jc::CENTER]);
                 }
 
                 $section->addTextBreak(1);

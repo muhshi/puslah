@@ -54,6 +54,14 @@ composer dev
 
 ## Changelog
 
+### 2026-11-27
+- **Perbaikan Surat Undangan, Lampiran, Jadwal UI/UX, & Multiclass (`SuratUndanganResource`, `SurveyResource`, `SuratUndanganPdfService`, `SuratUndanganDocxService`):**
+  - **UI/UX Form Berbasis Tab (`SuratUndanganResource`):** Menata ulang form Surat Undangan ke dalam 4 tab terfokus (*Surat Utama*, *Lampiran 1: Daftar Peserta*, *Lampiran 2: Jadwal Kegiatan*, *Penandatangan*) serta menyederhanakan layout Repeater jadwal menjadi 4 kolom yang collapsible dengan `itemLabel` dinamis.
+  - **Sorting Peserta, Kelas, & Role Prioritas (`SuratUndanganPdfService`, `SuratUndangan`):** Mengurutkan kelas secara natural (`strnatcasecmp`) dan mengurutkan peserta berdasarkan urutan prioritas role yang dapat dikustomisasi (`urutan_role_peserta`, default `PPL`, `PML`, `Inda`, `Panitia`), lalu diurutkan berdasarkan abjad nama.
+  - **Opsi Kolom Asal & Batasan Lebar Tabel (`SuratUndanganResource`, `SuratUndanganPdfService`, `SuratUndanganDocxService`, `pdf.blade.php`):** Menambahkan pilihan terpisah antara `Asal (Daftar Peserta Pelatihan)` (dari `survey_users.asal`) dan `Asal Kecamatan / Alamat (Profile)`, membatasi kolom tambahan maksimal 2 kolom (`maxItems(2)`), serta menghitung lebar kolom tabel DOCX secara proporsional (`9900` twips) agar tidak melebihi lebar kertas.
+  - **Format Naskah & Lampiran (`SuratUndanganResource`, `CreateSuratUndangan`, `SuratUndanganDocxService`, `pdf.blade.php`):** Mengambil teks `Rujukan Surat / Konsiderans` (`rujukan_surat`) pada paragraf pembuka *Menindaklanjuti*, menghilangkan cetak tebal (*bold*) pada baris `Hal`, dan merapikan header pojok kanan atas lampiran (`Lampiran X` / `Surat Kepala BPS Kabupaten Demak` / `Nomor` / `Tanggal`) dengan margin lebih lega sebelum judul.
+  - **Multiclass Khusus Pelatihan (`SurveyResource`, `ParticipantsRelationManager`):** Membatasi toggle dan fitur `is_multiclass` hanya untuk kegiatan berjenis `pelatihan`.
+
 ### 2026-11-26
 - **Modul Generator Surat Undangan Kegiatan & Kop Surat Dinamis (`SuratUndanganResource`, `KopSuratResource`)**:
   - **Manajemen Kop Surat Dinamis Berbasis Template DOCX (`KopSuratResource`, `KopSurat`, `KopSuratSeeder`):**

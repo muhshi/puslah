@@ -91,18 +91,29 @@ class SuratUndanganPdfService
                 $pesertaList = [];
                 foreach ($items as $su) {
                     if ($su->user) {
-                        $pesertaList[] = $this->formatPesertaRow($su->user, $su->role ?: $su->role_pelatihan);
+                        $pesertaList[] = $this->formatPesertaRow($su->user, $su->role_pelatihan ?: $su->role, $su);
                     }
                 }
                 if (count($pesertaList) > 0) {
                     $result[$className] = $pesertaList;
                 }
             }
+
+            uksort($result, function (string $a, string $b): int {
+                if ($a === 'Tanpa Kelas / Umum') {
+                    return 1;
+                }
+                if ($b === 'Tanpa Kelas / Umum') {
+                    return -1;
+                }
+
+                return strnatcasecmp($a, $b);
+            });
         } else {
             $pesertaList = [];
             foreach ($surveyUsers as $su) {
                 if ($su->user) {
-                    $pesertaList[] = $this->formatPesertaRow($su->user, $su->role ?: $su->role_pelatihan);
+                    $pesertaList[] = $this->formatPesertaRow($su->user, $su->role ?: $su->role_pelatihan, $su);
                 }
             }
             if (count($pesertaList) > 0) {
@@ -110,13 +121,71 @@ class SuratUndanganPdfService
             }
         }
 
+        $roleOrder = $this->resolveRoleOrder($suratUndangan);
+        foreach ($result as $className => &$pesertaList) {
+            usort($pesertaList, fn (array $a, array $b): int => $this->comparePeserta($a, $b, $roleOrder));
+        }
+        unset($pesertaList);
+
         return $result;
+    }
+
+    /**
+     * Build lowercase role => priority index map from SuratUndangan configuration.
+     *
+     * @return array<string, int>
+     */
+    protected function resolveRoleOrder(SuratUndangan $suratUndangan): array
+    {
+        $roles = $suratUndangan->urutan_role_peserta;
+        if (! is_array($roles) || count($roles) === 0) {
+            $roles = ['PPL', 'PML', 'Inda', 'Panitia'];
+        }
+
+        $order = [];
+        foreach (array_values($roles) as $index => $role) {
+            $normalized = mb_strtolower(trim((string) $role));
+            if ($normalized !== '' && ! array_key_exists($normalized, $order)) {
+                $order[$normalized] = $index;
+            }
+        }
+
+        return $order;
+    }
+
+    /**
+     * Compare two participant rows by configured role priority, then role name, then participant name.
+     *
+     * @param  array<string, mixed>  $a
+     * @param  array<string, mixed>  $b
+     * @param  array<string, int>  $roleOrder
+     */
+    protected function comparePeserta(array $a, array $b, array $roleOrder): int
+    {
+        $roleA = mb_strtolower(trim((string) ($a['jabatan'] ?? '')));
+        $roleB = mb_strtolower(trim((string) ($b['jabatan'] ?? '')));
+
+        $prioA = $roleOrder[$roleA] ?? PHP_INT_MAX;
+        $prioB = $roleOrder[$roleB] ?? PHP_INT_MAX;
+
+        if ($prioA !== $prioB) {
+            return $prioA <=> $prioB;
+        }
+
+        if ($prioA === PHP_INT_MAX && $roleA !== $roleB) {
+            $roleCmp = strnatcasecmp((string) ($a['jabatan'] ?? ''), (string) ($b['jabatan'] ?? ''));
+            if ($roleCmp !== 0) {
+                return $roleCmp;
+            }
+        }
+
+        return strnatcasecmp((string) ($a['nama'] ?? ''), (string) ($b['nama'] ?? ''));
     }
 
     /**
      * Format row informasi peserta.
      */
-    protected function formatPesertaRow(User $user, ?string $surveyRole): array
+    protected function formatPesertaRow(User $user, ?string $surveyRole, ?SurveyUser $surveyUser = null): array
     {
         $profile = $user->profile;
         $jabatan = $surveyRole ?: ($profile?->jabatan ?: ($user->roles->first()?->name ?? 'Peserta'));
@@ -126,6 +195,7 @@ class SuratUndanganPdfService
             'nama'           => $profile?->full_name ?: $user->name,
             'nip'            => $profile?->nip ?: ($profile?->old_nip ?: '-'),
             'jabatan'        => $jabatan,
+            'asal_peserta'   => $surveyUser?->asal ?: '-',
             'asal_kecamatan' => $profile?->address ?: '-',
             'sobat_id'       => $profile?->sobat_id ?: '-',
             'email'          => $user->email ?: '-',

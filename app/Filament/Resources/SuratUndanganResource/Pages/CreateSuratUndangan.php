@@ -18,13 +18,14 @@ class CreateSuratUndangan extends CreateRecord
         if ($surveyId) {
             $survey = Survey::with('surveyUsers')->find($surveyId);
             if ($survey) {
-                $dasar = $survey->dasar_surat ?: 'Surat ...';
+                $rujukan = $survey->rujukan_surat ?: ($survey->dasar_surat ?: 'Surat ...');
                 $this->form->fill([
                     'survey_id'        => $survey->id,
                     'hal'              => 'Undangan ' . $survey->name,
                     'yth_teks'         => "Yth. Peserta {$survey->name}\nBPS Kabupaten Demak\ndi\n     Tempat",
-                    'paragraf_pembuka' => "Menindaklanjuti {$dasar}, dengan ini kami mengharapkan kehadiran Saudara pada:",
+                    'paragraf_pembuka' => "Menindaklanjuti {$rujukan}, dengan ini kami mengharapkan kehadiran Saudara pada:",
                     'agenda_acara'     => $survey->name,
+                    'agenda_tempat'    => $survey->lokasi,
                     'peserta_ids'      => $survey->surveyUsers->pluck('user_id')->toArray(),
                 ]);
             }

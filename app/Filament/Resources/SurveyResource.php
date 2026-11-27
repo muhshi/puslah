@@ -24,6 +24,8 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -63,6 +65,12 @@ class SurveyResource extends Resource
                         'non-pelatihan' => 'Non-Pelatihan',
                     ])
                     ->default('non-pelatihan')
+                    ->live()
+                    ->afterStateUpdated(function (Set $set, ?string $state): void {
+                        if ($state !== 'pelatihan') {
+                            $set('is_multiclass', false);
+                        }
+                    })
                     ->required(),
                 Select::make('metode')
                     ->label('Metode')
@@ -97,6 +105,7 @@ class SurveyResource extends Resource
                 Toggle::make('is_multiclass')
                     ->label('Kegiatan Multi-Kelas')
                     ->helperText('Aktifkan jika peserta dibagi ke beberapa kelas (Kelas A, Kelas B, dll)')
+                    ->visible(fn (Get $get): bool => $get('jenis_kegiatan') === 'pelatihan')
                     ->default(false),
             ]);
     }
@@ -147,7 +156,8 @@ class SurveyResource extends Resource
                     ->label('Aktif'),
                 ToggleColumn::make('is_multiclass')
                     ->label('Multi-Kelas')
-                    ->tooltip('Aktifkan jika kegiatan memiliki beberapa kelas peserta'),
+                    ->disabled(fn (Survey $record): bool => $record->jenis_kegiatan !== 'pelatihan' && ! $record->is_pelatihan)
+                    ->tooltip('Hanya tersedia untuk kegiatan Pelatihan'),
                 TextColumn::make('participants_count')
                     ->counts('participants')
                     ->label('Peserta'),
@@ -205,6 +215,12 @@ class SurveyResource extends Resource
                                 'non-pelatihan' => 'Non-Pelatihan',
                             ])
                             ->default(fn (Survey $record) => $record->jenis_kegiatan ?? 'non-pelatihan')
+                            ->live()
+                            ->afterStateUpdated(function (Set $set, ?string $state): void {
+                                if ($state !== 'pelatihan') {
+                                    $set('is_multiclass', false);
+                                }
+                            })
                             ->required(),
                         Select::make('metode')
                             ->label('Metode')
@@ -238,6 +254,7 @@ class SurveyResource extends Resource
                             ->default(fn (Survey $record) => $record->is_multiple),
                         Toggle::make('is_multiclass')
                             ->label('Kegiatan Multi-Kelas')
+                            ->visible(fn (Get $get): bool => $get('jenis_kegiatan') === 'pelatihan')
                             ->default(fn (Survey $record) => $record->is_multiclass),
                         Toggle::make('copy_participants')
                             ->label('Copy Petugas/Peserta')
